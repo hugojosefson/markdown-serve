@@ -2,14 +2,12 @@
   "name": "@hugojosefson/markdown-server",
   "version": "0.0.1",
   "license": "MIT",
-  "exports": {
-    ".": "./mod.ts"
-  },
+  "exports": "./mod.ts",
   "tasks": {
     "default": "       deno fmt && deno lint --fix && (deno check & deno task test) && deno task readme",
     "all": "           deno task default && deno publish --dry-run",
-    "test": "          deno test --parallel --trace-leaks --coverage",
-    "dev": "           deno test --parallel --trace-leaks --watch",
+    "test": "          deno test --parallel --trace-leaks --coverage --allow-read --allow-write --allow-net --allow-env=CI,FORCE_COLOR,TERM",
+    "dev": "           deno test --parallel --trace-leaks --watch --allow-read --allow-write --allow-net --allow-env=CI,FORCE_COLOR,TERM",
     "coverage": "      deno coverage",
     "readme": "        touch README.md && chmod +w README.md && ./readme/generate-readme.ts readme/README.md > README.md && deno fmt README.md; chmod -w README.md",
     "git-is-clean": "  test -z \"$(git status --porcelain)\"",
@@ -24,6 +22,8 @@
   "lock": false,
   "imports": {
     "@std/assert": "jsr:@std/assert@^1.0.19",
-    "@std/path": "jsr:@std/path@^1.1.6"
+    "@std/path": "jsr:@std/path@^1.1.6",
+    "@std/media-types": "jsr:@std/media-types@^1.1.0",
+    "@deno/gfm": "jsr:@deno/gfm@^0.12.0"
   }
 }

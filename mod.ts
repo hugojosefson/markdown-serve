@@ -1,1 +1,3 @@
-export function placeholder() {}
+import { main } from "./src/cli.ts";
+
+await main(Deno.args);

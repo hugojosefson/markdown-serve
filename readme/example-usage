@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# share current dir
+deno run --allow-read=. --allow-net --allow-env jsr:@hugojosefson/markdown-server

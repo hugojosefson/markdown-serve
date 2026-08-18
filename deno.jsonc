@@ -3,8 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "exports": {
-    ".": "./mod.ts",
-    "./example-usage": "./readme/example-usage.ts"
+    ".": "./mod.ts"
   },
   "tasks": {
     "default": "       deno fmt && deno lint --fix && (deno check & deno task test) && deno task readme",

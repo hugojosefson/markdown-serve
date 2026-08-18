@@ -9,23 +9,29 @@ Deno.test("static MIME types, HEAD, 404, and 405 responses", async () => {
   });
   try {
     const h = await handler(f.root);
-    let response = await h(new Request("http://x/file.css"));
+    const css = await h(new Request("http://x/file.css"));
     assertEquals(
-      response.headers.get("content-type"),
+      css.headers.get("content-type"),
       "text/css; charset=UTF-8",
     );
-    assertEquals(await response.text(), "body{}");
-    response = await h(new Request("http://x/font.woff2", { method: "HEAD" }));
-    assertEquals(response.headers.get("content-type"), "font/woff2");
-    assertEquals(await response.text(), "");
+    assertEquals(await css.text(), "body{}");
+    const fontHead = await h(
+      new Request("http://x/font.woff2", { method: "HEAD" }),
+    );
+    assertEquals(fontHead.headers.get("content-type"), "font/woff2");
+    assertEquals(await fontHead.text(), "");
     assertEquals(
       await (await h(new Request("http://x/.hidden"))).text(),
       "yes",
     );
-    response = await h(new Request("http://x/missing", { method: "HEAD" }));
-    assertEquals([response.status, await response.text()], [404, ""]);
-    response = await h(new Request("http://x/file.css", { method: "POST" }));
-    assertEquals([response.status, response.headers.get("allow")], [
+    const missingHead = await h(
+      new Request("http://x/missing", { method: "HEAD" }),
+    );
+    assertEquals([missingHead.status, await missingHead.text()], [404, ""]);
+    const post = await h(
+      new Request("http://x/file.css", { method: "POST" }),
+    );
+    assertEquals([post.status, post.headers.get("allow")], [
       405,
       "GET, HEAD",
     ]);
@@ -55,7 +61,9 @@ Deno.test("malformed and traversal-style paths are rejected", async () => {
 });
 
 Deno.test("symlink targets are followed for files, directories, indexes, and listings", async () => {
-  if (Deno.build.os === "windows") return;
+  if (Deno.build.os === "windows") {
+    return;
+  }
   const f = await fixture({
     "target/file.txt": "linked",
     "target/README.md": "linked index",
@@ -74,21 +82,23 @@ Deno.test("symlink targets are followed for files, directories, indexes, and lis
       await (await h(new Request("http://x/linked.txt"))).text(),
       "linked",
     );
-    let response = await h(new Request("http://x/linked-dir"));
-    assertEquals(response.headers.get("location"), "/linked-dir/");
-    response = await h(new Request("http://x/linked-dir/"));
-    assertMatch(await response.text(), /linked index/);
-    response = await h(new Request("http://x/index-links/"));
-    assertMatch(await response.text(), /linked index/);
-    response = await h(new Request("http://x/"));
-    assertMatch(await response.text(), /index-dir\//);
+    const linkedRedirect = await h(new Request("http://x/linked-dir"));
+    assertEquals(linkedRedirect.headers.get("location"), "/linked-dir/");
+    const linkedDirectory = await h(new Request("http://x/linked-dir/"));
+    assertMatch(await linkedDirectory.text(), /linked index/);
+    const linkedIndex = await h(new Request("http://x/index-links/"));
+    assertMatch(await linkedIndex.text(), /linked index/);
+    const root = await h(new Request("http://x/"));
+    assertMatch(await root.text(), /index-dir\//);
   } finally {
     await f.cleanup();
   }
 });
 
 Deno.test("symlinks may target paths outside the logical root", async () => {
-  if (Deno.build.os === "windows") return;
+  if (Deno.build.os === "windows") {
+    return;
+  }
   const f = await fixture({});
   const outside = await Deno.makeTempDir();
   try {

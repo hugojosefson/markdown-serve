@@ -1,0 +1,45 @@
+import { resolve } from "@std/path";
+import { internalResponse } from "./internal.ts";
+import { route } from "./route.ts";
+import { plain } from "./responses.ts";
+import type { HandlerOptions, RequestHandler } from "./server-options.ts";
+import type { ServerConfig } from "./types.ts";
+
+export async function createRequestHandler(
+  options: HandlerOptions,
+): Promise<RequestHandler> {
+  const rootPath = resolve(options.root);
+  try {
+    if (!(await Deno.stat(rootPath)).isDirectory) {
+      throw new Error("not a directory");
+    }
+  } catch (error) {
+    throw new Error(
+      `cannot access root ${options.root}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  const config: ServerConfig = {
+    rootPath,
+    redirectStatus: options.redirectStatus ?? 302,
+    onError: options.onError,
+    reloadSource: options.reloadSource,
+  };
+  return async (request) => await respond(config, request);
+}
+
+async function respond(
+  config: ServerConfig,
+  request: Request,
+): Promise<Response> {
+  try {
+    return new URL(request.url).pathname.startsWith("/__markdown_server__/")
+      ? await internalResponse(config, request)
+      : await route(config, request);
+  } catch (error) {
+    return config.onError
+      ? await config.onError(error)
+      : plain("Internal Server Error", 500, request.method);
+  }
+}

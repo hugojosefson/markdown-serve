@@ -1,5 +1,5 @@
 import { assertEquals, assertRejects } from "@std/assert";
-import { startServer } from "../src/cli.ts";
+import { startServer } from "../src/cli/port.ts";
 import { serve } from "../src/server.ts";
 import { fixture } from "./fixture.ts";
 
@@ -33,9 +33,8 @@ Deno.test("CLI default ports fall forward but explicit occupied ports fail", asy
     () => new Response(),
   );
   const port = (reserved.addr as Deno.NetAddr).port;
-  let fallback: Deno.HttpServer | undefined;
   try {
-    fallback = await startServer({
+    const fallback = await startServer({
       root: f.root,
       host: "127.0.0.1",
       port,
@@ -44,20 +43,23 @@ Deno.test("CLI default ports fall forward but explicit occupied ports fail", asy
       reload: true,
       open: true,
     });
-    assertEquals((fallback.addr as Deno.NetAddr).port > port, true);
-    await assertRejects(() =>
-      startServer({
-        root: f.root,
-        host: "127.0.0.1",
-        port,
-        explicitPort: true,
-        redirectStatus: 302,
-        reload: true,
-        open: true,
-      })
-    );
+    try {
+      assertEquals((fallback.addr as Deno.NetAddr).port > port, true);
+      await assertRejects(() =>
+        startServer({
+          root: f.root,
+          host: "127.0.0.1",
+          port,
+          explicitPort: true,
+          redirectStatus: 302,
+          reload: true,
+          open: true,
+        })
+      );
+    } finally {
+      await fallback.shutdown();
+    }
   } finally {
-    await fallback?.shutdown();
     await reserved.shutdown();
     await f.cleanup();
   }

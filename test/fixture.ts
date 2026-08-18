@@ -1,10 +1,11 @@
 import { createHandler, type HandlerOptions } from "../src/server.ts";
+import { dirname, join } from "@std/path";
 
 export async function fixture(files: Record<string, string>) {
   const root = await Deno.makeTempDir();
   for (const [name, content] of Object.entries(files)) {
-    const path = `${root}/${name}`;
-    await Deno.mkdir(path.substring(0, path.lastIndexOf("/")), {
+    const path = join(root, name);
+    await Deno.mkdir(dirname(path), {
       recursive: true,
     });
     await Deno.writeTextFile(path, content);

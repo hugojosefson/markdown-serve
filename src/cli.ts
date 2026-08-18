@@ -5,12 +5,13 @@ import { parseCommand } from "./cli/parse-command.ts";
 import { startServer } from "./cli/port.ts";
 import { registerSignals } from "./cli/signals.ts";
 import { usage } from "./cli/usage.ts";
+import { version } from "./cli/version.ts";
 
 export async function main(args: string[]): Promise<void> {
   try {
     const command = parseCommand(args);
     if (command.kind !== "serve") {
-      console.log(command.kind === "help" ? usage : "0.0.0");
+      console.log(command.kind === "help" ? usage : version);
       return;
     }
     const abort = new AbortController();

@@ -3,6 +3,7 @@ import { openBrowser, openerCommand, usableUrl } from "../src/cli/browser.ts";
 import { parseArgs } from "../src/cli/parse-args.ts";
 import { parseCommand } from "../src/cli/parse-command.ts";
 import { usage } from "../src/cli/usage.ts";
+import { version } from "../src/cli/version.ts";
 
 Deno.test("parser uses documented defaults", () => {
   assertEquals(parseArgs([]), {
@@ -54,6 +55,7 @@ Deno.test("help and version commands are identified without server startup", () 
   assertEquals(parseCommand(["-V"]), { kind: "version" });
   assertEquals(parseCommand(["docs"]).kind, "serve");
   assertMatch(usage, /--redirect=<301\|302>/);
+  assertMatch(version, /^\d+\.\d+\.\d+/);
 });
 
 Deno.test("browser opener command and usable URL are platform-safe", () => {

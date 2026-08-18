@@ -1,3 +1,10 @@
 #!/usr/bin/env bash
-# share current dir
-deno run --allow-read=. --allow-net --allow-env jsr:@hugojosefson/markdown-server
+# Serve the current directory, starting at http://localhost:8000.
+markdown-server
+
+# Choose a root, host, and port; do not open a browser.
+markdown-server ./docs --host 127.0.0.1 --port 8080 --no-open
+
+# Use temporary redirects while testing, or permanent redirects when desired.
+markdown-server --redirect=302
+markdown-server --redirect=301

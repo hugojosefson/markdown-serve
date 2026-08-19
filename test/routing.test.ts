@@ -76,3 +76,67 @@ Deno.test("listing includes dotfiles and Markdown is sanitized", async () => {
     await f.cleanup();
   }
 });
+
+Deno.test("exact text paths render code and raw source preserves queries", async () => {
+  const f = await fixture({
+    "guide.ts": "const answer: number = 42;\n",
+    "data.json": '{"enabled":true}\n',
+    ".env": "NAME=value\n",
+    "manual.md": "# Guide",
+    "blob.bin": "placeholder",
+  });
+  try {
+    await Deno.writeFile(`${f.root}/blob.bin`, new Uint8Array([0, 255]));
+    const h = await handler(f.root);
+    const guide = await (await h(new Request("http://x/guide.ts?q=1"))).text();
+    assertMatch(guide, /code-language">typescript/);
+    assertMatch(guide, /token keyword">const/);
+    assertMatch(guide, /href="\?q=1&amp;raw">Raw/);
+    assertEquals((await h(new Request("http://x/guide"))).status, 404);
+    const json = await (await h(new Request("http://x/data.json"))).text();
+    assertMatch(json, /code-language">json/);
+    assertMatch(json, /token property/);
+    assertMatch(
+      await (await h(new Request("http://x/.env"))).text(),
+      /NAME=value/,
+    );
+    const raw = await h(new Request("http://x/guide.ts?raw"));
+    assertEquals(raw.headers.get("content-type"), "text/plain; charset=UTF-8");
+    assertEquals(await raw.text(), "const answer: number = 42;\n");
+    const rawHead = await h(
+      new Request("http://x/guide.ts?raw", { method: "HEAD" }),
+    );
+    assertEquals([rawHead.headers.get("content-type"), await rawHead.text()], [
+      "text/plain; charset=UTF-8",
+      "",
+    ]);
+    const markdownRaw = await h(new Request("http://x/manual.md?raw"));
+    assertEquals(markdownRaw.headers.get("location"), "/manual?raw");
+    assertEquals(
+      await (await h(new Request("http://x/manual?raw"))).text(),
+      "# Guide",
+    );
+    assertEquals(
+      new Uint8Array(
+        await (await h(new Request("http://x/blob.bin?raw"))).arrayBuffer(),
+      ),
+      new Uint8Array([0, 255]),
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("directory Markdown indexes expose raw source", async () => {
+  const f = await fixture({ "docs/README.md": "# Docs" });
+  try {
+    const h = await handler(f.root);
+    const rendered = await (await h(new Request("http://x/docs/"))).text();
+    assertMatch(rendered, /href="\?raw">Raw/);
+    const raw = await h(new Request("http://x/docs/?raw"));
+    assertEquals(raw.headers.get("content-type"), "text/plain; charset=UTF-8");
+    assertEquals(await raw.text(), "# Docs");
+  } finally {
+    await f.cleanup();
+  }
+});

@@ -2,7 +2,9 @@ import { statOrUndefined } from "./fs.ts";
 import { canonicalPath, decodePath, filePath } from "./paths.ts";
 import { renderDirectory } from "./render-directory.ts";
 import { renderMarkdown } from "./render-markdown.ts";
-import { plain, redirect, staticFile } from "./responses.ts";
+import { renderText } from "./render-text.ts";
+import { plain, rawTextFile, redirect, staticFile } from "./responses.ts";
+import { isTextFile } from "./text-file.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function route(
@@ -59,6 +61,11 @@ export async function route(
       config.redirectStatus,
       request.method,
     );
+  }
+  if (await isTextFile(target)) {
+    return url.searchParams.has("raw")
+      ? await rawTextFile(request, target)
+      : await renderText(config, request, url, target, parts);
   }
   return await staticFile(request, target);
 }

@@ -33,6 +33,16 @@ export async function staticFile(
   );
 }
 
+export async function rawTextFile(
+  request: Request,
+  path: string,
+): Promise<Response> {
+  return new Response(
+    request.method === "HEAD" ? null : (await Deno.open(path)).readable,
+    { headers: { "content-type": "text/plain; charset=UTF-8" } },
+  );
+}
+
 function extension(path: string): string {
   const name = basename(path);
   const index = name.lastIndexOf(".");

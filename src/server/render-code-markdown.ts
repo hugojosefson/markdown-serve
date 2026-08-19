@@ -51,3 +51,12 @@ export function renderCodeMarkdown(markdown: string, baseUrl: string): string {
     },
   });
 }
+
+export function renderCodeBlock(text: string, language: string): string {
+  return new CodeRenderer().code({
+    type: "code",
+    raw: text,
+    text,
+    lang: language,
+  });
+}

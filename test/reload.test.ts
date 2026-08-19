@@ -23,8 +23,9 @@ Deno.test("reload client and SSE are limited to generated pages", async () => {
         /EventSource/,
       );
     }
-    const staticResponse = await h(new Request("http://x/raw.txt"));
-    assert(!staticResponse.headers.get("content-type")?.includes("html"));
+    const textResponse = await h(new Request("http://x/raw.txt"));
+    assert(textResponse.headers.get("content-type")?.includes("html"));
+    assertMatch(await textResponse.text(), /EventSource/);
     const response = await h(
       new Request("http://x/__markdown_server__/events"),
     );

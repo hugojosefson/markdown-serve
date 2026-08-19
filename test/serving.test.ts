@@ -10,20 +10,14 @@ Deno.test("static MIME types, HEAD, 404, and 405 responses", async () => {
   try {
     const h = await handler(f.root);
     const css = await h(new Request("http://x/file.css"));
-    assertEquals(
-      css.headers.get("content-type"),
-      "text/css; charset=UTF-8",
-    );
-    assertEquals(await css.text(), "body{}");
+    assertEquals(css.headers.get("content-type"), "text/html; charset=utf-8");
+    assertMatch(await css.text(), /code-language">css/);
     const fontHead = await h(
       new Request("http://x/font.woff2", { method: "HEAD" }),
     );
     assertEquals(fontHead.headers.get("content-type"), "font/woff2");
     assertEquals(await fontHead.text(), "");
-    assertEquals(
-      await (await h(new Request("http://x/.hidden"))).text(),
-      "yes",
-    );
+    assertMatch(await (await h(new Request("http://x/.hidden"))).text(), /yes/);
     const missingHead = await h(
       new Request("http://x/missing", { method: "HEAD" }),
     );
@@ -35,6 +29,43 @@ Deno.test("static MIME types, HEAD, 404, and 405 responses", async () => {
       405,
       "GET, HEAD",
     ]);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("text files render only at their exact paths and binaries stay static", async () => {
+  const f = await fixture({
+    ".editorconfig": "root = true\n# café\n",
+    ".gitignore": "node_modules/\n",
+    ".binary": "placeholder",
+  });
+  try {
+    await Deno.writeFile(
+      `${f.root}/.binary`,
+      new Uint8Array([0x61, 0x00, 0xff]),
+    );
+    const h = await handler(f.root);
+    const editorconfig = await h(new Request("http://x/.editorconfig"));
+    assertEquals(
+      editorconfig.headers.get("content-type"),
+      "text/html; charset=utf-8",
+    );
+    assertMatch(await editorconfig.text(), /root = true/);
+    assertMatch(
+      await (await h(new Request("http://x/.gitignore"))).text(),
+      /node_modules/,
+    );
+    assertEquals((await h(new Request("http://x/editorconfig"))).status, 404);
+    const binary = await h(new Request("http://x/.binary"));
+    assertEquals(
+      binary.headers.get("content-type"),
+      "application/octet-stream",
+    );
+    assertEquals(
+      new Uint8Array(await binary.arrayBuffer()),
+      new Uint8Array([0x61, 0x00, 0xff]),
+    );
   } finally {
     await f.cleanup();
   }
@@ -78,9 +109,9 @@ Deno.test("symlink targets are followed for files, directories, indexes, and lis
       `${f.root}/index-links/README.md`,
     );
     const h = await handler(f.root);
-    assertEquals(
+    assertMatch(
       await (await h(new Request("http://x/linked.txt"))).text(),
-      "linked",
+      /linked/,
     );
     const linkedRedirect = await h(new Request("http://x/linked-dir"));
     assertEquals(linkedRedirect.headers.get("location"), "/linked-dir/");
@@ -104,11 +135,11 @@ Deno.test("symlinks may target paths outside the logical root", async () => {
   try {
     await Deno.writeTextFile(`${outside}/outside.txt`, "outside");
     await Deno.symlink(`${outside}/outside.txt`, `${f.root}/outside.txt`);
-    assertEquals(
+    assertMatch(
       await (await handler(f.root))(new Request("http://x/outside.txt")).then((
         response,
       ) => response.text()),
-      "outside",
+      /outside/,
     );
   } finally {
     await Deno.remove(outside, { recursive: true });

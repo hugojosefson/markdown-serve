@@ -1,7 +1,9 @@
 import { codeLanguageForPath } from "./code-language.ts";
 import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
+import type { PageAction } from "./page.ts";
 import { renderCodeBlock } from "./render-code-markdown.ts";
+import { queryHref, setQuery } from "./query.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function renderText(
@@ -17,12 +19,20 @@ export async function renderText(
   );
   return htmlResponse(
     request,
-    await page(config, url.pathname, parts, false, content, rawHref(url)),
+    await page(config, url.pathname, parts, false, content, url, [
+      rawAction(url),
+    ]),
   );
 }
 
 export function rawHref(url: URL): string {
-  const parameters = new URLSearchParams(url.search);
-  parameters.delete("raw");
-  return `?${parameters.toString()}${parameters.size ? "&" : ""}raw`;
+  return queryHref(url.pathname, setQuery(url.search, "raw", null));
+}
+
+function rawAction(url: URL): PageAction {
+  return {
+    href: rawHref(url),
+    kind: "raw",
+    label: "Raw",
+  };
 }

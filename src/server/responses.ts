@@ -1,5 +1,6 @@
 import { contentType } from "@std/media-types";
 import { basename } from "@std/path";
+import { canonicalQuery } from "./query.ts";
 
 export function plain(text: string, status: number, method: string): Response {
   return new Response(method === "HEAD" ? null : text, { status });
@@ -12,9 +13,10 @@ export function redirect(
   method: string,
 ): Response {
   url.pathname = pathname;
+  const query = canonicalQuery(url.search);
   return new Response(method === "HEAD" ? null : "Redirecting", {
     status,
-    headers: { Location: `${url.pathname}${url.search}` },
+    headers: { Location: `${url.pathname}${query ? `?${query}` : ""}` },
   });
 }
 

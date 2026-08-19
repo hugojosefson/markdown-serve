@@ -34,7 +34,9 @@ export function filePath(root: string, parts: string[]): string {
 }
 
 export function canonicalPath(parts: string[], trailing = false): string {
-  return `/${parts.map(encodeURIComponent).join("/")}${trailing ? "/" : ""}`;
+  return `/${parts.map(encodeURIComponent).join("/")}${
+    trailing && parts.length ? "/" : ""
+  }`;
 }
 
 export function lexical(left: string, right: string): number {

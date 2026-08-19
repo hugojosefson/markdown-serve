@@ -1,13 +1,43 @@
 import { escapeHtml } from "./html.ts";
 import { canonicalPath } from "./paths.ts";
 
-export function breadcrumbs(parts: string[], directory: boolean): string {
+export function breadcrumbs(
+  rootLabel: string,
+  parts: string[],
+  directory: boolean,
+): string {
+  const root = breadcrumbRoot(rootLabel, parts.length > 0);
   const links = parts.map((part, index) => {
     const last = index === parts.length - 1;
     const href = canonicalPath(parts.slice(0, index + 1), !last || directory);
-    return `<a href="${href}">${escapeHtml(part)}</a>`;
+    return last
+      ? `<span aria-current="page">${escapeHtml(part)}${
+        directory ? "/" : ""
+      }</span>`
+      : `<a href="${href}">${escapeHtml(part)}</a>`;
   });
-  return `<nav aria-label="Breadcrumb"><a href="/">Home</a>${
-    links.length ? ` / ${links.join(" / ")}` : ""
+  const rootCrumb = parts.length
+    ? `<a href="/">${escapeHtml(root)}</a>`
+    : `<span aria-current="page">${escapeHtml(root)}</span>`;
+  return `<nav aria-label="Breadcrumb">${rootCrumb}${
+    links.map((link, index) =>
+      `<span class="breadcrumb-separator" aria-hidden="true">${
+        index || !root.endsWith("/") ? "/" : ""
+      }</span>${link}`
+    ).join("")
   }</nav>`;
+}
+
+export function breadcrumbPath(root: string, parts: string[]): string {
+  const cleanRoot = breadcrumbRoot(root, parts.length > 0);
+  if (!parts.length) {
+    return cleanRoot || "/";
+  }
+  return `${cleanRoot === "/" ? cleanRoot : `${cleanRoot}/`}${
+    parts.join("/")
+  }/`;
+}
+
+function breadcrumbRoot(root: string, hasParts: boolean): string {
+  return hasParts && root !== "/" ? root.replace(/\/+$/, "") : root;
 }

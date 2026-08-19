@@ -9,7 +9,9 @@ export async function navigationTree(
   active: string[],
 ): Promise<string> {
   const rootClass = active.length === 0 ? "tree-root active" : "tree-root";
-  return `<nav aria-label="Files"><span class="tree-heading">Files</span><a class="${rootClass}" href="/">Root</a>${await treeList(
+  return `<nav aria-label="Files"><a href="/" class="tree-heading">Files</a><a class="${rootClass}" href="/">${
+    escapeHtml(config.rootLabel)
+  }</a>${await treeList(
     config,
     [],
     active,

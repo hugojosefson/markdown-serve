@@ -22,11 +22,16 @@ export async function createRequestHandler(
   }
   const config: ServerConfig = {
     rootPath,
+    rootLabel: ensureEndsWithSlash(options.root),
     redirectStatus: options.redirectStatus ?? 302,
     onError: options.onError,
     reloadSource: options.reloadSource,
   };
   return async (request) => await respond(config, request);
+}
+
+export function ensureEndsWithSlash(rootDirArg: string): string {
+  return rootDirArg.endsWith("/") ? rootDirArg : `${rootDirArg}/`;
 }
 
 async function respond(

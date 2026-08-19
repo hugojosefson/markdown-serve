@@ -1,5 +1,6 @@
 import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
+import type { PageAction } from "./page.ts";
 import { renderCodeMarkdown } from "./render-code-markdown.ts";
 import { rawHref } from "./render-text.ts";
 import { rawTextFile } from "./responses.ts";
@@ -11,7 +12,7 @@ export async function renderMarkdown(
   pathname: string,
   file: string,
   parts: string[],
-  directory = false,
+  options: MarkdownOptions = {},
 ): Promise<Response> {
   if (new URL(request.url).searchParams.has("raw")) {
     return await rawTextFile(request, file);
@@ -26,9 +27,23 @@ export async function renderMarkdown(
       config,
       pathname,
       parts,
-      directory,
+      options.directory ?? false,
       content,
-      rawHref(new URL(request.url)),
+      new URL(request.url),
+      [rawAction(new URL(request.url)), ...(options.actions ?? [])],
     ),
   );
+}
+
+export type MarkdownOptions = {
+  actions?: PageAction[];
+  directory?: boolean;
+};
+
+function rawAction(url: URL): PageAction {
+  return {
+    href: rawHref(url),
+    kind: "raw",
+    label: "Raw",
+  };
 }

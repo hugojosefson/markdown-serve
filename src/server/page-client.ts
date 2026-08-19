@@ -1,15 +1,10 @@
 export const pageClient = `
-const browse = document.querySelector('.browse');
 const tree = document.querySelector('.tree');
-browse?.addEventListener('click', () => {
-  const open = tree.dataset.open !== 'true';
-  tree.dataset.open = String(open);
-  browse.setAttribute('aria-expanded', String(open));
-});
 const addEntries = (list, entries) => entries.forEach((entry) => {
   const item = document.createElement('li');
   const link = document.createElement('a');
   link.href = entry.href;
+  syncDisplayLinks([link]);
   link.textContent = entry.name + (entry.directory ? '/' : '');
   if (!entry.directory) { item.append(link); list.append(item); return; }
   const details = document.createElement('details');

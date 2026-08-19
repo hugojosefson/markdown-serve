@@ -1,9 +1,12 @@
 import { join } from "@std/path";
 import { directoryEntries } from "./fs.ts";
-import { escapeHtml } from "./html.ts";
+import { breadcrumbPath } from "./breadcrumb.ts";
+import { directoryIndex } from "./directory-index.ts";
 import { htmlResponse } from "./html-response.ts";
 import { indexName } from "./indexes.ts";
 import { page } from "./page.ts";
+import type { PageAction } from "./page.ts";
+import { queryHref, setQuery } from "./query.ts";
 import { renderMarkdown } from "./render-markdown.ts";
 import type { ServerConfig } from "./types.ts";
 
@@ -15,30 +18,63 @@ export async function renderDirectory(
   parts: string[],
 ): Promise<Response> {
   const index = await indexName(path);
-  if (index) {
+  if (index && url.searchParams.get("view") !== "files") {
     return await renderMarkdown(
       config,
       request,
       url.pathname,
       join(path, index),
       parts,
-      true,
+      { directory: true, actions: [filesAction(url)] },
     );
   }
-  const entries = await directoryEntries(path);
-  const items = entries.sort((left, right) =>
-    left.name.localeCompare(right.name)
-  ).map((entry) => {
-    const suffix = entry.directory ? "/" : "";
-    return `<li><a href="${
-      escapeHtml(encodeURIComponent(entry.name) + suffix)
-    }">${escapeHtml(entry.name + suffix)}</a></li>`;
-  }).join("");
-  const content = `<h1>Index of ${
-    escapeHtml(url.pathname)
-  }</h1><ul>${items}</ul>`;
+  const content = directoryIndex(
+    await directoryEntries(path),
+    url,
+    breadcrumbPath(config.rootLabel, parts),
+  );
   return htmlResponse(
     request,
-    await page(config, url.pathname, parts, true, content),
+    await page(
+      config,
+      url.pathname,
+      parts,
+      true,
+      content,
+      url,
+      index ? [indexAction(url, index)] : [],
+    ),
   );
+}
+
+function filesAction(url: URL): PageAction {
+  return {
+    href: queryHref(
+      url.pathname,
+      setQuery(setQuery(url.search, "raw", undefined), "view", "files"),
+    ),
+    kind: "files",
+    label: "Files",
+    title: "Browse directory files",
+  };
+}
+
+function indexAction(url: URL, index: string): PageAction {
+  return {
+    href: queryHref(
+      url.pathname,
+      setQuery(
+        setQuery(
+          setQuery(url.search, "view", undefined),
+          "order",
+          undefined,
+        ),
+        "raw",
+        undefined,
+      ),
+    ),
+    kind: "index",
+    label: index,
+    title: `Return to ${index}`,
+  };
 }

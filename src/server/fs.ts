@@ -20,12 +20,17 @@ export async function readDirectory(path: string): Promise<Deno.DirEntry[]> {
 
 export async function directoryEntries(
   path: string,
-): Promise<Array<{ name: string; directory: boolean }>> {
+): Promise<DirectoryEntry[]> {
   const entries = await readDirectory(path);
-  const resolved = await Promise.all(entries.map(async (entry) => ({
-    name: entry.name,
-    directory: (await statOrUndefined(join(path, entry.name)))?.isDirectory ??
-      false,
-  })));
+  const resolved = await Promise.all(entries.map(async (entry) => {
+    const info = await statOrUndefined(join(path, entry.name));
+    return { name: entry.name, directory: info?.isDirectory ?? false, info };
+  }));
   return resolved.sort((left, right) => lexical(left.name, right.name));
 }
+
+export type DirectoryEntry = {
+  name: string;
+  directory: boolean;
+  info: Deno.FileInfo | undefined;
+};

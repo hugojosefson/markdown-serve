@@ -288,6 +288,10 @@ Deno.test("indexed directories can switch between their index and file listing",
       index,
       /<a class="raw-link"[^>]*>Raw<\/a><a class="page-action" href="\?a=1&amp;a=2&amp;order=size&amp;theme=dark&amp;view=files&amp;width=wide" title="Browse directory files">Files<\/a>/,
     );
+    assertMatch(
+      index,
+      /<a href="\/docs\/">docs<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">README\.md<\/span>/,
+    );
     assert(!index.includes('<table class="directory-table">'));
 
     const listing = await (await h(
@@ -317,6 +321,8 @@ Deno.test("indexed directories can switch between their index and file listing",
       mixed,
       /title="Return to rEaDmE\.md">rEaDmE\.md<\/a>/,
     );
+    const mixedIndex = await (await h(new Request("http://x/mixed/"))).text();
+    assertMatch(mixedIndex, /aria-current="page">rEaDmE\.md<\/span>/);
 
     const noIndex = await (await h(
       new Request("http://x/empty/?view=files&order=size"),

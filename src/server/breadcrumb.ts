@@ -5,18 +5,20 @@ export function breadcrumbs(
   rootLabel: string,
   parts: string[],
   directory: boolean,
+  indexName?: string,
 ): string {
-  const root = breadcrumbRoot(rootLabel, parts.length > 0);
-  const links = parts.map((part, index) => {
-    const last = index === parts.length - 1;
-    const href = canonicalPath(parts.slice(0, index + 1), !last || directory);
+  const crumbs = indexName ? [...parts, indexName] : parts;
+  const root = breadcrumbRoot(rootLabel, crumbs.length > 0);
+  const links = crumbs.map((part, index) => {
+    const last = index === crumbs.length - 1;
+    const href = canonicalPath(crumbs.slice(0, index + 1), !last || directory);
     return last
       ? `<span aria-current="page">${escapeHtml(part)}${
-        directory ? "/" : ""
+        directory && !indexName ? "/" : ""
       }</span>`
       : `<a href="${href}">${escapeHtml(part)}</a>`;
   });
-  const rootCrumb = parts.length
+  const rootCrumb = crumbs.length
     ? `<a href="/">${escapeHtml(root)}</a>`
     : `<span aria-current="page">${escapeHtml(root)}</span>`;
   return `<nav aria-label="Breadcrumb">${rootCrumb}${

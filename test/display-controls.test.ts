@@ -88,15 +88,20 @@ Deno.test("initial display state applies valid query values", () => {
   });
 });
 
-Deno.test("client preserves display option destinations and keyboard follows links", () => {
+Deno.test("client carries all current query state across internal navigation", () => {
   const listeners = new Map<string, (event: { key?: string }) => void>();
   const location = {
-    href: "http://x/guide?theme=dark&width=wide",
+    href:
+      "http://x/guide?order=size&unknown=one&unknown=two&flag&theme=dark&width=wide",
     origin: "http://x",
-    search: "?theme=dark&width=wide",
+    search: "?order=size&unknown=one&unknown=two&flag&theme=dark&width=wide",
   };
-  let ordinaryHref = "docs?z=2&raw&a=1";
+  let ordinaryHref = "docs";
+  let overrideHref = "/files?order=name&order=modified&unknown=target";
+  let absoluteHref = "http://x/root?view=files#section";
   let optionHref = "?theme=dark";
+  let externalHref = "https://example.test/docs?x=1";
+  let hashHref = "#browse";
   let clicked = 0;
   const ordinary = {
     getAttribute: () => ordinaryHref,
@@ -108,12 +113,22 @@ Deno.test("client preserves display option destinations and keyboard follows lin
     setAttribute: (_name: string, value: string) => optionHref = value,
     matches: () => true,
   };
+  const link = (get: () => string, set: (value: string) => void) => ({
+    getAttribute: () => get(),
+    setAttribute: (_name: string, value: string) => set(value),
+    matches: () => false,
+  });
+  const override = link(() => overrideHref, (value) => overrideHref = value);
+  const absolute = link(() => absoluteHref, (value) => absoluteHref = value);
+  const external = link(() => externalHref, (value) => externalHref = value);
+  const hash = link(() => hashHref, (value) => hashHref = value);
   const width = { querySelector: () => ({ click: () => clicked++ }) };
   const document = {
     documentElement: { dataset: {} as Record<string, string> },
     querySelector: (selector: string) =>
       selector.includes("display-width") ? width : null,
-    querySelectorAll: () => [ordinary, option],
+    querySelectorAll:
+      () => [ordinary, override, absolute, option, external, hash],
   };
   new Function(
     "location",
@@ -126,22 +141,36 @@ Deno.test("client preserves display option destinations and keyboard follows lin
     (name: string, listener: (event: { key?: string }) => void) =>
       listeners.set(name, listener),
   );
-  assertEquals(ordinaryHref, "docs?a=1&raw&theme=dark&width=wide&z=2");
+  assertEquals(
+    ordinaryHref,
+    "docs?flag&order=size&theme=dark&unknown=one&unknown=two&width=wide",
+  );
+  assertEquals(
+    overrideHref,
+    "/files?flag&order=modified&order=name&theme=dark&unknown=target&width=wide",
+  );
+  assertEquals(
+    absoluteHref,
+    "http://x/root?flag&order=size&theme=dark&unknown=one&unknown=two&view=files&width=wide#section",
+  );
   assertEquals(optionHref, "?theme=dark");
+  assertEquals(externalHref, "https://example.test/docs?x=1");
+  assertEquals(hashHref, "#browse");
   listeners.get("keydown")?.({ key: "w" });
   assertEquals(clicked, 1);
-  location.search = "";
+  location.search = "?order=size-desc&new&unknown=changed";
   listeners.get("popstate")?.({});
   assertEquals(document.documentElement.dataset, {
     colorMode: "auto",
     width: "narrow",
   });
-  assertEquals(ordinaryHref, "docs?a=1&raw&z=2");
-  location.search = "?theme=auto&width=narrow";
-  listeners.get("popstate")?.({});
-  assertEquals(ordinaryHref, "docs?a=1&raw&z=2");
+  assertEquals(ordinaryHref, "docs?new&order=size-desc&unknown=changed");
+  assertEquals(
+    overrideHref,
+    "/files?new&order=modified&order=name&unknown=target",
+  );
   assert(!displayControlsClient.includes("history.replaceState"));
-  assert(!displayControlsClient.includes("displayControls"));
+  assert(!displayControlsClient.includes("syncDisplayLinks"));
   assertMatch(displayControlsClient, /addEventListener\('popstate'/);
 });
 

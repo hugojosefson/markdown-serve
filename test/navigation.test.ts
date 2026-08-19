@@ -71,7 +71,10 @@ Deno.test("generated pages include responsive navigation and active branches", a
     const docsBody = await (await h(new Request("http://x/docs/"))).text();
     assertMatch(docsBody, /data-path="docs" data-loaded="true" open/);
     assertMatch(docsBody, /data-path="docs\/nested"/);
-    assertMatch(docsBody, /aria-current="page">docs\/<\/span>/);
+    assertMatch(
+      docsBody,
+      /<a href="\/docs\/">docs<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">README\.md<\/span>/,
+    );
 
     const emptyBody = await (await h(new Request("http://x/empty/"))).text();
     assertMatch(
@@ -94,6 +97,10 @@ Deno.test("breadcrumbs copy as exact configured paths", () => {
   );
   assertEquals(text(breadcrumbs("/", ["coverage"], true)), "/coverage/");
   assertEquals(text(breadcrumbs("./", [], true)), "./");
+  assertEquals(
+    text(breadcrumbs("./", ["docs"], true, "README.md")),
+    "./docs/README.md",
+  );
   assertEquals(breadcrumbPath("docs///", ["nested"]), "docs/nested/");
 });
 
@@ -110,7 +117,9 @@ Deno.test("root labels preserve the configured argument and escape HTML", async 
     assert(body.includes(`class="tree-root active" href="/">${label}</a>`));
     assert(
       body.includes(
-        `aria-label="Breadcrumb"><span aria-current="page">${label}</span>`,
+        `aria-label="Breadcrumb"><a href="/">${
+          label.slice(0, -1)
+        }</a><span class="breadcrumb-separator" aria-hidden="true">/</span><span aria-current="page">README.md</span>`,
       ),
     );
     assert(!body.includes(`>${root}/</a>`));

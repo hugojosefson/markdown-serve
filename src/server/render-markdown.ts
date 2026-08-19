@@ -31,6 +31,7 @@ export async function renderMarkdown(
       content,
       new URL(request.url),
       [rawAction(new URL(request.url)), ...(options.actions ?? [])],
+      options.indexName,
     ),
   );
 }
@@ -38,6 +39,7 @@ export async function renderMarkdown(
 export type MarkdownOptions = {
   actions?: PageAction[];
   directory?: boolean;
+  indexName?: string;
 };
 
 function rawAction(url: URL): PageAction {

@@ -6,49 +6,35 @@ document.documentElement.dataset.colorMode = displayTheme;
 document.documentElement.dataset.width = displayWidth;`;
 
 export const displayControlsClient = `
-const displayHrefs = new WeakMap();
-const validDisplay = (value, values) => values.includes(value) ? value : undefined;
-const displayParams = () => {
-  const state = new URLSearchParams(location.search);
-  const theme = validDisplay(state.get('theme'), ['auto', 'light', 'dark']);
-  const width = validDisplay(state.get('width'), ['narrow', 'wide']);
-  return {
-    theme: theme === 'auto' ? undefined : theme,
-    width: width === 'narrow' ? undefined : width,
-  };
-};
-const syncDisplayLinks = (links = document.querySelectorAll('a')) => {
-  const { theme, width } = displayParams();
+const navigationHrefs = new WeakMap();
+const queryPairs = (search) => search.replace(/^\\?/, '').split('&').filter(Boolean).map((part, index) => {
+  const equals = part.indexOf('=');
+  const decode = (value) => { try { return decodeURIComponent(value.replaceAll('+', ' ')); } catch { return value; } };
+  return { key: decode(equals < 0 ? part : part.slice(0, equals)), value: equals < 0 ? undefined : decode(part.slice(equals + 1)), index };
+});
+const syncNavigationLinks = (links = document.querySelectorAll('a')) => {
   links.forEach((link) => {
-    const href = displayHrefs.get(link) ?? link.getAttribute('href');
+    const href = navigationHrefs.get(link) ?? link.getAttribute('href');
     if (href === null || link.matches('.display-link') || href.startsWith('#')) { return; }
-    displayHrefs.set(link, href);
-    const url = new URL(href, location.href);
+    let url;
+    try { url = new URL(href, location.href); } catch { return; }
     if (url.origin !== location.origin) { return; }
-    const pairs = url.search.slice(1).split('&').filter(Boolean).map((part, index) => {
-      const equals = part.indexOf('=');
-      const decode = (value) => { try { return decodeURIComponent(value.replaceAll('+', ' ')); } catch { return value; } };
-      return { key: decode(equals < 0 ? part : part.slice(0, equals)), value: equals < 0 ? undefined : decode(part.slice(equals + 1)), index };
-    });
-    const set = (key, value) => {
-      const index = pairs.length;
-      for (let at = pairs.length - 1; at >= 0; at--) { if (pairs[at].key === key) { pairs.splice(at, 1); } }
-      if (value) { pairs.push({ key, value, index }); }
-    };
-    set('theme', theme);
-    set('width', width);
+    navigationHrefs.set(link, href);
+    const target = queryPairs(url.search);
+    const targetKeys = new Set(target.map(({ key }) => key));
+    const pairs = queryPairs(location.search).filter(({ key }) => !targetKeys.has(key)).concat(target);
     const lexical = (left, right) => left < right ? -1 : left > right ? 1 : 0;
     pairs.sort((a, b) => lexical(a.key, b.key) || lexical(a.value ?? '', b.value ?? '') || a.index - b.index);
-    url.search = pairs.map(({ key, value }) => encodeURIComponent(key) + (value === undefined ? '' : '=' + encodeURIComponent(value))).join('&');
-    const query = url.search + url.hash;
+    const query = pairs.length ? '?' + pairs.map(({ key, value }) => encodeURIComponent(key) + (value === undefined ? '' : '=' + encodeURIComponent(value))).join('&') : '';
+    const hash = href.includes('#') ? '#' + href.split('#').slice(1).join('#') : '';
     const path = href.split(/[?#]/, 1)[0];
-    link.setAttribute('href', path + query);
+    link.setAttribute('href', path + query + hash);
   });
 };
 const setDisplay = (theme, width) => {
   document.documentElement.dataset.colorMode = theme;
   document.documentElement.dataset.width = width;
-  syncDisplayLinks();
+  syncNavigationLinks();
 };
 const readDisplay = () => {
   const state = new URLSearchParams(location.search);

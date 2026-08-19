@@ -26,6 +26,7 @@ export async function page(
   content: string,
   url: URL,
   actions: PageAction[] = [],
+  indexName?: string,
 ): Promise<string> {
   const reload = config.reloadSource
     ? `<script>new EventSource("/__markdown_server__/events").addEventListener("reload",()=>location.reload())</script>`
@@ -36,7 +37,7 @@ export async function page(
     config,
     parts,
   )}</aside><main class="content markdown-body"><header class="content-header">${
-    breadcrumbs(config.rootLabel, parts, directory)
+    breadcrumbs(config.rootLabel, parts, directory, indexName)
   }${actions.map(renderPageAction).join("")}${
     displayLinks(url)
   }</header>${content}</main></div><script>${displayControlsClient}${pageClient}${codeToolbarClient}</script>${reload}</body></html>`;

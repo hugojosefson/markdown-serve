@@ -77,6 +77,13 @@ Deno.test("browser opener command and usable URL are platform-safe", () => {
     usableUrl({ transport: "tcp", hostname: "::1", port: 8000 }),
     "http://[::1]:8000/",
   );
+  assertEquals(
+    usableUrl(
+      { transport: "tcp", hostname: "127.0.0.1", port: 8000 },
+      "localhost",
+    ),
+    "http://localhost:8000/",
+  );
 });
 
 Deno.test("browser opener failure is nonfatal", async () => {

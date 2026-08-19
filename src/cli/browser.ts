@@ -2,10 +2,14 @@ import type { CommandRunner } from "./types.ts";
 
 export type Warn = (message: string) => void;
 
-export function usableUrl(address: Deno.NetAddr): string {
-  const host = address.hostname === "0.0.0.0" || address.hostname === "::"
+export function usableUrl(
+  address: Deno.NetAddr,
+  configuredHost?: string,
+): string {
+  const selectedHost = configuredHost ?? address.hostname;
+  const host = selectedHost === "0.0.0.0" || selectedHost === "::"
     ? "localhost"
-    : address.hostname;
+    : selectedHost;
   return `http://${host.includes(":") ? `[${host}]` : host}:${address.port}/`;
 }
 

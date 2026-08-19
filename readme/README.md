@@ -34,9 +34,9 @@ fails. Options are `--host`, `--port`, `--redirect=301|302` (default `302`),
 
 Installation grants `--allow-read=.` so the server can read the current
 directory tree without granting read access everywhere. It also needs
-`--allow-net`, `--allow-env=CI,FORCE_COLOR,TERM`, and
-`--allow-run=xdg-open,open,cmd` for the platform browser opener. Broader read
-grants can expose more files.
+`--allow-net`, `--allow-env=CI,FORCE_COLOR,TERM`, and one platform-specific
+browser opener (`xdg-open`, `open`, or `cmd`). Broader read grants can expose
+more files.
 
 ## URLs and pages
 

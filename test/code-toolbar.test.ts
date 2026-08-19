@@ -45,5 +45,5 @@ Deno.test("fence labels cannot inject markup", () => {
     "http://x/",
   );
   assertNotMatch(html, /<img|onerror|alert\(1\)/);
-  assertMatch(html, />safe<\/code>/);
+  assertMatch(html, /<pre>safe<\/pre>/);
 });

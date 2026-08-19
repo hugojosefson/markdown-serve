@@ -1,9 +1,12 @@
 import { CSS } from "@deno/gfm";
 import { codeToolbarCss } from "./code-toolbar-css.ts";
+import { displayControlsCss } from "./display-controls-css.ts";
 
 export const pageCss = `${CSS}
 :root { color-scheme: light dark; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; }
 @media (prefers-color-scheme: dark) { :root { --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; } }
+html[data-color-mode="light"] { color-scheme: light; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; }
+html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; }
 .layout { display: grid; grid-template-columns: 17rem minmax(0, 1fr); gap: 24px; margin: 0 auto; max-width: 1280px; padding: 16px; }
 .tree { align-self: start; background: var(--tree-bg); border: 1px solid var(--tree-border); border-radius: 6px; color: var(--tree-text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.45; max-height: calc(100vh - 32px); overflow: auto; padding: 8px; position: sticky; top: 16px; }
 .tree nav > ul, .tree ul { list-style: none; margin: 4px 0; padding: 0; }
@@ -23,9 +26,16 @@ export const pageCss = `${CSS}
 .tree-heading { color: var(--tree-muted); display: block; font-size: 12px; font-weight: 600; padding: 5px 6px; text-transform: uppercase; }
 .tree-root { font-weight: 600; }
 .content { min-width: 0; padding: 8px 16px 32px; }
+.raw-link { border: 1px solid var(--code-border); border-radius: 6px; color: var(--code-text); float: right; font: 500 12px/20px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0 0 8px 12px; padding: 0 7px; text-decoration: none; }
+.raw-link:hover { background: var(--code-hover); }
+.raw-link:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 1px; }
 .browse { display: none; }
 ${codeToolbarCss}
+${displayControlsCss}
 @media (max-width: 700px) {
+  .page-toolbar { align-items: stretch; flex-direction: column; gap: 8px; }
+  .page-toolbar .browse { margin: 0; width: 100%; }
+  .display-controls { align-self: flex-end; }
   .layout { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
   .content { order: 1; padding: 0; }
   .tree { display: none; max-height: none; order: 2; position: static; width: auto; }

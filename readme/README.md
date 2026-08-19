@@ -48,9 +48,10 @@ URLs redirect to their clean URL. An ordinary Markdown file wins a conflict at
 Generated Markdown pages, directory-index pages, and no-index listings include a
 desktop sticky lazy navigation tree, a mobile Browse control, and breadcrumbs.
 Live reload is included on generated pages when enabled, not on static assets.
-Dotfiles are listed and served, and symlinks are followed; Deno's read
-permissions remain the boundary, including for symlink targets. The reserved
-`/__markdown_server__/` namespace is used internally.
+Fenced code blocks show their language and include a copy button. Dotfiles are
+listed and served, and symlinks are followed; Deno's read permissions remain the
+boundary, including for symlink targets. The reserved `/__markdown_server__/`
+namespace is used internally.
 
 The browser opens by default. If opening it fails, the server warns and keeps
 running. Use `--redirect=302` for temporary redirects while testing and

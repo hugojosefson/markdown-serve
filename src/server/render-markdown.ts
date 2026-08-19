@@ -1,6 +1,6 @@
-import { render } from "@deno/gfm";
 import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
+import { renderCodeMarkdown } from "./render-code-markdown.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function renderMarkdown(
@@ -14,7 +14,7 @@ export async function renderMarkdown(
   const base = new URL(request.url);
   base.pathname = pathname;
   base.search = "";
-  const content = render(await Deno.readTextFile(file), { baseUrl: base.href });
+  const content = renderCodeMarkdown(await Deno.readTextFile(file), base.href);
   return htmlResponse(
     request,
     await page(config, pathname, parts, directory, content),

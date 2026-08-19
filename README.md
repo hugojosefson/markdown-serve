@@ -16,7 +16,12 @@ This is currently a CLI-first package; it does not promise a public library API.
 ## Installation
 
 ```sh
-deno install --global --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM --allow-run=xdg-open,open,cmd jsr:@hugojosefson/markdown-server
+case "$(uname -s)" in
+  Darwin) browser_opener=open ;;
+  MINGW* | MSYS* | CYGWIN*) browser_opener=cmd ;;
+  *) browser_opener=xdg-open ;;
+esac
+deno install --global --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM "--allow-run=${browser_opener}" jsr:@hugojosefson/markdown-server
 ```
 
 ## Example usage
@@ -42,9 +47,9 @@ fails. Options are `--host`, `--port`, `--redirect=301|302` (default `302`),
 
 Installation grants `--allow-read=.` so the server can read the current
 directory tree without granting read access everywhere. It also needs
-`--allow-net`, `--allow-env=CI,FORCE_COLOR,TERM`, and
-`--allow-run=xdg-open,open,cmd` for the platform browser opener. Broader read
-grants can expose more files.
+`--allow-net`, `--allow-env=CI,FORCE_COLOR,TERM`, and one platform-specific
+browser opener (`xdg-open`, `open`, or `cmd`). Broader read grants can expose
+more files.
 
 ## URLs and pages
 

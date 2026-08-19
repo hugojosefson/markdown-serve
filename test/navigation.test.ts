@@ -16,6 +16,12 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(guideBody, /markdown-body/);
     assertMatch(guideBody, /data-color-mode="auto"/);
     assertMatch(guideBody, /color-scheme: light dark/);
+    assertMatch(guideBody, /prefers-color-scheme: dark/);
+    assertMatch(guideBody, /font-family: -apple-system, BlinkMacSystemFont/);
+    assertMatch(
+      guideBody,
+      /\.tree \.active \{ background: var\(--tree-active\); color: #fff/,
+    );
     assertMatch(guideBody, /tree\?path=/);
     assertMatch(guideBody, /tree\?\.addEventListener\('toggle'/);
     assertMatch(guideBody, /}, true\);/);

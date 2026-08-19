@@ -24,6 +24,12 @@
     "@std/assert": "jsr:@std/assert@^1.0.19",
     "@std/path": "jsr:@std/path@^1.1.6",
     "@std/media-types": "jsr:@std/media-types@^1.1.0",
-    "@deno/gfm": "jsr:@deno/gfm@^0.12.0"
+    "@deno/gfm": "jsr:@deno/gfm@^0.12.0",
+    "prismjs/components/prism-bash.js": "npm:prismjs@^1.30.0/components/prism-bash.js",
+    "prismjs/components/prism-go.js": "npm:prismjs@^1.30.0/components/prism-go.js",
+    "prismjs/components/prism-json.js": "npm:prismjs@^1.30.0/components/prism-json.js",
+    "prismjs/components/prism-python.js": "npm:prismjs@^1.30.0/components/prism-python.js",
+    "prismjs/components/prism-rust.js": "npm:prismjs@^1.30.0/components/prism-rust.js",
+    "prismjs/components/prism-typescript.js": "npm:prismjs@^1.30.0/components/prism-typescript.js"
   }
 }

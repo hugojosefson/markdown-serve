@@ -1,4 +1,5 @@
 import { breadcrumbs } from "./breadcrumb.ts";
+import { codeToolbarClient } from "./code-toolbar-client.ts";
 import { escapeHtml } from "./html.ts";
 import { navigationTree } from "./navigation-tree.ts";
 import { pageClient } from "./page-client.ts";
@@ -22,5 +23,5 @@ export async function page(
     parts,
   )}</aside><main class="content markdown-body">${
     breadcrumbs(parts, directory)
-  }${content}</main></div><script>${pageClient}</script>${reload}</body></html>`;
+  }${content}</main></div><script>${pageClient}${codeToolbarClient}</script>${reload}</body></html>`;
 }

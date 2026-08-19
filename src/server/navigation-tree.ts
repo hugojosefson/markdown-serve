@@ -8,7 +8,8 @@ export async function navigationTree(
   config: ServerConfig,
   active: string[],
 ): Promise<string> {
-  return `<nav aria-label="Browse"><a href="/">Root</a>${await treeList(
+  const rootClass = active.length === 0 ? "tree-root active" : "tree-root";
+  return `<nav aria-label="Files"><span class="tree-heading">Files</span><a class="${rootClass}" href="/">Root</a>${await treeList(
     config,
     [],
     active,

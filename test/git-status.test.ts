@@ -1,5 +1,10 @@
 import { assertEquals } from "@std/assert";
-import { parseGitStatus } from "../src/server/git/status.ts";
+import {
+  gitDirtyCount,
+  gitDisplay,
+  gitStatusAt,
+  parseGitStatus,
+} from "../src/server/git/status.ts";
 
 Deno.test("parses branches, detached HEAD, and ahead/behind counts", () => {
   const branch = parseGitStatus("## main...origin/main [ahead 2, behind 3]\0");
@@ -14,6 +19,15 @@ Deno.test("parses branches, detached HEAD, and ahead/behind counts", () => {
     "HEAD (detached at 1234567)",
     true,
   ]);
+});
+
+Deno.test("looks up display status and excludes ignored files from dirty count", () => {
+  const status = parseGitStatus(
+    "## main\0 M docs/file.md\0?? docs/new.md\0!! cache/\0",
+  );
+  assertEquals(gitDisplay(gitStatusAt(status, "docs", true)), "M");
+  assertEquals(gitDisplay(gitStatusAt(status, "docs/new.md")), "??");
+  assertEquals(gitDirtyCount(status), 2);
 });
 
 Deno.test("normalizes collapsed directories and chooses dominant status", () => {

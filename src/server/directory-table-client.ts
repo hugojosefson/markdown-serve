@@ -1,14 +1,15 @@
 export const directoryTableClient = `
 const directoryColumnCandidates = [
   '',
-  'user',
-  'user permissions',
-  'user permissions modified',
-  'user permissions modified size',
+  'git',
+  'git user',
+  'git user permissions',
+  'git user permissions modified',
+  'git user permissions modified size',
 ];
 const compactDirectoryColumnCandidates = [
-  'user permissions modified',
-  'user permissions modified size',
+  'git user permissions modified',
+  'git user permissions modified size',
 ];
 const directoryNavigation = document.querySelector('.tree');
 const fitDirectoryColumns = (container) => {

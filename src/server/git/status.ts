@@ -34,6 +34,31 @@ export type GitStatus = {
   byPath: ReadonlyMap<string, GitFileStatus>;
 };
 
+export function gitStatusAt(
+  status: GitStatus | undefined,
+  path: string,
+  directory = false,
+): GitFileStatus | GitDirectoryStatus | undefined {
+  if (!status) return undefined;
+  return directory
+    ? status.byPath.get(path) ?? status.directories.get(path)
+    : status.byPath.get(path);
+}
+
+export function gitDisplay(
+  status: GitFileStatus | GitDirectoryStatus | undefined,
+): string {
+  if (!status) return "";
+  const file = "status" in status ? status.status : status;
+  return file.index === "?" && file.worktree === "?"
+    ? "??"
+    : `${file.index}${file.worktree}`.trim() || status.kind[0].toUpperCase();
+}
+
+export function gitDirtyCount(status: GitStatus): number {
+  return status.files.filter((file) => file.kind !== "ignored").length;
+}
+
 export function parseGitStatus(
   output: string,
   servedRootPrefix = "",

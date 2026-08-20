@@ -3,10 +3,10 @@ import { codeToolbarCss } from "./code-toolbar-css.ts";
 import { displayControlsCss } from "./display-controls-css.ts";
 
 export const pageCss = `${CSS}
-:root { color-scheme: light dark; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; }
-@media (prefers-color-scheme: dark) { :root { --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; } }
+:root { color-scheme: light dark; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; --kind-directory: #8250df; --kind-symlink: #0969da; --kind-executable: #1a7f37; --kind-archive: #bf8700; --kind-image: #cf222e; --kind-media: #0550ae; --kind-file: var(--code-text); --git-conflict: #cf222e; --git-renamed: #8250df; --git-deleted: #cf222e; --git-modified: #bf8700; --git-added: #1a7f37; --git-untracked: #0969da; --git-ignored: var(--code-muted); }
+@media (prefers-color-scheme: dark) { :root { --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; --kind-directory: #d2a8ff; --kind-symlink: #58a6ff; --kind-executable: #7ee787; --kind-archive: #e3b341; --kind-image: #ff7b72; --kind-media: #79c0ff; --kind-file: var(--code-text); --git-conflict: #ff7b72; --git-renamed: #d2a8ff; --git-deleted: #ff7b72; --git-modified: #e3b341; --git-added: #7ee787; --git-untracked: #58a6ff; --git-ignored: var(--code-muted); } }
 html[data-color-mode="light"] { color-scheme: light; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; }
-html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; }
+html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; --kind-directory: #d2a8ff; --kind-symlink: #58a6ff; --kind-executable: #7ee787; --kind-archive: #e3b341; --kind-image: #ff7b72; --kind-media: #79c0ff; --kind-file: var(--code-text); --git-conflict: #ff7b72; --git-renamed: #d2a8ff; --git-deleted: #ff7b72; --git-modified: #e3b341; --git-added: #7ee787; --git-untracked: #58a6ff; --git-ignored: var(--code-muted); }
 .layout { display: grid; grid-template-columns: 17rem minmax(0, 1fr); gap: 24px; margin: 0 auto; max-width: 1280px; padding: 16px; }
 .tree { align-self: start; background: var(--tree-bg); border: 1px solid var(--tree-border); border-radius: 6px; color: var(--tree-text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.45; max-height: calc(100vh - 32px); overflow: auto; padding: 8px; position: sticky; top: 16px; }
 .tree nav > ul, .tree ul { list-style: none; margin: 4px 0; padding: 0; }
@@ -18,6 +18,18 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .tree a:hover, .tree summary:hover { background: var(--tree-hover); }
 .tree a:focus-visible, .tree summary:focus-visible { outline: 2px solid var(--focus-color); outline-offset: -2px; }
 .tree .active { background: var(--tree-active); color: #fff; font-weight: 600; }
+.tree a[data-kind], .directory-table a[data-kind] { color: var(--kind-file); }
+.tree a[data-kind="directory"], .directory-table a[data-kind="directory"] { color: var(--kind-directory); }
+.tree a[data-kind="symlink"], .directory-table a[data-kind="symlink"] { color: var(--kind-symlink); }
+.tree a[data-kind="executable"], .directory-table a[data-kind="executable"] { color: var(--kind-executable); }
+.tree a[data-kind="archive"], .directory-table a[data-kind="archive"] { color: var(--kind-archive); }
+.tree a[data-kind="image"], .directory-table a[data-kind="image"] { color: var(--kind-image); }
+.tree a[data-kind="media"], .directory-table a[data-kind="media"] { color: var(--kind-media); }
+.tree .active[data-kind] { color: #fff; }
+.tree a[data-git-ignored="true"], .directory-table a[data-git-ignored="true"] { opacity: .65; }
+.git-marker, .directory-git span { color: var(--git-modified); font-size: .9em; margin-left: 4px; }
+[data-git-kind="conflict"] { color: var(--git-conflict); } [data-git-kind="renamed"] { color: var(--git-renamed); } [data-git-kind="deleted"] { color: var(--git-deleted); } [data-git-kind="modified"] { color: var(--git-modified); } [data-git-kind="added"] { color: var(--git-added); } [data-git-kind="untracked"] { color: var(--git-untracked); } [data-git-kind="ignored"] { color: var(--git-ignored); opacity: .65; }
+.tree-repo-context { color: var(--tree-muted); font-size: 11px; margin-left: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.tree-repo-context b { color: var(--git-modified); }.repo-context { display: none; }
  .tree summary, .tree .tree-root-row, .tree .tree-entry-row { align-items: center; border-radius: 4px; display: flex; min-width: 0; position: relative; }
 .tree summary { cursor: pointer; list-style: none; }
 .tree summary::-webkit-details-marker { display: none; }
@@ -70,10 +82,10 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .directory-table tbody tr:hover { background: var(--code-hover); }
 .directory-table tbody tr:last-child td { border-bottom: 0; }
 .directory-table .directory-size, .directory-table .directory-user { font-variant-numeric: tabular-nums; text-align: right; }
-.directory-table .directory-permissions, .directory-table .directory-size, .directory-table .directory-user, .directory-table .directory-modified { white-space: nowrap; width: 1%; }
+.directory-table .directory-git, .directory-table .directory-permissions, .directory-table .directory-size, .directory-table .directory-user, .directory-table .directory-modified { white-space: nowrap; width: 1%; }
 .directory-table .directory-name { white-space: nowrap; width: 100%; }
 .directory-table .directory-modified { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.directory-table[data-hidden-columns~="permissions"] .directory-permissions, .directory-table[data-hidden-columns~="size"] .directory-size, .directory-table[data-hidden-columns~="user"] .directory-user, .directory-table[data-hidden-columns~="modified"] .directory-modified { display: none; }
+.directory-table[data-hidden-columns~="git"] .directory-git, .directory-table[data-hidden-columns~="permissions"] .directory-permissions, .directory-table[data-hidden-columns~="size"] .directory-size, .directory-table[data-hidden-columns~="user"] .directory-user, .directory-table[data-hidden-columns~="modified"] .directory-modified { display: none; }
 .directory-table .timestamp-separator, .file-metadata-details .timestamp-separator { color: var(--code-muted); }
 .directory-table .timestamp-t, .file-metadata-details .timestamp-t { display: inline-block; margin: 0 .25ch; }
 .directory-table .timestamp-t, .directory-table .timestamp-zone, .file-metadata-details .timestamp-t, .file-metadata-details .timestamp-zone { opacity: .2; }
@@ -86,7 +98,8 @@ ${displayControlsCss}
 @media (max-width: 560px) {
   .layout { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
   .content { order: 1; padding: 0; }
-  .tree { display: none; max-height: none; order: 2; position: static; width: auto; }
+   .tree { display: none; max-height: none; order: 2; position: static; width: auto; }
+   .repo-context { color: var(--code-muted); display: block; flex: 1 1 100%; font: 12px/1.4 ui-monospace, monospace; }
   .content-header nav { flex: 1 1 100%; }
   .markdown-body .file-metadata-details dl { padding: 12px; }
 }`;

@@ -53,7 +53,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(guideBody, /data-path="docs"/);
     assertMatch(
       guideBody,
-      /data-path="docs"><summary><a class="tree-folder-link" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"/,
+      /data-path="docs"><summary><a class="tree-folder-link" data-kind="directory" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"/,
     );
     assertMatch(
       pageCss,
@@ -115,7 +115,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(emptyBody, /\.dot/);
     assertMatch(
       emptyBody,
-      /data-path="empty"[^>]*><summary><a class="(?:active )?tree-folder-link" href="\/empty\/" data-query-remove="dir">empty\/<\/a><a class="tree-files-link" href="\/empty\/"/,
+      /data-path="empty"[^>]*><summary><a class="(?:active )?tree-folder-link" data-kind="directory" href="\/empty\/" data-query-remove="dir">empty\/<\/a><a class="tree-files-link" href="\/empty\/"/,
     );
   } finally {
     await f.cleanup();
@@ -227,11 +227,11 @@ Deno.test("directory listings activate only their current tree directory", async
     ).then((response) => response.text());
     assertMatch(
       body,
-      /data-path="docs" data-loaded="true" open><summary><a class="tree-folder-link" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"/,
+      /data-path="docs" data-loaded="true" open><summary><a class="tree-folder-link" data-kind="directory" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"/,
     );
     assertMatch(
       body,
-      /data-path="docs\/nested" data-loaded="true" open><summary><a class="active tree-folder-link" href="\/docs\/nested\/" data-query-remove="dir">nested\/<\/a><a class="tree-files-link" href="\/docs\/nested\/\?dir"/,
+      /data-path="docs\/nested" data-loaded="true" open><summary><a class="active tree-folder-link" data-kind="directory" href="\/docs\/nested\/" data-query-remove="dir">nested\/<\/a><a class="tree-files-link" href="\/docs\/nested\/\?dir"/,
     );
   } finally {
     await f.cleanup();
@@ -344,6 +344,7 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
         filesHref: "/docs/?dir",
         filesLabel: "docs",
         queryRemove: ["dir"],
+        kind: "file",
       },
     );
     assertEquals(
@@ -355,6 +356,7 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
         href: "/docs/indexed/",
         filesHref: "/docs/indexed/?dir",
         queryRemove: ["dir"],
+        kind: "directory",
       },
     );
     assertEquals(

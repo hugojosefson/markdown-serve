@@ -33,10 +33,13 @@ export async function renderDirectory(
   if (request.method === "HEAD") {
     return htmlResponse(request, "");
   }
+  const gitStatus = await config.git?.status();
   const content = directoryIndex(
     await config.catalog.entries(path),
     url,
     breadcrumbPath(config.rootLabel, parts),
+    gitStatus,
+    parts.join("/"),
   );
   return htmlResponse(
     request,
@@ -48,6 +51,7 @@ export async function renderDirectory(
       url,
       actions: index ? [indexPageAction(url, index)] : [],
       directoryView: true,
+      gitStatus,
     }),
   );
 }

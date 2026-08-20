@@ -29,18 +29,22 @@ const addEntries = (list, entries) => entries.forEach((entry) => {
   const item = document.createElement('li');
   const link = document.createElement('a');
   if (entry.directory) { link.className = 'tree-folder-link'; }
-  link.href = entry.href;
+   link.href = entry.href;
+   link.dataset.kind = entry.kind;
+   if (entry.git?.kind === 'ignored') { link.dataset.gitIgnored = 'true'; }
   if (entry.queryRemove) { link.dataset.queryRemove = entry.queryRemove.join(' '); }
-  link.textContent = entry.name + (entry.directory ? '/' : '');
+   link.textContent = entry.name + (entry.directory ? '/' : '');
+   const marker = entry.git ? document.createElement('span') : null;
+   if (marker) { marker.className = 'git-marker'; marker.dataset.gitKind = entry.git.kind; marker.title = marker.ariaLabel = entry.git.tooltip; marker.textContent = entry.git.display; }
   if (!entry.directory) {
     if (entry.filesHref) {
       item.className = 'tree-entry-row';
       const files = filesLink(entry.filesHref, entry.filesLabel ?? entry.name);
       syncNavigationLinks([link, files]);
-      item.append(link, files);
+       item.append(link, ...(marker ? [marker] : []), files);
     } else {
       syncNavigationLinks([link]);
-      item.append(link);
+       item.append(link, ...(marker ? [marker] : []));
     }
     list.append(item);
     return;
@@ -48,7 +52,7 @@ const addEntries = (list, entries) => entries.forEach((entry) => {
   const details = document.createElement('details');
   details.dataset.path = entry.path;
   const summary = document.createElement('summary');
-  summary.append(link);
+   summary.append(link, ...(marker ? [marker] : []));
   details.append(summary, document.createElement('ul'));
   const files = filesLink(entry.filesHref, entry.name);
   summary.append(files);

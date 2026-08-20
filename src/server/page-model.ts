@@ -1,5 +1,6 @@
 import type { PageAction } from "./page-action.ts";
 import type { FileMetadata } from "./file-metadata.ts";
+import type { GitStatus } from "./git/status.ts";
 
 export type PageModel = {
   title: string;
@@ -11,4 +12,5 @@ export type PageModel = {
   directoryView?: boolean;
   sourceName?: string;
   metadata?: FileMetadata;
+  gitStatus?: GitStatus;
 };

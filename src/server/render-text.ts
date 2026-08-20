@@ -1,7 +1,8 @@
 import { codeLanguageForPath } from "./code-language.ts";
 import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
-import { rawPageAction } from "./page-action.ts";
+import { filePageActions } from "./page-action.ts";
+import { fileMime, metadataForFile, textFileMime } from "./file-metadata.ts";
 import { renderCodeBlock } from "./render-code-markdown.ts";
 import type { ServerConfig } from "./types.ts";
 
@@ -15,10 +16,9 @@ export async function renderText(
   if (request.method === "HEAD") {
     return htmlResponse(request, "");
   }
-  const content = renderCodeBlock(
-    await Deno.readTextFile(file),
-    codeLanguageForPath(file),
-  );
+  const text = await Deno.readTextFile(file);
+  const info = await Deno.stat(file);
+  const content = renderCodeBlock(text, codeLanguageForPath(file, text));
   return htmlResponse(
     request,
     await page(config, {
@@ -27,7 +27,11 @@ export async function renderText(
       directory: false,
       content,
       url,
-      actions: [rawPageAction()],
+      actions: filePageActions(
+        "text/plain; charset=UTF-8",
+        fileMime(file),
+      ),
+      metadata: { ...metadataForFile(file, info), mime: textFileMime(file) },
     }),
   );
 }

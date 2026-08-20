@@ -5,6 +5,7 @@ import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
 import { filesPageAction, indexPageAction } from "./page-action.ts";
 import { renderMarkdown } from "./render-markdown.ts";
+import { redirect } from "./responses.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function renderDirectory(
@@ -15,6 +16,10 @@ export async function renderDirectory(
   parts: string[],
 ): Promise<Response> {
   const index = await config.catalog.index(path);
+  if (!index && url.searchParams.has("dir")) {
+    url.searchParams.delete("dir");
+    return redirect(url, url.pathname, config.redirectStatus, request.method);
+  }
   if (index && !url.searchParams.has("dir")) {
     return await renderMarkdown(
       config,

@@ -1,6 +1,5 @@
 import { plain } from "./responses.ts";
 import { pageAsset } from "./page-assets.ts";
-import { indexStatusResponse } from "./index-status-response.ts";
 import { sseResponse } from "./sse-response.ts";
 import { treeResponse } from "./tree-response.ts";
 import type { ServerConfig } from "./types.ts";
@@ -27,13 +26,6 @@ export async function internalResponse(
   }
   if (url.pathname === "/__markdown_server__/tree") {
     return await treeResponse(config, request, url.searchParams.get("path"));
-  }
-  if (url.pathname === "/__markdown_server__/index") {
-    return await indexStatusResponse(
-      config,
-      request,
-      url.searchParams.get("path"),
-    );
   }
   if (url.pathname === "/__markdown_server__/events" && config.reloadSource) {
     return request.method === "HEAD"

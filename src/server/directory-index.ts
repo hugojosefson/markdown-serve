@@ -2,6 +2,7 @@ import type { DirectoryEntry } from "./fs.ts";
 import { escapeHtml } from "./html.ts";
 import { queryHref, setQuery } from "./query.ts";
 import { classifyEntry, entryRoute } from "./entry-route.ts";
+import { formatSize, permissions } from "./file-metadata.ts";
 
 type DirectoryOrder =
   | "name"
@@ -95,19 +96,6 @@ function row(entry: DirectoryEntry, url: URL): string {
   }</td></tr>`;
 }
 
-function permissions(info: Deno.FileInfo | undefined): string | undefined {
-  if (!info || info.mode === null) {
-    return undefined;
-  }
-  const permission = (bit: number, character: string) =>
-    info.mode! & bit ? character : "-";
-  return `${info.isDirectory ? "d" : "-"}${permission(0o400, "r")}${
-    permission(0o200, "w")
-  }${permission(0o100, "x")}${permission(0o040, "r")}${permission(0o020, "w")}${
-    permission(0o010, "x")
-  }${permission(0o004, "r")}${permission(0o002, "w")}${permission(0o001, "x")}`;
-}
-
 function size(entry: DirectoryEntry): number | undefined {
   return entry.directory || !entry.info ? undefined : entry.info.size;
 }
@@ -149,20 +137,6 @@ function isoTime(milliseconds: number): string {
         }${separator === "Z" ? " timestamp-zone" : ""}">${separator}</span>`,
     )
   }</time>`;
-}
-
-function formatSize(bytes: number): string {
-  const units = ["B", "K", "M", "G", "T", "P"];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit++;
-  }
-  const formatted = value < 10 && unit
-    ? value.toFixed(1).replace(/\.0$/, "")
-    : Math.round(value);
-  return `${formatted}${units[unit]}`;
 }
 
 function header(

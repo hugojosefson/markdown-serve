@@ -1,4 +1,5 @@
 import type { PageAction } from "./page-action.ts";
+import type { FileMetadata } from "./file-metadata.ts";
 
 export type PageModel = {
   title: string;
@@ -9,4 +10,5 @@ export type PageModel = {
   actions?: PageAction[];
   directoryView?: boolean;
   sourceName?: string;
+  metadata?: FileMetadata;
 };

@@ -1,7 +1,8 @@
 import { queryHref, setQuery } from "./query.ts";
 
 export type PageAction =
-  | { kind: "raw"; href: string; label: "Raw" }
+  | { kind: "raw"; href: string; label: "Raw"; title: string }
+  | { kind: "download"; href: string; label: "Download"; title: string }
   | { kind: "files"; href: string; label: "Files"; title: string }
   | {
     kind: "index";
@@ -11,8 +12,25 @@ export type PageAction =
     queryRemove: ["dir"];
   };
 
-export function rawPageAction(): PageAction {
-  return { kind: "raw", href: "?raw", label: "Raw" };
+export function rawPageAction(contentType: string): PageAction {
+  return {
+    kind: "raw",
+    href: "?raw",
+    label: "Raw",
+    title: `View raw content (${contentType})`,
+  };
+}
+
+export function filePageActions(
+  rawContentType: string,
+  downloadContentType: string,
+): PageAction[] {
+  return [rawPageAction(rawContentType), {
+    kind: "download",
+    href: "?download",
+    label: "Download",
+    title: `Download file (${downloadContentType})`,
+  }];
 }
 
 export function filesPageAction(url: URL): PageAction {

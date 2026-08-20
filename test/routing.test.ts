@@ -324,7 +324,11 @@ Deno.test("indexed directories can switch between their index and file listing",
     )).text();
     assertMatch(
       index,
-      /<a class="raw-link" href="\?raw">Raw<\/a><a class="page-action" href="\?a=1&amp;a=2&amp;dir&amp;order=size&amp;theme=dark&amp;width=wide" title="Browse directory files">Files<\/a>/,
+      /<a class="raw-link" href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)" aria-label="View raw content \(text\/plain; charset=UTF-8\)">Raw<\/a><a class="page-action" href="\?download" title="Download file \(text\/markdown; charset=UTF-8\)" aria-label="Download file \(text\/markdown; charset=UTF-8\)">Download<\/a>/,
+    );
+    assertMatch(
+      index,
+      /href="\?a=1&amp;a=2&amp;dir&amp;order=size&amp;theme=dark&amp;width=wide" title="Browse directory files"[^>]*>Files/,
     );
     assertMatch(
       index,
@@ -332,7 +336,7 @@ Deno.test("indexed directories can switch between their index and file listing",
     );
     assertMatch(
       index,
-      /<summary><a class="tree-folder-link" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"[^>]*>Files<\/a><\/summary><ul><li><a class="active" href="\/docs\/" data-query-remove="dir">README\.md/,
+      /<summary><a class="tree-folder-link" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"[^>]*>Files<\/a><\/summary><ul><li class="tree-entry-row"><a class="active" href="\/docs\/" data-query-remove="dir">README\.md<\/a><a class="tree-files-link" href="\/docs\/\?dir"/,
     );
     assert(!index.includes('<table class="directory-table">'));
 
@@ -345,12 +349,12 @@ Deno.test("indexed directories can switch between their index and file listing",
     assertMatch(listing, /data-directory-view="true"/);
     assertMatch(
       listing,
-      /<summary><a class="active tree-folder-link" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"[^>]*>Files<\/a><\/summary><ul><li><a href="\/docs\/" data-query-remove="dir">README\.md/,
+      /<summary><a class="active tree-folder-link" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"[^>]*>Files<\/a><\/summary><ul><li class="tree-entry-row"><a href="\/docs\/" data-query-remove="dir">README\.md<\/a><a class="tree-files-link" href="\/docs\/\?dir"/,
     );
     assertMatch(listing, /<a href="note\.txt">note\.txt<\/a>/);
     assertMatch(
       listing,
-      /<nav aria-label="Breadcrumb">[\s\S]*?<\/nav><a class="page-action" href="\?a=1&amp;a=2&amp;order=size&amp;theme=dark&amp;width=wide" data-query-remove="dir" title="View README\.md">README\.md<\/a>/,
+      /<nav aria-label="Breadcrumb">[\s\S]*?<\/nav><a class="page-action" href="\?a=1&amp;a=2&amp;order=size&amp;theme=dark&amp;width=wide" data-query-remove="dir" title="View README\.md"[^>]*>README\.md<\/a>/,
     );
     assertMatch(
       listing,
@@ -366,16 +370,45 @@ Deno.test("indexed directories can switch between their index and file listing",
     )).text();
     assertMatch(
       mixed,
-      /title="View rEaDmE\.md">rEaDmE\.md<\/a>/,
+      /title="View rEaDmE\.md"[^>]*>rEaDmE\.md<\/a>/,
     );
     const mixedIndex = await (await h(new Request("http://x/mixed/"))).text();
     assertMatch(mixedIndex, /aria-current="page">rEaDmE\.md<\/span>/);
 
-    const noIndex = await (await h(
+    const noIndex = await h(
       new Request("http://x/empty/?dir&order=size"),
-    )).text();
-    assertMatch(noIndex, /<table class="directory-table">/);
-    assert(!noIndex.includes('class="page-action"'));
+    );
+    assertEquals(noIndex.status, 302);
+    assertEquals(noIndex.headers.get("location"), "/empty/?order=size");
+    assertEquals(await noIndex.text(), "Redirecting");
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("index-less listing URLs remove dir while retaining canonical query state", async () => {
+  const f = await fixture({
+    "empty/file.txt": "plain",
+    "indexed/README.md": "index",
+  });
+  try {
+    const h = await handler(f.root, { redirectStatus: 301 });
+    const request = "http://x/empty/?z=last&dir&a=two&a=one&dir";
+    const get = await h(new Request(request));
+    assertEquals(get.status, 301);
+    assertEquals(get.headers.get("location"), "/empty/?a=one&a=two&z=last");
+    assertEquals(await get.text(), "Redirecting");
+
+    const head = await h(new Request(request, { method: "HEAD" }));
+    assertEquals(head.status, 301);
+    assertEquals(head.headers.get("location"), "/empty/?a=one&a=two&z=last");
+    assertEquals(await head.text(), "");
+
+    const indexed = await h(
+      new Request("http://x/indexed/?dir&order=size"),
+    );
+    assertEquals(indexed.status, 200);
+    assertMatch(await indexed.text(), /<table class="directory-table">/);
   } finally {
     await f.cleanup();
   }
@@ -422,6 +455,11 @@ Deno.test("exact text paths render code and raw source accepts queries", async (
     ".env": "NAME=value\n",
     "manual.md": "# Guide",
     "blob.bin": "placeholder",
+    "applypatch-msg.sample": "#!/bin/sh\necho apply\n",
+    ".git/config": "[core]\nrepositoryformatversion = 0\n",
+    ".git/hooks/applypatch-msg.sample": "#!/bin/sh\necho apply\n",
+    ".gitconfig": "[user]\nname = Example\n",
+    ".editorconfig": "root = true\n",
   });
   try {
     await Deno.writeFile(`${f.root}/blob.bin`, new Uint8Array([0, 255]));
@@ -429,8 +467,25 @@ Deno.test("exact text paths render code and raw source accepts queries", async (
     const guide = await (await h(new Request("http://x/guide.ts?q=1"))).text();
     assertMatch(guide, /code-language">typescript/);
     assertMatch(guide, /token keyword">const/);
-    assertMatch(guide, /href="\?raw">Raw/);
+    assertMatch(
+      guide,
+      /href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)"[^>]*>Raw/,
+    );
     assertEquals((await h(new Request("http://x/guide"))).status, 404);
+    const hook = await (await h(
+      new Request("http://x/applypatch-msg.sample"),
+    )).text();
+    assertMatch(hook, /code-language">bash/);
+    assertMatch(hook, /token builtin class-name">echo/);
+    const gitHook = await (await h(
+      new Request("http://x/.git/hooks/applypatch-msg.sample"),
+    )).text();
+    assertMatch(gitHook, /code-language">bash/);
+    for (const path of [".git/config", ".gitconfig", ".editorconfig"]) {
+      const ini = await (await h(new Request(`http://x/${path}`))).text();
+      assertMatch(ini, /code-language">ini/);
+      assertMatch(ini, /class="token (?:key|selector)/);
+    }
     const json = await (await h(new Request("http://x/data.json"))).text();
     assertMatch(json, /code-language">json/);
     assertMatch(json, /token property/);
@@ -470,7 +525,10 @@ Deno.test("directory Markdown indexes expose raw source", async () => {
   try {
     const h = await handler(f.root);
     const rendered = await (await h(new Request("http://x/docs/"))).text();
-    assertMatch(rendered, /href="\?raw">Raw/);
+    assertMatch(
+      rendered,
+      /href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)"[^>]*>Raw/,
+    );
     const raw = await h(new Request("http://x/docs/?raw"));
     assertEquals(raw.headers.get("content-type"), "text/plain; charset=UTF-8");
     assertEquals(await raw.text(), "# Docs");

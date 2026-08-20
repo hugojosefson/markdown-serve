@@ -22,10 +22,22 @@ export async function createRequestHandler(
     );
   }
   const catalog = new FileCatalog();
+  let warmRevision = 0;
+  let warmQueue = Promise.resolve();
+  const scheduleWarm = (clear: boolean): Promise<void> => {
+    warmRevision++;
+    if (clear) {
+      catalog.clear();
+    }
+    warmQueue = warmQueue.catch(() => {}).then(() =>
+      catalog.warmRoot(rootPath)
+    );
+    return warmQueue;
+  };
   let sourceClosed = false;
   let unsubscribe = () => {};
   unsubscribe = options.reloadSource?.subscribe(
-    () => catalog.clear(),
+    () => scheduleWarm(true),
     () => {
       sourceClosed = true;
       unsubscribe();
@@ -34,6 +46,12 @@ export async function createRequestHandler(
   if (sourceClosed) {
     unsubscribe();
   }
+  scheduleWarm(false);
+  let observedRevision = 0;
+  do {
+    observedRevision = warmRevision;
+    await warmQueue;
+  } while (observedRevision !== warmRevision);
   const config: ServerConfig = {
     rootPath,
     rootLabel: ensureEndsWithSlash(options.root),

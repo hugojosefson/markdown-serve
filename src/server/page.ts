@@ -3,6 +3,10 @@ import { displayInitialClient } from "./display-controls-client.ts";
 import { displayLinks } from "./display-links.ts";
 import { escapeHtml } from "./html.ts";
 import { navigationTree } from "./navigation-tree.ts";
+import {
+  renderFileMetadataDetails,
+  renderFileMetadataSummary,
+} from "./file-metadata.ts";
 import type { PageAction } from "./page-action.ts";
 import { pageScript, pageStylesheet } from "./page-assets.ts";
 import type { PageModel } from "./page-model.ts";
@@ -34,14 +38,25 @@ function renderBody(
   model: PageModel,
   navigation: string,
 ): string {
+  const metadataExpanded = model.url.searchParams.getAll("metadata").includes(
+    "expand",
+  );
   return `<body><div class="layout"><aside class="tree">${navigation}</aside><main class="content markdown-body">${
-    renderContentHeader(config, model)
+    renderContentHeader(config, model, metadataExpanded)
+  }${
+    model.metadata && metadataExpanded
+      ? renderFileMetadataDetails(model.metadata)
+      : ""
   }${model.content}</main></div><script src="${pageScript.url}"></script>${
     reloadClient(config)
   }</body>`;
 }
 
-function renderContentHeader(config: ServerConfig, model: PageModel): string {
+function renderContentHeader(
+  config: ServerConfig,
+  model: PageModel,
+  metadataExpanded: boolean,
+): string {
   const breadcrumb = breadcrumbs(
     config.rootLabel,
     model.parts,
@@ -50,8 +65,10 @@ function renderContentHeader(config: ServerConfig, model: PageModel): string {
   );
   const actions = (model.actions ?? []).map(renderPageAction).join("");
   return `<header class="content-header">${breadcrumb}${actions}${
-    displayLinks(model.url)
-  }</header>`;
+    model.metadata
+      ? renderFileMetadataSummary(model.metadata, model.url, metadataExpanded)
+      : ""
+  }${displayLinks(model.url)}</header>`;
 }
 
 function reloadClient(config: ServerConfig): string {
@@ -63,12 +80,12 @@ function reloadClient(config: ServerConfig): string {
 function renderPageAction(action: PageAction): string {
   const className = action.kind === "raw" ? "raw-link" : "page-action";
   const queryRemove = action.kind === "index" ? action.queryRemove : undefined;
-  const title = action.kind === "raw" ? undefined : action.title;
+  const title = action.title;
   return `<a class="${className}" href="${escapeHtml(action.href)}"${
     queryRemove?.length
       ? ` data-query-remove="${escapeHtml(queryRemove.join(" "))}"`
       : ""
-  }${title ? ` title="${escapeHtml(title)}"` : ""}>${
+  } title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${
     escapeHtml(action.label)
   }</a>`;
 }

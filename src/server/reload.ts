@@ -1,4 +1,4 @@
-import { resolve } from "@std/path";
+import { isAbsolute, relative, resolve } from "@std/path";
 import type { ReloadSource } from "./reload-source.ts";
 
 type WatchedReloadSource = ReloadSource & { close(): void };
@@ -10,8 +10,9 @@ type ReloadSubscriber = {
 export function createReloadWatcher(
   root: string,
   signal?: AbortSignal,
+  ignorePaths: string[] = [],
 ): WatchedReloadSource {
-  return new ReloadHub(Deno.watchFs(resolve(root)), signal);
+  return new ReloadHub(Deno.watchFs(resolve(root)), signal, ignorePaths);
 }
 
 class ReloadHub implements WatchedReloadSource {
@@ -21,13 +22,16 @@ class ReloadHub implements WatchedReloadSource {
   #notifications = Promise.resolve();
   readonly #watcher: Deno.FsWatcher;
   readonly #signal?: AbortSignal;
+  readonly #ignorePaths: string[];
 
   constructor(
     watcher: Deno.FsWatcher,
     signal?: AbortSignal,
+    ignorePaths: string[] = [],
   ) {
     this.#watcher = watcher;
     this.#signal = signal;
+    this.#ignorePaths = ignorePaths.map((path) => resolve(path));
     if (this.#signal?.aborted) {
       this.close();
       return;
@@ -75,8 +79,12 @@ class ReloadHub implements WatchedReloadSource {
 
   async watch(): Promise<void> {
     try {
-      for await (const _event of this.#watcher) {
-        this.scheduleReload();
+      for await (const event of this.#watcher) {
+        if (reloadEventRelevant(event, this.#ignorePaths)) {
+          this.scheduleReload();
+        } else {
+          this.cancelScheduledReload();
+        }
       }
     } catch {
       // Closing the watcher also ends iteration; subscribers must still close.
@@ -100,6 +108,13 @@ class ReloadHub implements WatchedReloadSource {
     }, 50);
   }
 
+  cancelScheduledReload(): void {
+    if (this.#timer !== undefined) {
+      clearTimeout(this.#timer);
+      this.#timer = undefined;
+    }
+  }
+
   async notify(): Promise<void> {
     for (const subscriber of this.#subscribers) {
       if (this.#closed) {
@@ -112,4 +127,20 @@ class ReloadHub implements WatchedReloadSource {
       }
     }
   }
+}
+
+export function reloadEventRelevant(
+  event: Deno.FsEvent,
+  ignorePaths: string[],
+): boolean {
+  return event.paths.length > 0 &&
+    event.paths.every((path) =>
+      !ignorePaths.some((ignored) => pathWithin(path, ignored))
+    );
+}
+
+function pathWithin(path: string, parent: string): boolean {
+  const relation = relative(resolve(parent), resolve(path));
+  return relation === "" ||
+    (!isAbsolute(relation) && relation.split(/[\\/]/, 1)[0] !== "..");
 }

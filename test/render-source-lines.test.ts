@@ -12,6 +12,10 @@ Deno.test("source lines add accessible links without adding numbers to code text
     /<span class="source-line" id="L1"><a class="source-line-number" href="#L1" aria-label="Line 1" data-line="1"><\/a><span class="source-line-content">one<\/span><\/span>/,
   );
   assertMatch(rendered, /id="L3"[^>]*>.*data-line="3"/s);
+  assertMatch(
+    rendered,
+    /<\/span><\/span><span class="source-line-break" aria-hidden="true">\n<\/span><span class="source-line"/,
+  );
   assertEquals(rendered.replaceAll(/<[^>]+>/g, ""), "one\ntwo\n");
 });
 
@@ -22,7 +26,7 @@ Deno.test("source lines retain Prism tokens that cross a newline", () => {
   );
   assertMatch(
     rendered,
-    /source-line-content"><span class="token comment">\/\* first<\/span><\/span><\/span>\n<span class="source-line" id="L2">.*<span class="token comment">second \*\//s,
+    /source-line-content"><span class="token comment">\/\* first<\/span><\/span><\/span><span class="source-line-break" aria-hidden="true">\n<\/span><span class="source-line" id="L2">.*<span class="token comment">second \*\//s,
   );
   assertEquals(
     sourceText(rendered),

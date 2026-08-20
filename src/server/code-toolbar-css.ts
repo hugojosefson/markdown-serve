@@ -16,6 +16,7 @@ export const codeToolbarCss = `
 .source-line-number:hover, .source-line-number:focus-visible { background: var(--code-hover); color: var(--focus-color); }
 .source-line-number:focus-visible { outline: 2px solid var(--focus-color); outline-offset: -2px; }
 .source-line-content { min-width: 0; white-space: pre; }
+.source-line-break { display: none; }
 @media (max-width: 560px) { .source-line-number { padding-left: 7px; padding-right: 8px; } }
 .code-block .token.comment, .code-block .token.prolog, .code-block .token.doctype, .code-block .token.cdata { color: #57606a; }
 .code-block .token.keyword, .code-block .token.atrule { color: #cf222e; }

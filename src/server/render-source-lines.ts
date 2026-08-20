@@ -55,7 +55,8 @@ export function renderSourceLines(
     for (let index = 0; index < lines.length; index++) {
       result += lines[index];
       if (index < lines.length - 1) {
-        result += `${closeTags()}</span></span>\n`;
+        result +=
+          `${closeTags()}</span></span><span class="source-line-break" aria-hidden="true">\n</span>`;
         line++;
         result += `${openLine()}${reopenTags()}`;
       }

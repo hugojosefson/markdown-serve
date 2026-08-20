@@ -3,6 +3,7 @@ import { basename } from "@std/path";
 import { escapeHtml } from "./html.ts";
 import { queryHref, setQuery } from "./query.ts";
 import { renderIsoTimestamp } from "./render-iso-timestamp.ts";
+import { formatRelativeTime } from "./relative-time.ts";
 
 export type FileMetadata = {
   mime: string;
@@ -92,13 +93,16 @@ export function renderFileMetadataSummary(
     setQuery(url.search, "metadata", expanded ? undefined : "expand"),
   );
   const action = expanded ? "Collapse metadata" : "Expand metadata";
+  const relativeLabel = metadata.modified
+    ? `<span class="file-metadata-relative" data-relative-time="${
+      escapeHtml(metadata.modified.toISOString())
+    }">${escapeHtml(relative)}</span>`
+    : escapeHtml(relative);
   return `<a class="file-metadata" href="${
     escapeHtml(href)
-  }" title="${action}" aria-label="${action}" aria-controls="file-metadata-details" aria-expanded="${expanded}">${
-    [formatSize(metadata.size), relative].map(escapeHtml).join(
-      ' <span aria-hidden="true">·</span> ',
-    )
-  }</a>`;
+  }" title="${action}" aria-label="${action}" aria-controls="file-metadata-details" aria-expanded="${expanded}">${`${
+    escapeHtml(formatSize(metadata.size))
+  } <span aria-hidden="true">·</span> ${relativeLabel}`}</a>`;
 }
 
 export function renderFileMetadataDetails(
@@ -112,9 +116,8 @@ export function renderFileMetadataDetails(
         ? renderIsoTimestamp(metadata.modified)
         : undefined,
       valueIsHtml: true,
-      suffix: metadata.modified
-        ? `(${formatRelativeTime(metadata.modified)})`
-        : undefined,
+      suffix: metadata.modified ? relativeSuffix(metadata.modified) : undefined,
+      suffixIsHtml: true,
     },
     {
       label: "Size",
@@ -137,13 +140,13 @@ export function renderFileMetadataDetails(
     .filter((field): field is MetadataField & { value: string } =>
       field.value !== undefined
     )
-    .map(({ label, value, valueIsHtml, suffix }) =>
+    .map(({ label, value, valueIsHtml, suffix, suffixIsHtml }) =>
       `<div><dt>${escapeHtml(label)}</dt><dd>${
         valueIsHtml ? value : escapeHtml(value)
       }${
         suffix
           ? `<wbr> <span class="metadata-value-suffix">${
-            escapeHtml(suffix)
+            suffixIsHtml ? suffix : escapeHtml(suffix)
           }</span>`
           : ""
       }</dd></div>`
@@ -162,6 +165,7 @@ type MetadataField = {
   value: string | undefined;
   valueIsHtml?: boolean;
   suffix?: string;
+  suffixIsHtml?: boolean;
 };
 
 function detailedSize(bytes: number): string {
@@ -170,25 +174,9 @@ function detailedSize(bytes: number): string {
   return compact.endsWith(" B") ? exact : `${exact} (${compact})`;
 }
 
-function formatRelativeTime(date: Date, now = new Date()): string {
-  const ranges: [number, Intl.RelativeTimeFormatUnit][] = [
-    [60, "second"],
-    [60, "minute"],
-    [24, "hour"],
-    [7, "day"],
-    [4.345, "week"],
-    [12, "month"],
-    [Number.POSITIVE_INFINITY, "year"],
-  ];
-  let value = (date.getTime() - now.getTime()) / 1_000;
-  for (const [range, unit] of ranges) {
-    if (Math.abs(value) < range) {
-      return new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(
-        Math.round(value),
-        unit,
-      );
-    }
-    value /= range;
-  }
-  return "now";
+function relativeSuffix(date: Date): string {
+  const iso = escapeHtml(date.toISOString());
+  return `(<span class="metadata-relative-time" data-relative-time="${iso}">${
+    escapeHtml(formatRelativeTime(date))
+  }</span>)`;
 }

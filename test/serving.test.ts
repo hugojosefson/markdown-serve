@@ -298,7 +298,7 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     const image = await (await h(new Request("http://x/photo.png"))).text();
     assertMatch(
       image,
-      /<a class="file-metadata" href="\?metadata=expand" title="Expand metadata" aria-label="Expand metadata" aria-controls="file-metadata-details" aria-expanded="false">4 B <span[^>]*>·<\/span> (?:now|today)<\/a>/,
+      /<a class="file-metadata" href="\?metadata=expand" title="Expand metadata" aria-label="Expand metadata" aria-controls="file-metadata-details" aria-expanded="false">4 B <span[^>]*>·<\/span> <span class="file-metadata-relative" data-relative-time="[^"]+">(?:now|today)<\/span><\/a>/,
     );
     assert(!image.includes('<section class="file-metadata-details"'));
     const details = await (await h(
@@ -306,11 +306,11 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     )).text();
     assertMatch(
       details,
-      /<\/header><section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><div class="file-metadata-details-header"><span>File metadata<\/span><a class="file-metadata-close" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 4l8 8M12 4l-8 8"\/><\/svg><\/a><\/div><dl>.*<dt>Modified<\/dt><dd><time datetime="[^"]+" aria-label="[^"]+">.*class="timestamp-separator timestamp-t">T<\/span>.*class="timestamp-separator timestamp-zone">Z<\/span><\/time><wbr> <span class="metadata-value-suffix">\((?:now|today)\)<\/span><\/dd>.*<dt>Size<\/dt><dd>4 bytes<\/dd>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>User<\/dt>.*<dt>Permissions<\/dt>.*<dt>Mode<\/dt>.*<\/dl><\/section><div class="page-content/s,
+      /<\/header><section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><div class="file-metadata-details-header"><span>File metadata<\/span><a class="file-metadata-close" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 4l8 8M12 4l-8 8"\/><\/svg><\/a><\/div><dl>.*<dt>Modified<\/dt><dd><time datetime="[^"]+" aria-label="[^"]+">.*class="timestamp-separator timestamp-t">T<\/span>.*class="timestamp-separator timestamp-zone">Z<\/span><\/time><wbr> <span class="metadata-value-suffix">\(<span class="metadata-relative-time" data-relative-time="[^"]+">(?:now|today)<\/span>\)<\/span><\/dd>.*<dt>Size<\/dt><dd>4 bytes<\/dd>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>User<\/dt>.*<dt>Permissions<\/dt>.*<dt>Mode<\/dt>.*<\/dl><\/section><div class="page-content/s,
     );
     assertMatch(
       details,
-      /<header class="content-header metadata-expanded">.*<a class="file-metadata" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata" aria-controls="file-metadata-details" aria-expanded="true">4 B <span[^>]*>·<\/span> (?:now|today)<\/a>/s,
+      /<header class="content-header metadata-expanded">.*<a class="file-metadata" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata" aria-controls="file-metadata-details" aria-expanded="true">4 B <span[^>]*>·<\/span> <span class="file-metadata-relative" data-relative-time="[^"]+">(?:now|today)<\/span><\/a>/s,
     );
     assertMatch(
       pageStylesheet.body,

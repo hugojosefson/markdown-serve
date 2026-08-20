@@ -2,6 +2,7 @@ import { assert, assertEquals, assertMatch } from "@std/assert";
 import {
   formatSize,
   renderFileMetadataDetails,
+  renderFileMetadataSummary,
 } from "../src/server/file-metadata.ts";
 import { renderIsoTimestamp } from "../src/server/render-iso-timestamp.ts";
 
@@ -33,4 +34,21 @@ Deno.test("ISO timestamps expose copyable text and styled separators", () => {
   assertEquals(html.replace(/<[^>]+>/g, ""), value);
   assertMatch(html, /class="timestamp-separator timestamp-t">T<\/span>/);
   assertMatch(html, /class="timestamp-separator timestamp-zone">Z<\/span>/);
+});
+
+Deno.test("metadata labels retain SSR text and expose machine-readable dates", () => {
+  const modified = new Date("2020-01-01T00:00:00.000Z");
+  const metadata = { mime: "text/plain", size: 1, modified };
+  const summary = renderFileMetadataSummary(
+    metadata,
+    new URL("http://x/"),
+    false,
+  );
+  const details = renderFileMetadataDetails(metadata, new URL("http://x/"));
+  assertMatch(summary, /data-relative-time="2020-01-01T00:00:00.000Z">/);
+  assertMatch(details, /<time datetime="2020-01-01T00:00:00.000Z"/);
+  assertMatch(
+    details,
+    /metadata-relative-time" data-relative-time="2020-01-01T00:00:00.000Z">/,
+  );
 });

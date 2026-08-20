@@ -1,5 +1,6 @@
-import { assert, assertMatch } from "@std/assert";
+import { assert, assertEquals, assertMatch } from "@std/assert";
 import { pageClient } from "../src/server/page-client.ts";
+import { relativeTimeClient } from "../src/server/relative-time-client.ts";
 
 Deno.test("lazy tree entries construct Files controls without index discovery", () => {
   assertMatch(pageClient, /const filesLink = \(href, name\)/);
@@ -10,6 +11,52 @@ Deno.test("lazy tree entries construct Files controls without index discovery", 
   );
   assert(!pageClient.includes("/__markdown_server__/index"));
   assert(!pageClient.includes("indexPending"));
+});
+
+Deno.test("relative-time client uses one visibility-aware scheduler", () => {
+  assertMatch(
+    relativeTimeClient,
+    /querySelectorAll\('\[data-relative-time\]'\)/,
+  );
+  assertMatch(relativeTimeClient, /let relativeTimeTimer/);
+  assertMatch(relativeTimeClient, /document\.hidden/);
+  assertMatch(relativeTimeClient, /visibilitychange/);
+  assertMatch(relativeTimeClient, /new Intl\.RelativeTimeFormat\('en'/);
+});
+
+Deno.test("relative-time client updates labels and caps long timers", () => {
+  const now = Date.parse("2020-01-01T00:00:00.000Z");
+  const element = {
+    dataset: { relativeTime: "2010-01-01T00:00:00.000Z" },
+    textContent: "",
+  };
+  let delay = 0;
+  class ClockDate extends Date {
+    static override now(): number {
+      return now;
+    }
+  }
+  new Function(
+    "document",
+    "Date",
+    "setTimeout",
+    "clearTimeout",
+    relativeTimeClient,
+  )(
+    {
+      hidden: false,
+      querySelectorAll: () => [element],
+      addEventListener: () => {},
+    },
+    ClockDate,
+    (_callback: () => void, milliseconds: number) => {
+      delay = milliseconds;
+      return 1;
+    },
+    () => {},
+  );
+  assertEquals(element.textContent, "10 years ago");
+  assertEquals(delay, 2_147_483_647);
 });
 
 Deno.test("loaded image previews are limited to four times intrinsic width", () => {

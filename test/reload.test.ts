@@ -1,6 +1,76 @@
 import { assert, assertEquals, assertMatch } from "@std/assert";
+import { join } from "@std/path";
 import { serve } from "../src/server.ts";
+import { reloadClientScript } from "../src/server/reload-client.ts";
+import {
+  createReloadWatcher,
+  reloadEventRelevant,
+} from "../src/server/reload.ts";
 import { fixture, handler } from "./fixture.ts";
+
+Deno.test("source changes defer browser reload until the server reconnects", () => {
+  const listeners = new Map<string, () => void>();
+  let reloads = 0;
+  class EventSource {
+    constructor(_url: string) {}
+    addEventListener(name: string, listener: () => void): void {
+      listeners.set(name, listener);
+    }
+  }
+  new Function("EventSource", "location", reloadClientScript)(EventSource, {
+    reload: () => reloads++,
+  });
+  listeners.get("open")?.();
+  assertEquals(reloads, 0);
+  listeners.get("open")?.();
+  assertEquals(reloads, 1);
+  listeners.get("reload")?.();
+  assertEquals(reloads, 2);
+});
+
+Deno.test("source paths do not race content reload notifications", () => {
+  const root = Deno.cwd();
+  const source = join(root, "src");
+  const event = (paths: string[]): Deno.FsEvent => ({ kind: "modify", paths });
+  assertEquals(
+    reloadEventRelevant(event([join(source, "server/page-css.ts")]), [source]),
+    false,
+  );
+  assertEquals(
+    reloadEventRelevant(event([join(root, "src-other/page.css")]), [source]),
+    true,
+  );
+  assertEquals(
+    reloadEventRelevant(
+      event([join(source, "server/page-css.ts"), join(root, "README.md")]),
+      [source],
+    ),
+    false,
+  );
+});
+
+Deno.test("an ignored source event cancels a pending content reload", async () => {
+  const f = await fixture({ "content.txt": "before", "src/code.ts": "before" });
+  const watcher = createReloadWatcher(f.root, undefined, [join(f.root, "src")]);
+  let reloads = 0;
+  const unsubscribe = watcher.subscribe(() => {
+    reloads++;
+  });
+  try {
+    await Deno.writeTextFile(join(f.root, "content.txt"), "pending");
+    await Deno.writeTextFile(join(f.root, "src/code.ts"), "restart");
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assertEquals(reloads, 0);
+
+    await Deno.writeTextFile(join(f.root, "content.txt"), "after restart");
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assertEquals(reloads, 1);
+  } finally {
+    unsubscribe();
+    watcher.close();
+    await f.cleanup();
+  }
+});
 
 Deno.test("reload client and SSE are limited to generated pages", async () => {
   const f = await fixture({

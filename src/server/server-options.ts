@@ -15,6 +15,7 @@ export type ServerOptions = HandlerOptions & {
   signal?: AbortSignal;
   onListen?: (address: Deno.NetAddr) => void;
   liveReload?: boolean;
+  liveReloadIgnorePaths?: string[];
 };
 
 export type RequestHandler = (request: Request) => Promise<Response>;

@@ -10,6 +10,7 @@ import {
 import type { PageAction } from "./page-action.ts";
 import { pageScript, pageStylesheet } from "./page-assets.ts";
 import type { PageModel } from "./page-model.ts";
+import { reloadClientScript } from "./reload-client.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function page(
@@ -72,9 +73,7 @@ function renderContentHeader(
 }
 
 function reloadClient(config: ServerConfig): string {
-  return config.reloadSource
-    ? `<script>new EventSource("/__markdown_server__/events").addEventListener("reload",()=>location.reload())</script>`
-    : "";
+  return config.reloadSource ? `<script>${reloadClientScript}</script>` : "";
 }
 
 function renderPageAction(action: PageAction): string {

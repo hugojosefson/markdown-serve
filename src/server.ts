@@ -22,7 +22,11 @@ export async function createHandler(
 /** Binds exactly `port`, or 8000 when omitted. */
 export async function serve(options: ServerOptions): Promise<Deno.HttpServer> {
   const watched = options.liveReload && !options.reloadSource
-    ? createReloadWatcher(options.root, options.signal)
+    ? createReloadWatcher(
+      options.root,
+      options.signal,
+      options.liveReloadIgnorePaths,
+    )
     : undefined;
   try {
     const server = Deno.serve(

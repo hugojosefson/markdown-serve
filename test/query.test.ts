@@ -42,7 +42,7 @@ Deno.test("Markdown view actions preserve unrelated query state", () => {
     {
       kind: "source",
       href: "?source&theme=dark",
-      label: "Source",
+      label: "View source",
       title: "View Markdown source",
     },
   );
@@ -51,7 +51,7 @@ Deno.test("Markdown view actions preserve unrelated query state", () => {
     {
       kind: "rendered",
       href: "?theme=dark",
-      label: "Rendered",
+      label: "View rendered",
       queryRemove: ["source"],
       title: "View rendered Markdown",
     },

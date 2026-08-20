@@ -4,11 +4,11 @@ export type PageAction =
   | { kind: "raw"; href: string; label: "Raw"; title: string }
   | { kind: "download"; href: string; label: "Download"; title: string }
   | { kind: "files"; href: string; label: "Files"; title: string }
-  | { kind: "source"; href: string; label: "Source"; title: string }
+  | { kind: "source"; href: string; label: "View source"; title: string }
   | {
     kind: "rendered";
     href: string;
-    label: "Rendered";
+    label: "View rendered";
     title: string;
     queryRemove: ["source"];
   }
@@ -34,7 +34,7 @@ export function markdownViewPageAction(url: URL, source: boolean): PageAction {
     return {
       kind: "rendered",
       href: queryHref(url.pathname, setQuery(url.search, "source", undefined)),
-      label: "Rendered",
+      label: "View rendered",
       queryRemove: ["source"],
       title: "View rendered Markdown",
     };
@@ -42,7 +42,7 @@ export function markdownViewPageAction(url: URL, source: boolean): PageAction {
   return {
     kind: "source",
     href: queryHref(url.pathname, setQuery(url.search, "source", null)),
-    label: "Source",
+    label: "View source",
     title: "View Markdown source",
   };
 }

@@ -96,7 +96,16 @@ Deno.test("Markdown source view has gutters and preserves raw/download priority"
     const rendered = await (await h(new Request("http://x/guide"))).text();
     assertMatch(
       rendered,
-      /<a class="page-action" href="\?source"[^>]*>Source<\/a>/,
+      /<div class="page-content page-content-rendered"><div class="content-view-control"><a class="content-view-action" href="\?source"[^>]*>View source<\/a><\/div>/,
+    );
+    assertEquals(
+      rendered.match(/<header class="content-header[^>]*>[\s\S]*?<\/header>/)
+        ?.[0].includes("View source"),
+      false,
+    );
+    assertMatch(
+      pageStylesheet.body,
+      /\.markdown-body \.content-view-action \{[^}]*color: var\(--code-muted\)/,
     );
     assertEquals(rendered.includes('href="#L1"'), false);
     const source = await (await h(
@@ -105,7 +114,7 @@ Deno.test("Markdown source view has gutters and preserves raw/download priority"
     assertMatch(source, /id="L1"/);
     assertMatch(
       source,
-      /<a class="page-action" href="\?theme=dark" data-query-remove="source"[^>]*>Rendered<\/a>/,
+      /<div class="page-content page-content-source"><div class="content-view-control"><a class="content-view-action" href="\?theme=dark" data-query-remove="source"[^>]*>View rendered<\/a><\/div>/,
     );
     assertMatch(
       await (await h(new Request("http://x/guide?source&raw"))).text(),

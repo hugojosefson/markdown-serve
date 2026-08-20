@@ -54,7 +54,9 @@ function renderBody(
     model.metadata && metadataExpanded
       ? renderFileMetadataDetails(model.metadata, model.url)
       : ""
-  }${model.content}</main></div><script src="${pageScript.url}"></script>${
+  }${
+    renderPageContent(model)
+  }</main></div><script src="${pageScript.url}"></script>${
     reloadClient(config)
   }</body>`;
 }
@@ -89,7 +91,10 @@ function renderContentHeader(
     model.directory,
     model.sourceName,
   );
-  const actions = (model.actions ?? []).map(renderPageAction).join("");
+  const actions = (model.actions ?? []).map((action) =>
+    renderPageAction(action)
+  )
+    .join("");
   return `<header class="content-header${
     model.metadata && metadataExpanded ? " metadata-expanded" : ""
   }">${breadcrumb}${actions}${
@@ -99,16 +104,27 @@ function renderContentHeader(
   }${displayLinks(model.url)}</header>`;
 }
 
+function renderPageContent(model: PageModel): string {
+  if (!model.contentAction) {
+    return model.content;
+  }
+  const view = model.contentAction.kind === "rendered" ? "source" : "rendered";
+  return `<div class="page-content page-content-${view}"><div class="content-view-control">${
+    renderPageAction(model.contentAction, "content-view-action")
+  }</div>${model.content}</div>`;
+}
+
 function reloadClient(config: ServerConfig): string {
   return config.reloadSource ? `<script>${reloadClientScript}</script>` : "";
 }
 
-function renderPageAction(action: PageAction): string {
-  const className = action.kind === "raw"
-    ? "raw-link"
-    : action.kind === "download"
-    ? "page-action download-link"
-    : "page-action";
+function renderPageAction(action: PageAction, classOverride?: string): string {
+  const className = classOverride ??
+    (action.kind === "raw"
+      ? "raw-link"
+      : action.kind === "download"
+      ? "page-action download-link"
+      : "page-action");
   const queryRemove = "queryRemove" in action ? action.queryRemove : undefined;
   const title = action.title;
   return `<a class="${className}" href="${escapeHtml(action.href)}"${

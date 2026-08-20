@@ -187,10 +187,13 @@ Deno.test("client carries all current query state across internal navigation", (
   );
   let indexHref = "/docs/";
   const index = link(() => indexHref, (value) => indexHref = value, "dir");
-  document.querySelectorAll = () => [index];
+  let filesHref = "/docs/?dir";
+  const files = link(() => filesHref, (value) => filesHref = value);
+  document.querySelectorAll = () => [index, files];
   location.search = "?dir&order=size&theme=dark&unknown=value";
   listeners.get("popstate")?.({});
   assertEquals(indexHref, "/docs/?order=size&theme=dark&unknown=value");
+  assertEquals(filesHref, "/docs/?dir&order=size&theme=dark&unknown=value");
   assert(!displayControlsClient.includes("history.replaceState"));
   assert(!displayControlsClient.includes("syncDisplayLinks"));
   assertMatch(displayControlsClient, /addEventListener\('popstate'/);

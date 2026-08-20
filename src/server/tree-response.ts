@@ -43,9 +43,10 @@ function treeEntry(
     name: entry.name,
     path: child.join("/"),
     directory: entry.directory,
-    href: entry.directory
+    href: canonicalPath(route, entry.directory || index),
+    filesHref: entry.directory
       ? `${canonicalPath(route, true)}?dir`
-      : canonicalPath(route, index),
-    queryRemove: index ? ["dir"] : undefined,
+      : undefined,
+    queryRemove: entry.directory || index ? ["dir"] : undefined,
   };
 }

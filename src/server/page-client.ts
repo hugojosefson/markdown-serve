@@ -1,38 +1,22 @@
 export const pageClient = `
 const tree = document.querySelector('.tree');
-const pendingIndexes = [];
-let runningIndexes = 0;
-const addFilesLink = (details, href, name) => {
-  if (details.querySelector('.tree-files-link')) { return; }
+const filesLink = (href, name) => {
   const filesLink = document.createElement('a');
   filesLink.className = 'tree-files-link';
   filesLink.href = href;
   filesLink.title = filesLink.ariaLabel = 'Show files in ' + name;
   filesLink.textContent = 'Files';
-  details.querySelector('summary').append(filesLink);
-  syncNavigationLinks([filesLink]);
+  return filesLink;
 };
-const runIndexes = () => {
-  while (runningIndexes < 4 && pendingIndexes.length) {
-    const details = pendingIndexes.shift();
-    runningIndexes++;
-    fetch('/__markdown_server__/index?path=' + encodeURIComponent(details.dataset.path))
-      .then((response) => response.ok ? response.json() : undefined)
-      .then((status) => { if (status?.filesHref) { addFilesLink(details, status.filesHref, details.querySelector('.tree-folder-link').textContent.slice(0, -1)); } })
-      .catch(() => {})
-      .finally(() => { details.dataset.indexPending = 'done'; runningIndexes--; runIndexes(); });
-  }
-};
-const queueIndex = (details) => {
-  if (details.dataset.indexPending !== 'true') { return; }
-  details.dataset.indexPending = 'queued'; pendingIndexes.push(details); runIndexes();
-};
-tree?.querySelectorAll?.('details[data-index-pending="true"]').forEach(queueIndex);
 const navigationLocationKey = (value) => {
   const url = new URL(value, location.href);
   const query = [...url.searchParams].map((pair) => JSON.stringify(pair)).sort().join(',');
   return JSON.stringify([url.origin, url.pathname, query]);
 };
+document.querySelectorAll('.media-preview.image').forEach((image) => {
+  const constrain = () => { if (image.naturalWidth) { image.style.setProperty('--image-max-width', (image.naturalWidth * 4) + 'px'); } };
+  if (image.complete) { constrain(); } else { image.addEventListener('load', constrain, { once: true }); }
+});
 tree?.addEventListener('click', (event) => {
   if (event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) { return; }
   const link = event.target.closest?.('details[data-path] > summary > .tree-folder-link, details[data-path] > summary > .tree-files-link');
@@ -48,16 +32,28 @@ const addEntries = (list, entries) => entries.forEach((entry) => {
   link.href = entry.href;
   if (entry.queryRemove) { link.dataset.queryRemove = entry.queryRemove.join(' '); }
   link.textContent = entry.name + (entry.directory ? '/' : '');
-  if (!entry.directory) { syncNavigationLinks([link]); item.append(link); list.append(item); return; }
+  if (!entry.directory) {
+    if (entry.filesHref) {
+      item.className = 'tree-entry-row';
+      const files = filesLink(entry.filesHref, entry.filesLabel ?? entry.name);
+      syncNavigationLinks([link, files]);
+      item.append(link, files);
+    } else {
+      syncNavigationLinks([link]);
+      item.append(link);
+    }
+    list.append(item);
+    return;
+  }
   const details = document.createElement('details');
   details.dataset.path = entry.path;
   const summary = document.createElement('summary');
   summary.append(link);
   details.append(summary, document.createElement('ul'));
-  if (entry.filesHref) { addFilesLink(details, entry.filesHref, entry.name); }
-  syncNavigationLinks([link]);
-  if (entry.indexPending) { details.dataset.indexPending = 'true'; }
-  item.append(details); list.append(item); queueIndex(details);
+  const files = filesLink(entry.filesHref, entry.name);
+  summary.append(files);
+  syncNavigationLinks([link, files]);
+  item.append(details); list.append(item);
 });
 tree?.addEventListener('toggle', async (event) => {
   const details = event.target;

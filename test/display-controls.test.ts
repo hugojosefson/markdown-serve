@@ -103,6 +103,7 @@ Deno.test("client carries all current query state across internal navigation", (
   let externalHref = "https://example.test/docs?x=1";
   let hashHref = "#browse";
   let rawHref = "?raw";
+  let metadataHref = "?theme=dark";
   let clicked = 0;
   const ordinary = {
     getAttribute: (name: string) => name === "href" ? ordinaryHref : null,
@@ -137,13 +138,26 @@ Deno.test("client carries all current query state across internal navigation", (
     setAttribute: (_name: string, value: string) => rawHref = value,
     matches: (selector: string) => selector.includes(".raw-link"),
   };
+  const metadata = {
+    getAttribute: (name: string) => name === "href" ? metadataHref : null,
+    setAttribute: (_name: string, value: string) => metadataHref = value,
+    matches: (selector: string) => selector.includes(".file-metadata"),
+  };
   const width = { querySelector: () => ({ click: () => clicked++ }) };
   const document = {
     documentElement: { dataset: {} as Record<string, string> },
     querySelector: (selector: string) =>
       selector.includes("display-width") ? width : null,
-    querySelectorAll:
-      () => [ordinary, override, absolute, option, external, hash, raw],
+    querySelectorAll: () => [
+      ordinary,
+      override,
+      absolute,
+      option,
+      external,
+      hash,
+      raw,
+      metadata,
+    ],
   };
   new Function(
     "location",
@@ -160,6 +174,7 @@ Deno.test("client carries all current query state across internal navigation", (
     ordinaryHref,
     "docs?flag&order=size&theme=dark&unknown=one&unknown=two&width=wide",
   );
+  assertEquals(metadataHref, "?theme=dark");
   assertEquals(
     overrideHref,
     "/files?flag&order=modified&order=name&theme=dark&unknown=target&width=wide",

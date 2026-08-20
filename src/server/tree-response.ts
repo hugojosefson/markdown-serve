@@ -1,5 +1,6 @@
 import { join } from "@std/path";
 import { entryRoute } from "./entry-route.ts";
+import type { IndexState } from "./file-catalog.ts";
 import { canonicalPath, lexical, splitPath } from "./paths.ts";
 import { plain } from "./responses.ts";
 import type { ServerConfig } from "./types.ts";
@@ -47,30 +48,38 @@ function treeEntry(
   directory: boolean;
   href: string;
   filesHref?: string;
-  indexPending?: boolean;
+  filesLabel?: string;
   queryRemove?: string[];
 } {
   const child = [...parts, entry.name];
   const resolved = entryRoute(parts, entry);
   if (entry.directory) {
-    const index = config.catalog.indexState(join(config.rootPath, ...child));
     return {
       name: entry.name,
       path: child.join("/"),
       directory: true,
       href: canonicalPath(resolved.parts, resolved.trailing),
-      filesHref: index.known && index.index
-        ? `${canonicalPath(resolved.parts, resolved.trailing)}?dir`
-        : undefined,
-      indexPending: index.known ? undefined : true,
+      filesHref: directoryFilesHref(
+        canonicalPath(resolved.parts, resolved.trailing),
+        config.catalog.indexState(join(config.rootPath, ...child)),
+      ),
       queryRemove: ["dir"],
     };
   }
+  const href = canonicalPath(resolved.parts, resolved.trailing);
   return {
     name: entry.name,
     path: child.join("/"),
     directory: entry.directory,
-    href: canonicalPath(resolved.parts, resolved.trailing),
+    href,
+    filesHref: resolved.trailing ? `${href}?dir` : undefined,
+    filesLabel: resolved.trailing
+      ? (parts.at(-1) ?? config.rootLabel)
+      : undefined,
     queryRemove: resolved.trailing ? ["dir"] : undefined,
   };
+}
+
+function directoryFilesHref(href: string, indexState: IndexState): string {
+  return indexState.known && !indexState.index ? href : `${href}?dir`;
 }

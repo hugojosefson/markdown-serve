@@ -1,9 +1,10 @@
 import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
-import { rawPageAction } from "./page-action.ts";
+import { filePageActions } from "./page-action.ts";
 import type { PageAction } from "./page-action.ts";
 import { renderCodeMarkdown } from "./render-code-markdown.ts";
-import { rawTextFile } from "./responses.ts";
+import { downloadFile, rawFile } from "./responses.ts";
+import { metadataForFile } from "./file-metadata.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function renderMarkdown(
@@ -15,11 +16,16 @@ export async function renderMarkdown(
   options: MarkdownOptions = {},
 ): Promise<Response> {
   if (new URL(request.url).searchParams.has("raw")) {
-    return await rawTextFile(request, file);
+    return await rawFile(request, file, true);
+  }
+  if (new URL(request.url).searchParams.has("download")) {
+    return await downloadFile(request, file);
   }
   if (request.method === "HEAD") {
     return htmlResponse(request, "");
   }
+  const info = await Deno.stat(file);
+  const metadata = metadataForFile(file, info);
   const base = new URL(request.url);
   base.pathname = pathname;
   base.search = "";
@@ -32,7 +38,11 @@ export async function renderMarkdown(
       directory: options.directory ?? false,
       content,
       url: new URL(request.url),
-      actions: [rawPageAction(), ...(options.actions ?? [])],
+      actions: [
+        ...filePageActions("text/plain; charset=UTF-8", metadata.mime),
+        ...(options.actions ?? []),
+      ],
+      metadata,
       directoryView: options.directoryView,
       sourceName: options.sourceName,
     }),

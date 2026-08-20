@@ -20,6 +20,7 @@ export class FileCatalog {
   #indexStates = new Map<string, string | undefined>();
   #markdown = new Map<string, Promise<string | undefined>>();
   #statLimiter = new AsyncLimiter(16);
+  #readLimiter = new AsyncLimiter(16);
   #generation = 0;
 
   names(path: string): Promise<Deno.DirEntry[]> {
@@ -42,6 +43,16 @@ export class FileCatalog {
     return this.#indexStates.has(path)
       ? { known: true, index: this.#indexStates.get(path) }
       : { known: false };
+  }
+
+  async warmRoot(rootPath: string): Promise<void> {
+    const entries = await this.entries(rootPath);
+    await Promise.all([
+      this.index(rootPath),
+      ...entries.filter((entry) => entry.directory).map((entry) =>
+        this.index(join(rootPath, entry.name))
+      ),
+    ]);
   }
 
   async markdown(path: string, leaf: string): Promise<string | undefined> {
@@ -126,7 +137,7 @@ export class FileCatalog {
       if (generation === this.#generation) {
         const index = selectedIndex(sorted);
         this.#indexes.set(path, Promise.resolve(index));
-        this.#indexStates.set(path, index);
+        this.#setIndexState(path, index);
       }
       return sorted;
     });
@@ -146,20 +157,23 @@ export class FileCatalog {
         const info = await this.stat(join(path, name));
         return { name, directory: info?.isDirectory ?? false, info };
       }));
-      return selectedIndex(entries);
+      const index = selectedIndex(entries);
+      if (generation === this.#generation) {
+        this.#setIndexState(path, index);
+      }
+      return index;
     });
     this.#indexes.set(path, value);
-    value.then((index) => {
-      if (generation === this.#generation) {
-        this.#indexStates.set(path, index);
-      }
-    });
     return value;
   }
 
   #setNames(path: string): Promise<Deno.DirEntry[]> {
-    const value = readDirectory(path);
+    const value = this.#readLimiter.run(() => readDirectory(path));
     this.#names.set(path, value);
     return value;
+  }
+
+  #setIndexState(path: string, index: string | undefined): void {
+    this.#indexStates.set(path, index);
   }
 }

@@ -2,7 +2,10 @@ import { resolve } from "@std/path";
 import type { ReloadSource } from "./reload-source.ts";
 
 type WatchedReloadSource = ReloadSource & { close(): void };
-type ReloadSubscriber = { notify: () => void; close?: () => void };
+type ReloadSubscriber = {
+  notify: () => void | Promise<void>;
+  close?: () => void;
+};
 
 export function createReloadWatcher(
   root: string,
@@ -15,6 +18,7 @@ class ReloadHub implements WatchedReloadSource {
   #closed = false;
   #subscribers = new Set<ReloadSubscriber>();
   #timer?: ReturnType<typeof setTimeout>;
+  #notifications = Promise.resolve();
   readonly #watcher: Deno.FsWatcher;
   readonly #signal?: AbortSignal;
 
@@ -32,7 +36,10 @@ class ReloadHub implements WatchedReloadSource {
     void this.watch();
   }
 
-  subscribe(notify: () => void, onClose?: () => void): () => void {
+  subscribe(
+    notify: () => void | Promise<void>,
+    onClose?: () => void,
+  ): () => void {
     if (this.#closed) {
       onClose?.();
       return () => {};
@@ -88,14 +95,21 @@ class ReloadHub implements WatchedReloadSource {
     this.#timer = setTimeout(() => {
       this.#timer = undefined;
       if (!this.#closed) {
-        for (const subscriber of this.#subscribers) {
-          try {
-            subscriber.notify();
-          } catch {
-            // One disconnected client must not block remaining notifications.
-          }
-        }
+        this.#notifications = this.#notifications.then(() => this.notify());
       }
     }, 50);
+  }
+
+  async notify(): Promise<void> {
+    for (const subscriber of this.#subscribers) {
+      if (this.#closed) {
+        return;
+      }
+      try {
+        await subscriber.notify();
+      } catch {
+        // One disconnected client must not block remaining notifications.
+      }
+    }
   }
 }

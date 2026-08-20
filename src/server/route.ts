@@ -3,7 +3,9 @@ import { canonicalPath, decodePath, filePath } from "./paths.ts";
 import { renderDirectory } from "./render-directory.ts";
 import { renderMarkdown } from "./render-markdown.ts";
 import { renderText } from "./render-text.ts";
-import { plain, rawTextFile, redirect, staticFile } from "./responses.ts";
+import { renderFile } from "./render-file.ts";
+import { downloadFile, plain, rawFile, redirect } from "./responses.ts";
+import { previewableFile } from "./file-metadata.ts";
 import { isTextFile } from "./text-file.ts";
 import type { ServerConfig } from "./types.ts";
 
@@ -55,8 +57,10 @@ export async function route(
       { sourceName: resolved.sourceName },
     );
   }
-  if (resolved.kind === "raw") {
-    return await rawTextFile(request, resolved.path);
+  if (resolved.kind === "raw" || resolved.kind === "download") {
+    return resolved.kind === "raw"
+      ? await rawFile(request, resolved.path, resolved.text)
+      : await downloadFile(request, resolved.path);
   }
   if (resolved.kind === "text") {
     return await renderText(
@@ -68,7 +72,13 @@ export async function route(
     );
   }
   if (resolved.kind === "static") {
-    return await staticFile(request, resolved.path);
+    return await renderFile(
+      config,
+      request,
+      resolved.url,
+      resolved.path,
+      resolved.parts,
+    );
   }
   throw new Error("unreachable route");
 }
@@ -90,10 +100,11 @@ export type ResolvedRoute =
     sourceName: string;
   }
   | {
-    kind: "text" | "static" | "raw";
+    kind: "text" | "static" | "raw" | "download";
     url: URL;
     path: string;
     parts: string[];
+    text?: boolean;
   };
 
 export async function resolveRoute(
@@ -143,10 +154,18 @@ export async function resolveRoute(
     };
   }
   if (url.searchParams.has("raw")) {
-    return { kind: "raw", url, path: target, parts };
+    const text = !previewableFile(target) && await isTextFile(target);
+    return { kind: "raw", url, path: target, parts, text };
   }
-  // Both methods sample so Content-Type parity cannot depend on request method.
-  if (await isTextFile(target)) {
+  if (url.searchParams.has("download")) {
+    return { kind: "download", url, path: target, parts };
+  }
+  if (previewableFile(target)) {
+    return { kind: "static", url, path: target, parts };
+  }
+  // Sampling stays method-independent so GET and HEAD have matching types.
+  const text = await isTextFile(target);
+  if (text) {
     return { kind: "text", url, path: target, parts };
   }
   return { kind: "static", url, path: target, parts };

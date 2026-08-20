@@ -28,7 +28,7 @@ Deno.test("browser query source matches canonical query fixtures", () => {
 
 Deno.test("raw links are always query-relative and clean", () => {
   assertEquals(
-    rawPageAction().href,
+    rawPageAction("text/plain").href,
     "?raw",
   );
 });

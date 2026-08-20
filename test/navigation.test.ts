@@ -51,7 +51,10 @@ Deno.test("generated pages include responsive navigation and active branches", a
       /aria-label="Breadcrumb"><a href="\/\?dir">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">guide\.md<\/span>/,
     );
     assertMatch(guideBody, /data-path="docs"/);
-    assertMatch(guideBody, /data-path="docs" data-index-pending="true"/);
+    assertMatch(
+      guideBody,
+      /data-path="docs"><summary><a class="tree-folder-link" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"/,
+    );
     assertMatch(
       pageCss,
       /\.tree \.tree-files-link \{[^}]*bottom: 0;[^}]*display: flex;[^}]*opacity: 0;[^}]*position: absolute; right: 0; top: 0/,
@@ -80,7 +83,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     ));
     assertMatch(
       plainBody,
-      /<a class="raw-link" href="\?raw">Raw<\/a>/,
+      /<a class="raw-link" href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)" aria-label="View raw content \(text\/plain; charset=UTF-8\)">Raw<\/a>/,
     );
     assertMatch(
       pageCss,
@@ -112,7 +115,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(emptyBody, /\.dot/);
     assertMatch(
       emptyBody,
-      /data-path="empty"[^>]*><summary><a class="(?:active )?tree-folder-link" href="\/empty\/" data-query-remove="dir">empty\/<\/a><\/summary>/,
+      /data-path="empty"[^>]*><summary><a class="(?:active )?tree-folder-link" href="\/empty\/" data-query-remove="dir">empty\/<\/a><a class="tree-files-link" href="\/empty\/"/,
     );
   } finally {
     await f.cleanup();
@@ -170,7 +173,7 @@ Deno.test("folder controls toggle only when they already target the current page
     "fetch",
     pageClient,
   )(
-    { querySelector: () => tree },
+    { querySelector: () => tree, querySelectorAll: () => [] },
     class {},
     location,
     () => Promise.reject(new Error("not fetched")),
@@ -272,16 +275,16 @@ Deno.test("root labels preserve the configured argument and escape HTML", async 
   }
 });
 
-Deno.test("root Files control requires a renderable index", async () => {
+Deno.test("root Files control is available without a renderable index", async () => {
   const f = await fixture({ "docs/README.md": "docs" });
   try {
     const body = await (await handler(f.root))(new Request("http://x/"))
       .then((response) => response.text());
     assertMatch(
       body,
-      /<div class="tree-root-row"><a class="tree-root(?: active)?" href="\/" data-query-remove="dir">.+<\/a><\/div>/,
+      /<div class="tree-root-row"><a class="tree-root(?: active)?" href="\/" data-query-remove="dir">.+<\/a><a class="tree-files-link" href="\/"/,
     );
-    assert(!body.includes('title="Show files in ' + `${f.root}/`));
+    assert(body.includes('title="Show files in ' + `${f.root}/`));
   } finally {
     await f.cleanup();
   }
@@ -338,6 +341,8 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
         path: "docs/README.md",
         directory: false,
         href: "/docs/",
+        filesHref: "/docs/?dir",
+        filesLabel: "docs",
         queryRemove: ["dir"],
       },
     );
@@ -348,7 +353,7 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
         path: "docs/indexed",
         directory: true,
         href: "/docs/indexed/",
-        indexPending: true,
+        filesHref: "/docs/indexed/?dir",
         queryRemove: ["dir"],
       },
     );
@@ -356,35 +361,22 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
       (children.find((child) => child.name === "unindexed") as {
         filesHref?: string;
       }).filesHref,
-      undefined,
+      "/docs/unindexed/?dir",
     );
-    assert(pageClient.includes("/__markdown_server__/index?path="));
-    assert(pageClient.includes("runningIndexes < 4"));
-
-    const indexResponse = await h(
-      new Request("http://x/__markdown_server__/index?path=docs%2Findexed"),
-    );
-    assertEquals(await indexResponse.json(), {
-      filesHref: "/docs/indexed/?dir",
-    });
+    const rootChildren = await (
+      await h(new Request("http://x/__markdown_server__/tree"))
+    ).json() as Array<{ name: string; filesHref?: string }>;
     assertEquals(
-      await (await h(
-        new Request("http://x/__markdown_server__/index?path=docs%2Funindexed"),
-      )).json(),
-      {},
+      rootChildren.find((child) => child.name === "docs")?.filesHref,
+      "/docs/?dir",
     );
-    const cachedBody = await (await h(new Request("http://x/docs/ordinary")))
-      .text();
-    assertMatch(
-      cachedBody,
-      /data-path="docs\/indexed"><summary>.*tree-files-link/s,
+    assertEquals(
+      rootChildren.find((child) => child.name === "__markdown_server__")
+        ?.filesHref,
+      "/__markdown_server__/",
     );
-    assertMatch(cachedBody, /data-path="docs\/unindexed"><summary>/);
-    assert(
-      !cachedBody.includes(
-        'data-path="docs/unindexed" data-index-pending="true"',
-      ),
-    );
+    assert(!pageClient.includes("/__markdown_server__/index"));
+    assert(!pageClient.includes("indexPending"));
 
     const percentResponse = await h(
       new Request(
@@ -408,9 +400,9 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
     );
     assertEquals(traversalResponse.status, 400);
     assertEquals(
-      (await h(new Request("http://x/__markdown_server__/index?path=%2e%2e")))
+      (await h(new Request("http://x/__markdown_server__/index?path=docs")))
         .status,
-      400,
+      404,
     );
     const rootResponse = await h(
       new Request("http://x/__markdown_server__/tree"),

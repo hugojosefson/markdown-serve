@@ -108,7 +108,7 @@ Deno.test("SSE unsubscribes when a reload source closes during subscribe", async
   }
 });
 
-Deno.test("reload notifications invalidate the session file catalog", async () => {
+Deno.test("reload notifications invalidate index detection", async () => {
   const f = await fixture({ "docs/file.txt": "plain" });
   let notify = () => {};
   const source = {
@@ -116,20 +116,18 @@ Deno.test("reload notifications invalidate the session file catalog", async () =
   };
   try {
     const h = await handler(f.root, { reloadSource: source });
-    const url = "http://x/__markdown_server__/index?path=docs";
-    assertEquals(await (await h(new Request(url))).json(), {});
+    const url = "http://x/docs/?dir";
+    assertEquals((await h(new Request(url))).status, 302);
     await Deno.writeTextFile(`${f.root}/docs/README.md`, "now indexed");
     notify();
-    assertEquals(await (await h(new Request(url))).json(), {
-      filesHref: "/docs/?dir",
-    });
+    assertEquals((await h(new Request(url))).status, 200);
   } finally {
     await f.cleanup();
   }
 });
 
-Deno.test("watched reload emits SSE and closes on shutdown", async () => {
-  const f = await fixture({ "guide.md": "guide" });
+Deno.test("watched reload warms the catalog before notifying SSE clients", async () => {
+  const f = await fixture({ "docs/file.txt": "plain", "guide.md": "guide" });
   const server = await serve({
     root: f.root,
     hostname: "127.0.0.1",
@@ -143,7 +141,14 @@ Deno.test("watched reload emits SSE and closes on shutdown", async () => {
       `http://${address.hostname}:${address.port}/__markdown_server__/events`,
     );
     const reader = response.body!.getReader();
-    await Deno.writeTextFile(`${f.root}/changed.txt`, "changed");
+    assertEquals(
+      (await fetch(
+        `http://${address.hostname}:${address.port}/docs/?dir`,
+        { redirect: "manual" },
+      )).status,
+      302,
+    );
+    await Deno.writeTextFile(`${f.root}/docs/README.md`, "indexed");
     const result = await Promise.race([
       reader.read(),
       new Promise<never>((_, reject) =>
@@ -151,6 +156,13 @@ Deno.test("watched reload emits SSE and closes on shutdown", async () => {
       ),
     ]);
     assertMatch(new TextDecoder().decode(result.value), /event: reload/);
+    assertEquals(
+      (await fetch(
+        `http://${address.hostname}:${address.port}/docs/?dir`,
+        { redirect: "manual" },
+      )).status,
+      200,
+    );
     await reader.cancel();
     await server.shutdown();
     await server.finished;

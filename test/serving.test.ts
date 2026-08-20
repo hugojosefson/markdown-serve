@@ -1,4 +1,4 @@
-import { assertEquals, assertMatch } from "@std/assert";
+import { assert, assertEquals, assertMatch } from "@std/assert";
 import { pageScript, pageStylesheet } from "../src/server/page-assets.ts";
 import { fixture, handler } from "./fixture.ts";
 
@@ -16,7 +16,10 @@ Deno.test("static MIME types, HEAD, 404, and 405 responses", async () => {
     const fontHead = await h(
       new Request("http://x/font.woff2", { method: "HEAD" }),
     );
-    assertEquals(fontHead.headers.get("content-type"), "font/woff2");
+    assertEquals(
+      fontHead.headers.get("content-type"),
+      "text/html; charset=utf-8",
+    );
     assertEquals(await fontHead.text(), "");
     assertMatch(await (await h(new Request("http://x/.hidden"))).text(), /yes/);
     const missingHead = await h(
@@ -84,7 +87,7 @@ Deno.test("HEAD generated pages return headers without bodies", async () => {
   }
 });
 
-Deno.test("text files render only at their exact paths and binaries stay static", async () => {
+Deno.test("text files render only at their exact paths and binaries render pages", async () => {
   const f = await fixture({
     ".editorconfig": "root = true\n# café\n",
     ".gitignore": "node_modules/\n",
@@ -102,7 +105,10 @@ Deno.test("text files render only at their exact paths and binaries stay static"
       editorconfig.headers.get("content-type"),
       "text/html; charset=utf-8",
     );
-    assertMatch(await editorconfig.text(), /root = true/);
+    assertMatch(
+      await editorconfig.text(),
+      /token key attr-name">root.*token value attr-value">true/s,
+    );
     assertMatch(
       await (await h(new Request("http://x/.gitignore"))).text(),
       /node_modules/,
@@ -111,12 +117,9 @@ Deno.test("text files render only at their exact paths and binaries stay static"
     const binary = await h(new Request("http://x/.binary"));
     assertEquals(
       binary.headers.get("content-type"),
-      "application/octet-stream",
+      "text/html; charset=utf-8",
     );
-    assertEquals(
-      new Uint8Array(await binary.arrayBuffer()),
-      new Uint8Array([0x61, 0x00, 0xff]),
-    );
+    assertMatch(await binary.text(), /00000000\s+61 00 ff.*\|a\.\.\|/s);
     for (const path of ["/.binary", "/image.png"]) {
       const get = await h(new Request(`http://x${path}`));
       const head = await h(new Request(`http://x${path}`, { method: "HEAD" }));
@@ -126,6 +129,153 @@ Deno.test("text files render only at their exact paths and binaries stay static"
       );
       assertEquals(await head.text(), "");
     }
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("file pages expose metadata, previews, raw downloads, and ranges", async () => {
+  const f = await fixture({
+    "photo.png": "",
+    "song.mp3": "x",
+    "movie.mp4": "x",
+    "paper.pdf": "x",
+    "vector.svg": '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+    "script.ts": "const value = 1;",
+    "empty.bin": "",
+    "café.bin": "x",
+  });
+  try {
+    await Deno.writeFile(`${f.root}/photo.png`, new Uint8Array([1, 2, 3, 4]));
+    const h = await handler(f.root);
+    const image = await (await h(new Request("http://x/photo.png"))).text();
+    assertMatch(
+      image,
+      /<a class="file-metadata" href="\?metadata=expand" title="Show file details" aria-label="Show file details" aria-expanded="false">4B <span[^>]*>·<\/span> (?:now|today)<\/a>/,
+    );
+    assert(!image.includes("file-metadata-details"));
+    const details = await (await h(
+      new Request("http://x/photo.png?metadata=expand"),
+    )).text();
+    assertMatch(
+      details,
+      /<\/header><section class="file-metadata-details"[^>]*><dl>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>Size<\/dt><dd>4 bytes \(4B\)<\/dd>.*<dt>Modified<\/dt><dd>[^<]+ \((?:now|today)\)<\/dd>.*<\/dl><\/section><img/s,
+    );
+    assertMatch(
+      details,
+      /<a class="file-metadata" href="\/photo\.png" title="Hide file details" aria-label="Hide file details" aria-expanded="true">/,
+    );
+    const themedDetails = await (await h(
+      new Request("http://x/photo.png?theme=dark&metadata=expand"),
+    )).text();
+    assertMatch(
+      themedDetails,
+      /<a class="file-metadata" href="\?theme=dark" title="Hide file details" aria-label="Hide file details" aria-expanded="true">/,
+    );
+    assertMatch(
+      image,
+      /<a class="raw-link" href="\?raw" title="View raw content \(image\/png\)" aria-label="View raw content \(image\/png\)">Raw<\/a><a class="page-action" href="\?download" title="Download file \(image\/png\)" aria-label="Download file \(image\/png\)">Download<\/a>/,
+    );
+    assertMatch(
+      image,
+      /<img class="media-preview image"[^>]+alt="photo\.png">/,
+    );
+    assert(!image.includes("onload="));
+    assertMatch(pageScript.body, /naturalWidth \* 4/);
+    assertMatch(
+      await (await h(new Request("http://x/vector.svg"))).text(),
+      /<img class="media-preview image"/,
+    );
+    const rawSvg = await h(new Request("http://x/vector.svg?raw"));
+    assertEquals(rawSvg.headers.get("x-content-type-options"), "nosniff");
+    assertMatch(
+      rawSvg.headers.get("content-security-policy")!,
+      /sandbox; default-src 'none'/,
+    );
+    assertMatch(
+      await (await h(new Request("http://x/script.ts"))).text(),
+      /code-language">typescript/,
+    );
+    for (
+      const [path, shape] of [
+        ["/paper.pdf", /<embed/],
+        ["/song.mp3", /<audio/],
+        ["/movie.mp4", /<video/],
+      ] as const
+    ) {
+      assertMatch(
+        await (await h(new Request(`http://x${path}`))).text(),
+        shape,
+      );
+    }
+    const raw = await h(
+      new Request("http://x/photo.png?raw", {
+        headers: { Range: "bytes=1-2" },
+      }),
+    );
+    assertEquals([
+      raw.status,
+      raw.headers.get("content-type"),
+      raw.headers.get("content-range"),
+    ], [206, "image/png", "bytes 1-2/4"]);
+    assertEquals(
+      new Uint8Array(await raw.arrayBuffer()),
+      new Uint8Array([2, 3]),
+    );
+    const suffix = await h(
+      new Request("http://x/photo.png?raw", {
+        headers: { Range: "bytes=-2" },
+      }),
+    );
+    assertEquals(
+      [suffix.status, suffix.headers.get("content-range")],
+      [206, "bytes 2-3/4"],
+    );
+    assertEquals(
+      new Uint8Array(await suffix.arrayBuffer()),
+      new Uint8Array([3, 4]),
+    );
+    const textRange = await h(
+      new Request("http://x/script.ts?raw", {
+        headers: { Range: "bytes=0-4" },
+      }),
+    );
+    assertEquals(
+      [textRange.status, textRange.headers.get("content-range")],
+      [206, "bytes 0-4/16"],
+    );
+    assertEquals(await textRange.text(), "const");
+    for (const value of ["bytes=-0", "bytes=4-5", "bytes=3-2"]) {
+      const invalid = await h(
+        new Request("http://x/photo.png?raw", { headers: { Range: value } }),
+      );
+      assertEquals(invalid.status, 416);
+      assertEquals(invalid.headers.get("content-range"), "bytes */4");
+    }
+    const empty = await h(new Request("http://x/empty.bin?raw"));
+    assertEquals([empty.status, empty.headers.get("content-length")], [
+      200,
+      "0",
+    ]);
+    assertEquals((await empty.arrayBuffer()).byteLength, 0);
+    const download = await h(new Request("http://x/photo.png?download"));
+    assertMatch(
+      download.headers.get("content-disposition")!,
+      /attachment; filename="photo.png"/,
+    );
+    assertMatch(
+      (await h(new Request("http://x/caf%C3%A9.bin?download"))).headers.get(
+        "content-disposition",
+      )!,
+      /filename="caf_\.bin"; filename\*=UTF-8''caf%C3%A9\.bin/,
+    );
+    const head = await h(
+      new Request("http://x/photo.png?raw", { method: "HEAD" }),
+    );
+    assertEquals([head.headers.get("content-type"), await head.text()], [
+      "image/png",
+      "",
+    ]);
   } finally {
     await f.cleanup();
   }

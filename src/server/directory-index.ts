@@ -3,6 +3,7 @@ import { escapeHtml } from "./html.ts";
 import { queryHref, setQuery } from "./query.ts";
 import { classifyEntry, entryRoute } from "./entry-route.ts";
 import { entryKind } from "./entry-kind.ts";
+import { compareDirectoryGroups } from "./directory-order.ts";
 import { formatSize, permissions } from "./file-metadata.ts";
 import { gitDisplay, type GitStatus, gitStatusAt } from "./git/status.ts";
 import { renderIsoTimestamp } from "./render-iso-timestamp.ts";
@@ -61,6 +62,10 @@ function compareEntries(
   const descending = order.endsWith("-desc");
   const field = order.replace("-desc", "") as DirectoryField;
   return (left: DirectoryEntry, right: DirectoryEntry) => {
+    const grouped = compareDirectoryGroups(left, right);
+    if (grouped) {
+      return grouped;
+    }
     const leftValue = value(left, field, status, gitPrefix);
     const rightValue = value(right, field, status, gitPrefix);
     if ((leftValue === undefined) !== (rightValue === undefined)) {

@@ -66,7 +66,7 @@ Deno.test("pages render display anchors without a menu or selects", async () => 
     assert(!body.includes("<select"));
     assert(!body.includes('<details class="display'));
     assert(
-      body.indexOf(displayInitialClient) < body.indexOf("<style>"),
+      body.indexOf(displayInitialClient) < body.indexOf('rel="stylesheet"'),
       "applies query display state before the stylesheet can paint",
     );
   } finally {

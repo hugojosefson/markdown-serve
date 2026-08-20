@@ -1,5 +1,33 @@
 export const pageClient = `
 const tree = document.querySelector('.tree');
+const pendingIndexes = [];
+let runningIndexes = 0;
+const addFilesLink = (details, href, name) => {
+  if (details.querySelector('.tree-files-link')) { return; }
+  const filesLink = document.createElement('a');
+  filesLink.className = 'tree-files-link';
+  filesLink.href = href;
+  filesLink.title = filesLink.ariaLabel = 'Show files in ' + name;
+  filesLink.textContent = 'Files';
+  details.querySelector('summary').append(filesLink);
+  syncNavigationLinks([filesLink]);
+};
+const runIndexes = () => {
+  while (runningIndexes < 4 && pendingIndexes.length) {
+    const details = pendingIndexes.shift();
+    runningIndexes++;
+    fetch('/__markdown_server__/index?path=' + encodeURIComponent(details.dataset.path))
+      .then((response) => response.ok ? response.json() : undefined)
+      .then((status) => { if (status?.filesHref) { addFilesLink(details, status.filesHref, details.querySelector('.tree-folder-link').textContent.slice(0, -1)); } })
+      .catch(() => {})
+      .finally(() => { details.dataset.indexPending = 'done'; runningIndexes--; runIndexes(); });
+  }
+};
+const queueIndex = (details) => {
+  if (details.dataset.indexPending !== 'true') { return; }
+  details.dataset.indexPending = 'queued'; pendingIndexes.push(details); runIndexes();
+};
+tree?.querySelectorAll?.('details[data-index-pending="true"]').forEach(queueIndex);
 const navigationLocationKey = (value) => {
   const url = new URL(value, location.href);
   const query = [...url.searchParams].map((pair) => JSON.stringify(pair)).sort().join(',');
@@ -25,17 +53,11 @@ const addEntries = (list, entries) => entries.forEach((entry) => {
   details.dataset.path = entry.path;
   const summary = document.createElement('summary');
   summary.append(link);
-  if (entry.filesHref) {
-    const filesLink = document.createElement('a');
-    filesLink.className = 'tree-files-link';
-    filesLink.href = entry.filesHref;
-    filesLink.title = filesLink.ariaLabel = 'Show files in ' + entry.name;
-    filesLink.textContent = 'Files';
-    summary.append(filesLink);
-    syncNavigationLinks([link, filesLink]);
-  } else { syncNavigationLinks([link]); }
   details.append(summary, document.createElement('ul'));
-  item.append(details); list.append(item);
+  if (entry.filesHref) { addFilesLink(details, entry.filesHref, entry.name); }
+  syncNavigationLinks([link]);
+  if (entry.indexPending) { details.dataset.indexPending = 'true'; }
+  item.append(details); list.append(item); queueIndex(details);
 });
 tree?.addEventListener('toggle', async (event) => {
   const details = event.target;

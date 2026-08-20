@@ -1,4 +1,4 @@
-import { statOrUndefined } from "./fs.ts";
+import { classifyEntry, entryRoute } from "./entry-route.ts";
 import { canonicalPath, decodePath, filePath } from "./paths.ts";
 import { renderDirectory } from "./render-directory.ts";
 import { renderMarkdown } from "./render-markdown.ts";
@@ -17,64 +17,137 @@ export async function route(
       headers: { Allow: "GET, HEAD" },
     });
   }
-  const url = new URL(request.url);
-  const parts = decodePath(url.pathname);
-  if (!parts) {
+  const resolved = await resolveRoute(
+    config,
+    new URL(request.url),
+    config.catalog,
+  );
+  if (resolved.kind === "bad-request") {
     return plain("Bad Request", 400, request.method);
   }
-  const target = filePath(config.rootPath, parts);
-  const stat = await statOrUndefined(target);
-  if (url.pathname.endsWith("/")) {
-    return stat?.isDirectory
-      ? await renderDirectory(config, request, url, target, parts)
-      : plain("Not Found", 404, request.method);
+  if (resolved.kind === "not-found") {
+    return plain("Not Found", 404, request.method);
   }
-  const routeLeaf = parts.at(-1)!;
-  const sourceName = `${routeLeaf}.md`;
-  const markdown = filePath(config.rootPath, [
-    ...parts.slice(0, -1),
-    sourceName,
-  ]);
-  if (
-    (!stat || stat.isDirectory) && (await statOrUndefined(markdown))?.isFile
-  ) {
+  if (resolved.kind === "redirect") {
+    return redirect(
+      resolved.url,
+      resolved.pathname,
+      config.redirectStatus,
+      request.method,
+    );
+  }
+  if (resolved.kind === "directory") {
+    return await renderDirectory(
+      config,
+      request,
+      resolved.url,
+      resolved.path,
+      resolved.parts,
+    );
+  }
+  if (resolved.kind === "markdown") {
     return await renderMarkdown(
       config,
       request,
-      url.pathname,
-      markdown,
-      parts,
-      { sourceName },
+      resolved.url.pathname,
+      resolved.path,
+      resolved.parts,
+      { sourceName: resolved.sourceName },
     );
+  }
+  if (resolved.kind === "raw") {
+    return await rawTextFile(request, resolved.path);
+  }
+  if (resolved.kind === "text") {
+    return await renderText(
+      config,
+      request,
+      resolved.url,
+      resolved.path,
+      resolved.parts,
+    );
+  }
+  if (resolved.kind === "static") {
+    return await staticFile(request, resolved.path);
+  }
+  throw new Error("unreachable route");
+}
+
+export type ResolvedRoute =
+  | { kind: "bad-request" | "not-found" }
+  | { kind: "redirect"; url: URL; pathname: string }
+  | {
+    kind: "directory";
+    url: URL;
+    path: string;
+    parts: string[];
+  }
+  | {
+    kind: "markdown";
+    url: URL;
+    path: string;
+    parts: string[];
+    sourceName: string;
+  }
+  | {
+    kind: "text" | "static" | "raw";
+    url: URL;
+    path: string;
+    parts: string[];
+  };
+
+export async function resolveRoute(
+  config: ServerConfig,
+  url: URL,
+  catalog = config.catalog,
+): Promise<ResolvedRoute> {
+  const decodedParts = decodePath(url.pathname);
+  if (!decodedParts) {
+    return { kind: "bad-request" };
+  }
+  const parts = decodedParts;
+  const target = filePath(config.rootPath, parts);
+  const stat = await catalog.stat(target);
+  if (url.pathname.endsWith("/")) {
+    return stat?.isDirectory
+      ? { kind: "directory", url, path: target, parts }
+      : { kind: "not-found" };
+  }
+  const routeLeaf = parts.at(-1)!;
+  const parent = filePath(config.rootPath, parts.slice(0, -1));
+  const sourceName = (!stat || stat.isDirectory)
+    ? await catalog.markdown(parent, routeLeaf)
+    : undefined;
+  if (sourceName) {
+    return {
+      kind: "markdown",
+      url,
+      path: filePath(parent, [sourceName]),
+      parts,
+      sourceName,
+    };
   }
   if (stat?.isDirectory) {
-    return redirect(
-      url,
-      canonicalPath(parts, true),
-      config.redirectStatus,
-      request.method,
-    );
+    return { kind: "redirect", url, pathname: canonicalPath(parts, true) };
   }
   if (!stat?.isFile) {
-    return plain("Not Found", 404, request.method);
+    return { kind: "not-found" };
   }
-  const name = parts.at(-1)!;
-  if (name.toLowerCase().endsWith(".md")) {
-    const index = /^(readme|index)\.md$/i.test(name);
-    const routeParts = index
-      ? parts.slice(0, -1)
-      : [...parts.slice(0, -1), name.slice(0, -3)];
-    return redirect(
+  const entry = { name: parts.at(-1)!, directory: false };
+  if (classifyEntry(entry).markdown) {
+    const route = entryRoute(parts.slice(0, -1), entry);
+    return {
+      kind: "redirect",
       url,
-      canonicalPath(routeParts, index),
-      config.redirectStatus,
-      request.method,
-    );
+      pathname: canonicalPath(route.parts, route.trailing),
+    };
   }
+  if (url.searchParams.has("raw")) {
+    return { kind: "raw", url, path: target, parts };
+  }
+  // Both methods sample so Content-Type parity cannot depend on request method.
   if (await isTextFile(target)) {
-    return url.searchParams.has("raw")
-      ? await rawTextFile(request, target)
-      : await renderText(config, request, url, target, parts);
+    return { kind: "text", url, path: target, parts };
   }
-  return await staticFile(request, target);
+  return { kind: "static", url, path: target, parts };
 }

@@ -1,4 +1,5 @@
 import { assertEquals, assertMatch } from "@std/assert";
+import { pageScript, pageStylesheet } from "../src/server/page-assets.ts";
 import { fixture, handler } from "./fixture.ts";
 
 Deno.test("static MIME types, HEAD, 404, and 405 responses", async () => {
@@ -34,6 +35,55 @@ Deno.test("static MIME types, HEAD, 404, and 405 responses", async () => {
   }
 });
 
+Deno.test("versioned page assets are immutable and external to compact HTML", async () => {
+  const f = await fixture({ "guide.md": "guide" });
+  try {
+    const h = await handler(f.root);
+    const page = await (await h(new Request("http://x/guide"))).text();
+    assertMatch(page, new RegExp(`href="${pageStylesheet.url}"`));
+    assertMatch(page, new RegExp(`src="${pageScript.url}"`));
+    assertEquals(page.includes("<style>"), false);
+    assertEquals(page.includes(pageStylesheet.body), false);
+    assertEquals(page.includes(pageScript.body), false);
+    assertEquals(page.length < 12_000, true);
+    for (const asset of [pageStylesheet, pageScript]) {
+      const get = await h(new Request(`http://x${asset.url}`));
+      assertEquals(get.headers.get("content-type"), asset.contentType);
+      assertEquals(
+        get.headers.get("cache-control"),
+        "public, max-age=31536000, immutable",
+      );
+      assertEquals(await get.text(), asset.body);
+      const head = await h(
+        new Request(`http://x${asset.url}`, { method: "HEAD" }),
+      );
+      assertEquals(head.headers.get("content-type"), asset.contentType);
+      assertEquals(await head.text(), "");
+    }
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("HEAD generated pages return headers without bodies", async () => {
+  const f = await fixture({ "guide.md": "# Guide", "code.ts": "const x = 1" });
+  try {
+    const h = await handler(f.root);
+    for (const path of ["/guide", "/code.ts", "/"]) {
+      const response = await h(
+        new Request(`http://x${path}`, { method: "HEAD" }),
+      );
+      assertEquals(
+        response.headers.get("content-type"),
+        "text/html; charset=utf-8",
+      );
+      assertEquals(await response.text(), "");
+    }
+  } finally {
+    await f.cleanup();
+  }
+});
+
 Deno.test("text files render only at their exact paths and binaries stay static", async () => {
   const f = await fixture({
     ".editorconfig": "root = true\n# café\n",
@@ -45,6 +95,7 @@ Deno.test("text files render only at their exact paths and binaries stay static"
       `${f.root}/.binary`,
       new Uint8Array([0x61, 0x00, 0xff]),
     );
+    await Deno.writeFile(`${f.root}/image.png`, new Uint8Array([0, 255]));
     const h = await handler(f.root);
     const editorconfig = await h(new Request("http://x/.editorconfig"));
     assertEquals(
@@ -66,6 +117,15 @@ Deno.test("text files render only at their exact paths and binaries stay static"
       new Uint8Array(await binary.arrayBuffer()),
       new Uint8Array([0x61, 0x00, 0xff]),
     );
+    for (const path of ["/.binary", "/image.png"]) {
+      const get = await h(new Request(`http://x${path}`));
+      const head = await h(new Request(`http://x${path}`, { method: "HEAD" }));
+      assertEquals(
+        head.headers.get("content-type"),
+        get.headers.get("content-type"),
+      );
+      assertEquals(await head.text(), "");
+    }
   } finally {
     await f.cleanup();
   }
@@ -86,6 +146,10 @@ Deno.test("malformed and traversal-style paths are rejected", async () => {
     ) {
       assertEquals((await h(new Request(`http://x${path}`))).status, 400, path);
     }
+    assertEquals(
+      (await h(new Request("http://x/missing/child"))).status,
+      404,
+    );
   } finally {
     await f.cleanup();
   }

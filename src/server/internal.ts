@@ -1,4 +1,6 @@
 import { plain } from "./responses.ts";
+import { pageAsset } from "./page-assets.ts";
+import { indexStatusResponse } from "./index-status-response.ts";
 import { sseResponse } from "./sse-response.ts";
 import { treeResponse } from "./tree-response.ts";
 import type { ServerConfig } from "./types.ts";
@@ -14,8 +16,24 @@ export async function internalResponse(
     });
   }
   const url = new URL(request.url);
+  const asset = pageAsset(url.pathname);
+  if (asset) {
+    return new Response(request.method === "HEAD" ? null : asset.body, {
+      headers: {
+        "cache-control": "public, max-age=31536000, immutable",
+        "content-type": asset.contentType,
+      },
+    });
+  }
   if (url.pathname === "/__markdown_server__/tree") {
     return await treeResponse(config, request, url.searchParams.get("path"));
+  }
+  if (url.pathname === "/__markdown_server__/index") {
+    return await indexStatusResponse(
+      config,
+      request,
+      url.searchParams.get("path"),
+    );
   }
   if (url.pathname === "/__markdown_server__/events" && config.reloadSource) {
     return request.method === "HEAD"

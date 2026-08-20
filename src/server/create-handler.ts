@@ -1,5 +1,6 @@
 import { resolve } from "@std/path";
 import { internalResponse } from "./internal.ts";
+import { FileCatalog } from "./file-catalog.ts";
 import { route } from "./route.ts";
 import { plain } from "./responses.ts";
 import type { HandlerOptions, RequestHandler } from "./server-options.ts";
@@ -20,12 +21,26 @@ export async function createRequestHandler(
       }`,
     );
   }
+  const catalog = new FileCatalog();
+  let sourceClosed = false;
+  let unsubscribe = () => {};
+  unsubscribe = options.reloadSource?.subscribe(
+    () => catalog.clear(),
+    () => {
+      sourceClosed = true;
+      unsubscribe();
+    },
+  ) ?? unsubscribe;
+  if (sourceClosed) {
+    unsubscribe();
+  }
   const config: ServerConfig = {
     rootPath,
     rootLabel: ensureEndsWithSlash(options.root),
     redirectStatus: options.redirectStatus ?? 302,
     onError: options.onError,
     reloadSource: options.reloadSource,
+    catalog,
   };
   return async (request) => await respond(config, request);
 }

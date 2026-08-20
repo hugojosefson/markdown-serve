@@ -43,6 +43,10 @@ Deno.test("generated pages include responsive navigation and active branches", a
     );
     assertMatch(
       guideBody,
+      /<div class="tree-root-row"><a class="tree-root" href="\/" data-query-remove="dir">.+<\/a><a class="tree-files-link" href="\/\?dir" title="Show files in .+" aria-label="Show files in .+">Files<\/a><\/div>/,
+    );
+    assertMatch(
+      guideBody,
       /aria-label="Breadcrumb"><a href="\/\?dir">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">guide\.md<\/span>/,
     );
     assertMatch(guideBody, /data-path="docs"/);
@@ -56,7 +60,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     );
     assertMatch(
       guideBody,
-      /\.tree summary:hover \.tree-files-link, \.tree summary:focus-within \.tree-files-link, \.tree \.tree-files-link:focus-visible \{ opacity: 1; pointer-events: auto; \}/,
+      /\.tree summary:hover \.tree-files-link, \.tree summary:focus-within \.tree-files-link, \.tree \.tree-root-row:hover \.tree-files-link/,
     );
     assertMatch(guideBody, /href="\/" data-query-remove="dir">README\.md<\/a>/);
     assert(!guideBody.includes('href="//"'));
@@ -107,6 +111,10 @@ Deno.test("generated pages include responsive navigation and active branches", a
     );
     assert(!emptyBody.includes('<h1><a href="/">FILES'));
     assertMatch(emptyBody, /\.dot/);
+    assertMatch(
+      emptyBody,
+      /data-path="empty"[^>]*><summary><a class="(?:active )?tree-folder-link" href="\/empty\/" data-query-remove="dir">empty\/<\/a><\/summary>/,
+    );
   } finally {
     await f.cleanup();
   }
@@ -133,13 +141,17 @@ Deno.test("breadcrumbs copy as exact configured paths", () => {
   assertEquals(breadcrumbPath("docs///", ["nested"]), "docs/nested/");
 });
 
-Deno.test("folder links toggle only when they already target the current page", () => {
+Deno.test("folder controls toggle only when they already target the current page", () => {
   const listeners = new Map<string, (event: Record<string, unknown>) => void>();
   const details = { open: true };
-  const link = {
+  const folderLink = {
     href: "/readme/",
     closest: (selector: string) =>
       selector === "details[data-path]" ? details : null,
+  };
+  const filesLink = {
+    href: "/readme/?dir",
+    closest: folderLink.closest,
   };
   const tree = {
     addEventListener: (
@@ -164,7 +176,7 @@ Deno.test("folder links toggle only when they already target the current page", 
     location,
     () => Promise.reject(new Error("not fetched")),
   );
-  const click = () => {
+  const click = (link: typeof folderLink) => {
     let prevented = false;
     listeners.get("click")?.({
       altKey: false,
@@ -175,27 +187,38 @@ Deno.test("folder links toggle only when they already target the current page", 
       shiftKey: false,
       target: {
         closest: (selector: string) =>
-          selector === "details[data-path] > summary > .tree-folder-link"
+          selector ===
+              "details[data-path] > summary > .tree-folder-link, details[data-path] > summary > .tree-files-link"
             ? link
             : null,
       },
     });
     return prevented;
   };
-  assert(click());
+  assert(click(folderLink));
   assertEquals(details.open, false);
-  location.href = "http://x/readme/?dir";
-  location.search = "?dir";
-  assert(!click());
+  assert(!click(filesLink));
+  location.href = "http://x/readme/?a=2&a=1&dir&theme=dark";
+  location.pathname = "/readme/";
+  location.search = "?a=2&a=1&dir&theme=dark";
+  folderLink.href = "/readme/?a=1&a=2&theme=dark";
+  filesLink.href = "/readme/?a=1&a=2&dir&theme=dark";
+  assert(!click(folderLink));
   assertEquals(details.open, false);
+  assert(click(filesLink));
+  assertEquals(details.open, true);
   location.href = "http://x/other/";
   location.pathname = "/other/";
   location.search = "";
-  assert(!click());
+  assert(!click(folderLink));
 });
 
 Deno.test("directory listings activate only their current tree directory", async () => {
-  const f = await fixture({ "docs/nested/note.md": "note" });
+  const f = await fixture({
+    "docs/README.md": "docs",
+    "docs/nested/INDEX.md": "nested",
+    "docs/nested/note.md": "note",
+  });
   try {
     const body = await (await handler(f.root))(
       new Request("http://x/docs/nested/?dir"),
@@ -250,6 +273,21 @@ Deno.test("root labels preserve the configured argument and escape HTML", async 
   }
 });
 
+Deno.test("root Files control requires a renderable index", async () => {
+  const f = await fixture({ "docs/README.md": "docs" });
+  try {
+    const body = await (await handler(f.root))(new Request("http://x/"))
+      .then((response) => response.text());
+    assertMatch(
+      body,
+      /<div class="tree-root-row"><a class="tree-root(?: active)?" href="\/" data-query-remove="dir">.+<\/a><\/div>/,
+    );
+    assert(!body.includes('title="Show files in ' + `${f.root}/`));
+  } finally {
+    await f.cleanup();
+  }
+});
+
 Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions", async () => {
   const f = await fixture({
     "README.md": "root",
@@ -257,6 +295,8 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
     "docs/file.txt": "file",
     "docs/README.md": "readme",
     "docs/ordinary.md": "ordinary",
+    "docs/indexed/README.md": "indexed",
+    "docs/unindexed/file.txt": "unindexed",
     "docs/sub/file.txt": "sub",
     "docs/percent%zz/file.txt": "percent",
     "__markdown_server__/tree": "collision",
@@ -285,9 +325,11 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
       [
         "/docs/",
         "/docs/file.txt",
+        "/docs/indexed/",
         "/docs/ordinary",
         "/docs/percent%25zz/",
         "/docs/sub/",
+        "/docs/unindexed/",
       ],
     );
     assertEquals(
@@ -301,18 +343,28 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
       },
     );
     assertEquals(
-      children.find((child) => child.name === "sub") as unknown,
+      children.find((child) => child.name === "indexed") as unknown,
       {
-        name: "sub",
-        path: "docs/sub",
+        name: "indexed",
+        path: "docs/indexed",
         directory: true,
-        href: "/docs/sub/",
-        filesHref: "/docs/sub/?dir",
+        href: "/docs/indexed/",
+        filesHref: "/docs/indexed/?dir",
+        queryRemove: ["dir"],
+      },
+    );
+    assertEquals(
+      children.find((child) => child.name === "unindexed") as unknown,
+      {
+        name: "unindexed",
+        path: "docs/unindexed",
+        directory: true,
+        href: "/docs/unindexed/",
         queryRemove: ["dir"],
       },
     );
     assert(pageClient.includes("filesLink.href = entry.filesHref"));
-    assert(pageClient.includes("summary.append(link, filesLink)"));
+    assert(pageClient.includes("if (entry.filesHref)"));
 
     const percentResponse = await h(
       new Request(

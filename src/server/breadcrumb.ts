@@ -13,7 +13,9 @@ export function breadcrumbs(
   const root = breadcrumbRoot(rootLabel, crumbs.length > 0);
   const links = crumbs.map((part, index) => {
     const last = index === crumbs.length - 1;
-    const href = canonicalPath(crumbs.slice(0, index + 1), !last || directory);
+    const href = directoryHref(
+      canonicalPath(crumbs.slice(0, index + 1), !last || directory),
+    );
     return last
       ? `<span aria-current="page">${escapeHtml(part)}${
         directory && !sourceName ? "/" : ""
@@ -21,7 +23,7 @@ export function breadcrumbs(
       : `<a href="${href}">${escapeHtml(part)}</a>`;
   });
   const rootCrumb = crumbs.length
-    ? `<a href="/">${escapeHtml(root)}</a>`
+    ? `<a href="/?dir">${escapeHtml(root)}</a>`
     : `<span aria-current="page">${escapeHtml(root)}</span>`;
   return `<nav aria-label="Breadcrumb">${rootCrumb}${
     links.map((link, index) =>
@@ -30,6 +32,10 @@ export function breadcrumbs(
       }</span>${link}`
     ).join("")
   }</nav>`;
+}
+
+function directoryHref(path: string): string {
+  return `${path}?dir`;
 }
 
 export function breadcrumbPath(root: string, parts: string[]): string {

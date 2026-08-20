@@ -18,7 +18,7 @@ export async function renderDirectory(
   parts: string[],
 ): Promise<Response> {
   const index = await indexName(path);
-  if (index && url.searchParams.get("view") !== "files") {
+  if (index && !url.searchParams.has("dir")) {
     return await renderMarkdown(
       config,
       request,
@@ -42,7 +42,7 @@ export async function renderDirectory(
       true,
       content,
       url,
-      index ? [indexAction(url, index)] : [],
+      { actions: index ? [indexAction(url, index)] : [], directoryView: true },
     ),
   );
 }
@@ -51,7 +51,7 @@ function filesAction(url: URL): PageAction {
   return {
     href: queryHref(
       url.pathname,
-      setQuery(setQuery(url.search, "raw", undefined), "view", "files"),
+      setQuery(setQuery(url.search, "raw", undefined), "dir", null),
     ),
     kind: "files",
     label: "Files",
@@ -63,18 +63,11 @@ function indexAction(url: URL, index: string): PageAction {
   return {
     href: queryHref(
       url.pathname,
-      setQuery(
-        setQuery(
-          setQuery(url.search, "view", undefined),
-          "order",
-          undefined,
-        ),
-        "raw",
-        undefined,
-      ),
+      setQuery(setQuery(url.search, "dir", undefined), "raw", undefined),
     ),
     kind: "index",
     label: index,
+    queryRemove: ["dir"],
     title: `Return to ${index}`,
   };
 }

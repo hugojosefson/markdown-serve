@@ -20,7 +20,9 @@ export function directoryIndex(
   path: string,
 ): string {
   const order = directoryOrder(url.searchParams.get("order"));
-  const rows = entries.toSorted(compareEntries(order)).map(row).join("");
+  const rows = entries.toSorted(compareEntries(order)).map((entry) =>
+    row(entry, url)
+  ).join("");
   return `<div class="directory-scroll"><table class="directory-table"><caption class="sr-only">Files at ${
     escapeHtml(path)
   }</caption><thead><tr>${header(url, "Permissions", "permissions", order)}${
@@ -67,8 +69,12 @@ function compareEntries(order: DirectoryOrder) {
   };
 }
 
-function row(entry: DirectoryEntry): string {
+function row(entry: DirectoryEntry, url: URL): string {
   const suffix = entry.directory ? "/" : "";
+  const index = !entry.directory && /^(readme|index)\.md$/i.test(entry.name);
+  const href = index
+    ? url.pathname
+    : encodeURIComponent(entry.name) + suffix + (entry.directory ? "?dir" : "");
   const bytes = size(entry);
   const modified = modifiedTime(entry.info);
   return `<tr><td class="directory-permissions">${
@@ -81,9 +87,9 @@ function row(entry: DirectoryEntry): string {
     user(entry.info) ?? "—"
   }</td><td class="directory-modified">${
     modified === undefined ? "—" : isoTime(modified)
-  }</td><td class="directory-name"><a href="${
-    escapeHtml(encodeURIComponent(entry.name) + suffix)
-  }">${escapeHtml(entry.name + suffix)}</a></td></tr>`;
+  }</td><td class="directory-name"><a href="${escapeHtml(href)}"${
+    index ? ' data-query-remove="dir"' : ""
+  }>${escapeHtml(entry.name + suffix)}</a></td></tr>`;
 }
 
 function permissions(info: Deno.FileInfo | undefined): string | undefined {

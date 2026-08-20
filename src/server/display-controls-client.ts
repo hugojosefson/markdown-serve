@@ -20,9 +20,10 @@ const syncNavigationLinks = (links = document.querySelectorAll('a')) => {
     try { url = new URL(href, location.href); } catch { return; }
     if (url.origin !== location.origin) { return; }
     navigationHrefs.set(link, href);
-    const target = queryPairs(url.search);
+    const removed = new Set((link.getAttribute('data-query-remove') ?? '').split(/\\s+/).filter(Boolean));
+    const target = queryPairs(url.search).filter(({ key }) => !removed.has(key));
     const targetKeys = new Set(target.map(({ key }) => key));
-    const pairs = queryPairs(location.search).filter(({ key }) => !targetKeys.has(key)).concat(target);
+    const pairs = queryPairs(location.search).filter(({ key }) => !targetKeys.has(key) && !removed.has(key)).concat(target);
     const lexical = (left, right) => left < right ? -1 : left > right ? 1 : 0;
     pairs.sort((a, b) => lexical(a.key, b.key) || lexical(a.value ?? '', b.value ?? '') || a.index - b.index);
     const query = pairs.length ? '?' + pairs.map(({ key, value }) => encodeURIComponent(key) + (value === undefined ? '' : '=' + encodeURIComponent(value))).join('&') : '';

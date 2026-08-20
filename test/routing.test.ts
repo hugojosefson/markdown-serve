@@ -286,36 +286,45 @@ Deno.test("indexed directories can switch between their index and file listing",
     )).text();
     assertMatch(
       index,
-      /<a class="raw-link" href="\?raw">Raw<\/a><a class="page-action" href="\?a=1&amp;a=2&amp;order=size&amp;theme=dark&amp;view=files&amp;width=wide" title="Browse directory files">Files<\/a>/,
+      /<a class="raw-link" href="\?raw">Raw<\/a><a class="page-action" href="\?a=1&amp;a=2&amp;dir&amp;order=size&amp;theme=dark&amp;width=wide" title="Browse directory files">Files<\/a>/,
     );
     assertMatch(
       index,
-      /<a href="\/docs\/">docs<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">README\.md<\/span>/,
+      /<a href="\/docs\/\?dir">docs<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">README\.md<\/span>/,
+    );
+    assertMatch(
+      index,
+      /<summary><a href="\/docs\/\?dir">docs\/<\/a><\/summary><ul><li><a class="active" href="\/docs\/" data-query-remove="dir">README\.md/,
     );
     assert(!index.includes('<table class="directory-table">'));
 
     const listing = await (await h(
       new Request(
-        "http://x/docs/?width=wide&order=size&view=files&raw&theme=dark&a=2&a=1",
+        "http://x/docs/?width=wide&order=size&dir&raw&theme=dark&a=2&a=1",
       ),
     )).text();
     assertMatch(listing, /<table class="directory-table">/);
+    assertMatch(listing, /data-directory-view="true"/);
+    assertMatch(
+      listing,
+      /<summary><a class="active" href="\/docs\/\?dir">docs\/<\/a><\/summary><ul><li><a href="\/docs\/" data-query-remove="dir">README\.md/,
+    );
     assertMatch(listing, /<a href="note\.txt">note\.txt<\/a>/);
     assertMatch(
       listing,
-      /<nav aria-label="Breadcrumb">[\s\S]*?<\/nav><a class="page-action" href="\?a=1&amp;a=2&amp;theme=dark&amp;width=wide" title="Return to README\.md">README\.md<\/a>/,
+      /<nav aria-label="Breadcrumb">[\s\S]*?<\/nav><a class="page-action" href="\?a=1&amp;a=2&amp;order=size&amp;theme=dark&amp;width=wide" data-query-remove="dir" title="Return to README\.md">README\.md<\/a>/,
     );
     assertMatch(
       listing,
-      /href="\?a=1&amp;a=2&amp;order=size-desc&amp;raw&amp;theme=dark&amp;view=files&amp;width=wide">Size ↑/,
+      /href="\?a=1&amp;a=2&amp;dir&amp;order=size-desc&amp;raw&amp;theme=dark&amp;width=wide">Size ↑/,
     );
     assertMatch(
       listing,
-      /href="\?a=1&amp;a=2&amp;order=size&amp;raw&amp;theme=dark&amp;view=files"/,
+      /href="\?a=1&amp;a=2&amp;dir&amp;order=size&amp;raw&amp;theme=dark&amp;width=wide"/,
     );
 
     const mixed = await (await h(
-      new Request("http://x/mixed/?view=files"),
+      new Request("http://x/mixed/?dir"),
     )).text();
     assertMatch(
       mixed,
@@ -325,7 +334,7 @@ Deno.test("indexed directories can switch between their index and file listing",
     assertMatch(mixedIndex, /aria-current="page">rEaDmE\.md<\/span>/);
 
     const noIndex = await (await h(
-      new Request("http://x/empty/?view=files&order=size"),
+      new Request("http://x/empty/?dir&order=size"),
     )).text();
     assertMatch(noIndex, /<table class="directory-table">/);
     assert(!noIndex.includes('class="page-action"'));

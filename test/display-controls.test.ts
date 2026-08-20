@@ -98,24 +98,33 @@ Deno.test("client carries all current query state across internal navigation", (
   };
   let ordinaryHref = "docs";
   let overrideHref = "/files?order=name&order=modified&unknown=target";
-  let absoluteHref = "http://x/root?view=files#section";
+  let absoluteHref = "http://x/root?dir#section";
   let optionHref = "?theme=dark";
   let externalHref = "https://example.test/docs?x=1";
   let hashHref = "#browse";
   let rawHref = "?raw";
   let clicked = 0;
   const ordinary = {
-    getAttribute: () => ordinaryHref,
+    getAttribute: (name: string) => name === "href" ? ordinaryHref : null,
     setAttribute: (_name: string, value: string) => ordinaryHref = value,
     matches: () => false,
   };
   const option = {
-    getAttribute: () => optionHref,
+    getAttribute: (name: string) => name === "href" ? optionHref : null,
     setAttribute: (_name: string, value: string) => optionHref = value,
     matches: () => true,
   };
-  const link = (get: () => string, set: (value: string) => void) => ({
-    getAttribute: () => get(),
+  const link = (
+    get: () => string,
+    set: (value: string) => void,
+    remove?: string,
+  ) => ({
+    getAttribute: (name: string) =>
+      name === "href"
+        ? get()
+        : name === "data-query-remove"
+        ? remove ?? null
+        : null,
     setAttribute: (_name: string, value: string) => set(value),
     matches: () => false,
   });
@@ -124,7 +133,7 @@ Deno.test("client carries all current query state across internal navigation", (
   const external = link(() => externalHref, (value) => externalHref = value);
   const hash = link(() => hashHref, (value) => hashHref = value);
   const raw = {
-    getAttribute: () => rawHref,
+    getAttribute: (name: string) => name === "href" ? rawHref : null,
     setAttribute: (_name: string, value: string) => rawHref = value,
     matches: (selector: string) => selector.includes(".raw-link"),
   };
@@ -157,7 +166,7 @@ Deno.test("client carries all current query state across internal navigation", (
   );
   assertEquals(
     absoluteHref,
-    "http://x/root?flag&order=size&theme=dark&unknown=one&unknown=two&view=files&width=wide#section",
+    "http://x/root?dir&flag&order=size&theme=dark&unknown=one&unknown=two&width=wide#section",
   );
   assertEquals(optionHref, "?theme=dark");
   assertEquals(externalHref, "https://example.test/docs?x=1");
@@ -176,6 +185,12 @@ Deno.test("client carries all current query state across internal navigation", (
     overrideHref,
     "/files?new&order=modified&order=name&unknown=target",
   );
+  let indexHref = "/docs/";
+  const index = link(() => indexHref, (value) => indexHref = value, "dir");
+  document.querySelectorAll = () => [index];
+  location.search = "?dir&order=size&theme=dark&unknown=value";
+  listeners.get("popstate")?.({});
+  assertEquals(indexHref, "/docs/?order=size&theme=dark&unknown=value");
   assert(!displayControlsClient.includes("history.replaceState"));
   assert(!displayControlsClient.includes("syncDisplayLinks"));
   assertMatch(displayControlsClient, /addEventListener\('popstate'/);

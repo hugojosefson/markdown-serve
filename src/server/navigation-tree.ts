@@ -7,14 +7,20 @@ import type { ServerConfig } from "./types.ts";
 export async function navigationTree(
   config: ServerConfig,
   active: string[],
+  directoryView: boolean,
+  sourceName?: string,
 ): Promise<string> {
-  const rootClass = active.length === 0 ? "tree-root active" : "tree-root";
-  return `<nav aria-label="Files"><a href="/" class="tree-heading">Files</a><a class="${rootClass}" href="/">${
+  const rootClass = active.length === 0 && directoryView
+    ? "tree-root active"
+    : "tree-root";
+  return `<nav aria-label="Files"><a href="/?dir" class="tree-heading">Files</a><a class="${rootClass}" href="/?dir">${
     escapeHtml(config.rootLabel)
   }</a>${await treeList(
     config,
     [],
     active,
+    directoryView,
+    sourceName,
   )}</nav>`;
 }
 
@@ -22,6 +28,8 @@ async function treeList(
   config: ServerConfig,
   parent: string[],
   active: string[],
+  directoryView: boolean,
+  sourceName: string | undefined,
 ): Promise<string> {
   const entries = await directoryEntries(join(config.rootPath, ...parent));
   const children = await Promise.all(entries.map(async (entry) => {
@@ -31,6 +39,8 @@ async function treeList(
       entry,
       path,
       active,
+      directoryView,
+      sourceName,
       entry.directory && active[parent.length] === entry.name,
     );
   }));
@@ -42,6 +52,8 @@ async function treeItem(
   entry: { name: string; directory: boolean },
   path: string[],
   active: string[],
+  directoryView: boolean,
+  sourceName: string | undefined,
   activeDirectory: boolean,
 ): Promise<string> {
   const markdown = entry.name.toLowerCase().endsWith(".md");
@@ -51,17 +63,23 @@ async function treeItem(
     : markdown
     ? [...path.slice(0, -1), entry.name.slice(0, -3)]
     : path;
-  const href = canonicalPath(route, entry.directory || index);
-  const activeItem = activeDirectory ||
-    (!entry.directory && active.join("/") === route.join("/"));
-  const link = `<a${activeItem ? ' class="active"' : ""} href="${href}">${
-    escapeHtml(entry.name)
-  }${entry.directory ? "/" : ""}</a>`;
+  const href = entry.directory
+    ? `${canonicalPath(route, true)}?dir`
+    : canonicalPath(route, index);
+  const activeItem = entry.directory
+    ? directoryView && active.join("/") === route.join("/")
+    : index
+    ? !directoryView && active.join("/") === route.join("/") &&
+      sourceName === entry.name
+    : active.join("/") === route.join("/");
+  const link = `<a${activeItem ? ' class="active"' : ""} href="${href}"${
+    index ? ' data-query-remove="dir"' : ""
+  }>${escapeHtml(entry.name)}${entry.directory ? "/" : ""}</a>`;
   if (!entry.directory) {
     return `<li>${link}</li>`;
   }
   const descendants = activeDirectory
-    ? await treeList(config, path, active)
+    ? await treeList(config, path, active, directoryView, sourceName)
     : "<ul></ul>";
   return `<li><details data-path="${escapeHtml(path.join("/"))}"${
     activeDirectory ? ' data-loaded="true" open' : ""

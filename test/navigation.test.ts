@@ -21,7 +21,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(guideBody, /class="tree"/);
     assertMatch(
       guideBody,
-      /<a href="\/" class="tree-heading">Files<\/a>/,
+      /<a href="\/\?dir" class="tree-heading">Files<\/a>/,
     );
     assertMatch(guideBody, /markdown-body/);
     assertMatch(guideBody, /data-color-mode="auto"/);
@@ -36,13 +36,13 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(guideBody, /tree\?\.addEventListener\('toggle'/);
     assertMatch(guideBody, /}, true\);/);
     const rootLabel = `${f.root}/`;
-    assert(guideBody.includes(`href="/">${rootLabel}</a>`));
+    assert(guideBody.includes(`href="/?dir">${rootLabel}</a>`));
     assertMatch(
       guideBody,
-      /aria-label="Breadcrumb"><a href="\/">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">guide\.md<\/span>/,
+      /aria-label="Breadcrumb"><a href="\/\?dir">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">guide\.md<\/span>/,
     );
     assertMatch(guideBody, /data-path="docs"/);
-    assertMatch(guideBody, /href="\/">README\.md<\/a>/);
+    assertMatch(guideBody, /href="\/" data-query-remove="dir">README\.md<\/a>/);
     assert(!guideBody.includes('href="//"'));
     assertMatch(guideBody, /__markdown_server__\/tree\?path=/);
     assertMatch(guideBody, /class="active"/);
@@ -51,12 +51,12 @@ Deno.test("generated pages include responsive navigation and active branches", a
     const agentsBody = await (await h(new Request("http://x/AGENTS"))).text();
     assertMatch(
       agentsBody,
-      /aria-label="Breadcrumb"><a href="\/">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">AGENTS\.md<\/span>/,
+      /aria-label="Breadcrumb"><a href="\/\?dir">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">AGENTS\.md<\/span>/,
     );
 
     const plainBody = await (await h(new Request("http://x/plain.txt"))).text();
     assert(plainBody.includes(
-      `<header class="content-header"><nav aria-label="Breadcrumb"><a href="/">${
+      `<header class="content-header"><nav aria-label="Breadcrumb"><a href="/?dir">${
         rootLabel.slice(0, -1)
       }</a><span class="breadcrumb-separator" aria-hidden="true">/</span><span aria-current="page">plain.txt</span></nav><a class="raw-link"`,
     ));
@@ -81,7 +81,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(docsBody, /data-path="docs\/nested"/);
     assertMatch(
       docsBody,
-      /<a href="\/docs\/">docs<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">README\.md<\/span>/,
+      /<a href="\/docs\/\?dir">docs<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">README\.md<\/span>/,
     );
 
     const emptyBody = await (await h(new Request("http://x/empty/"))).text();
@@ -135,7 +135,7 @@ Deno.test("current directory links toggle their details without navigation", () 
       listener: (event: Record<string, unknown>) => void,
     ) => listeners.set(name, listener),
   };
-  const location = { href: "http://x/docs/", pathname: "/docs/" };
+  const location = { href: "http://x/docs/?dir", pathname: "/docs/" };
   new Function(
     "document",
     "HTMLDetailsElement",
@@ -143,7 +143,10 @@ Deno.test("current directory links toggle their details without navigation", () 
     "fetch",
     pageClient,
   )(
-    { querySelector: () => tree },
+    {
+      documentElement: { dataset: { directoryView: "true" } },
+      querySelector: () => tree,
+    },
     Details,
     location,
     () => Promise.reject(new Error("not fetched")),
@@ -157,20 +160,43 @@ Deno.test("current directory links toggle their details without navigation", () 
       metaKey: false,
       preventDefault: () => prevented = true,
       shiftKey: false,
-      target: { closest: (selector: string) => selector === "a" ? link : null },
+      target: {
+        closest: (selector: string) =>
+          selector === "details[data-path] > summary > a" ? link : null,
+      },
       ...overrides,
     });
     return prevented;
   };
   assert(click());
   assertEquals(details.open, false);
-  assertEquals(location, { href: "http://x/docs/", pathname: "/docs/" });
+  assertEquals(location, { href: "http://x/docs/?dir", pathname: "/docs/" });
   assert(click());
   assertEquals(details.open, true);
   assert(!click({ ctrlKey: true }));
+  assert(!click({ target: { closest: () => null } }));
   link.href = "/other/";
   assert(!click());
   assert(!pageClient.includes("history."));
+});
+
+Deno.test("directory listings activate only their current tree directory", async () => {
+  const f = await fixture({ "docs/nested/note.md": "note" });
+  try {
+    const body = await (await handler(f.root))(
+      new Request("http://x/docs/nested/?dir"),
+    ).then((response) => response.text());
+    assertMatch(
+      body,
+      /data-path="docs" data-loaded="true" open><summary><a href="\/docs\/\?dir">docs\/<\/a>/,
+    );
+    assertMatch(
+      body,
+      /data-path="docs\/nested" data-loaded="true" open><summary><a class="active" href="\/docs\/nested\/\?dir">nested\/<\/a>/,
+    );
+  } finally {
+    await f.cleanup();
+  }
 });
 
 Deno.test("root labels preserve the configured argument and escape HTML", async () => {
@@ -183,10 +209,10 @@ Deno.test("root labels preserve the configured argument and escape HTML", async 
     const h = await handler(root);
     const body = await (await h(new Request("http://x/"))).text();
     const label = `${root.replace("&", "&amp;").replace("<", "&lt;")}/`;
-    assert(body.includes(`class="tree-root active" href="/">${label}</a>`));
+    assert(body.includes(`class="tree-root" href="/?dir">${label}</a>`));
     assert(
       body.includes(
-        `aria-label="Breadcrumb"><a href="/">${
+        `aria-label="Breadcrumb"><a href="/?dir">${
           label.slice(0, -1)
         }</a><span class="breadcrumb-separator" aria-hidden="true">/</span><span aria-current="page">README.md</span>`,
       ),
@@ -196,7 +222,7 @@ Deno.test("root labels preserve the configured argument and escape HTML", async 
     const trailing = await handler(`${root}/`);
     const trailingBody = await (await trailing(new Request("http://x/")))
       .text();
-    assert(trailingBody.includes(`href="/">${label}</a>`));
+    assert(trailingBody.includes(`href="/?dir">${label}</a>`));
   } finally {
     await f.cleanup();
   }
@@ -238,9 +264,19 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
         "/docs/",
         "/docs/file.txt",
         "/docs/ordinary",
-        "/docs/percent%25zz/",
-        "/docs/sub/",
+        "/docs/percent%25zz/?dir",
+        "/docs/sub/?dir",
       ],
+    );
+    assertEquals(
+      children.find((child) => child.name === "README.md") as unknown,
+      {
+        name: "README.md",
+        path: "docs/README.md",
+        directory: false,
+        href: "/docs/",
+        queryRemove: ["dir"],
+      },
     );
 
     const percentResponse = await h(

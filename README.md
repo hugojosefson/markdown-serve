@@ -62,7 +62,8 @@ occupied explicitly selected `--port` fails instead.
 
 ### Permissions
 
-The installation uses narrowly scoped runtime permissions:
+The [suggested installation](#installation) uses narrowly scoped runtime
+permissions:
 
 | Permission                               | Purpose                                                                          |
 | ---------------------------------------- | -------------------------------------------------------------------------------- |
@@ -77,27 +78,16 @@ Broader read grants can expose more files.
 
 ### Routing
 
-| Source                              | URL or behavior                                           |
-| ----------------------------------- | --------------------------------------------------------- |
-| `guide.md`                          | Clean URL `/guide`.                                       |
-| `docs/README.md` or `docs/index.md` | Directory URL `/docs/`; `README.md` is preferred.         |
-| Direct `.md` URL                    | Redirects to its clean URL.                               |
-| Both `guide.md` and `guide/`        | `/guide` renders the file; `/guide/` opens the directory. |
-| Other files                         | Served at their exact static path.                        |
-
-### Generated-page features
-
-| Feature             | Behavior                                                                                         |
-| ------------------- | ------------------------------------------------------------------------------------------------ |
-| Navigation          | Sticky, lazy desktop file tree and a mobile Browse link.                                         |
-| Breadcrumbs         | Show the configured root and actual rendered source filename.                                    |
-| Directory listings  | Sortable metadata columns, including permissions, binary size, user ID, modified time, and name. |
-| Display controls    | Link-based light/auto/dark theme and narrow/wide layout choices.                                 |
-| Source access       | Markdown and text pages include a Raw link.                                                      |
-| Code blocks         | Show the detected language and a Copy button.                                                    |
-| Live reload         | Included on generated pages when enabled; static assets do not include it.                       |
-| Filesystem behavior | Dotfiles are listed and served; symlinks are followed within Deno's read-permission boundary.    |
-| Internal routes     | `/__markdown_server__/` is reserved for server endpoints.                                        |
+| Request or case                      | Behavior                                                               |
+| ------------------------------------ | ---------------------------------------------------------------------- |
+| `/guide` for `guide.md`              | Renders the Markdown file at its clean URL.                            |
+| Direct `.md` URL such as `/guide.md` | Redirects to the clean URL, such as `/guide`.                          |
+| `/docs/` with a Markdown index       | Renders `docs/README.md` or `docs/index.md`; `README.md` is preferred. |
+| `/docs/?dir`                         | Lists directory entries, including dotfiles, with sortable metadata.   |
+| Both `guide.md` and `guide/`         | `/guide` renders the file; `/guide/` opens the directory.              |
+| Exact path to another file           | Serves the file as static content.                                     |
+| Symlink                              | Follows its target within Deno's read-permission boundary.             |
+| `/__markdown_server__/`              | Reserves this namespace for internal server endpoints.                 |
 
 ### Browser and redirects
 

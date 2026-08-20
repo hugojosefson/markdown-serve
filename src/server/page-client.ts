@@ -1,13 +1,5 @@
 export const pageClient = `
 const tree = document.querySelector('.tree');
-tree?.addEventListener('click', (event) => {
-  if (event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) { return; }
-  const link = event.target.closest?.('details[data-path] > summary > .tree-folder-link');
-  const details = link?.closest?.('details[data-path]');
-  if (!details || document.documentElement.dataset.directoryView !== 'true' || new URL(link.href, location.href).pathname !== location.pathname) { return; }
-  event.preventDefault();
-  details.open = !details.open;
-});
 const addEntries = (list, entries) => entries.forEach((entry) => {
   const item = document.createElement('li');
   const link = document.createElement('a');

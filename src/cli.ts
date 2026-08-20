@@ -26,7 +26,7 @@ export async function main(args: string[]): Promise<void> {
         Deno.env.get("MARKDOWN_SERVER_BROWSER_OPENED") !== "true"
       ) {
         Deno.env.set("MARKDOWN_SERVER_BROWSER_OPENED", "true");
-        await openBrowser(url);
+        openBrowser(url);
       }
       await server.finished;
     } finally {

@@ -1,6 +1,22 @@
-import type { CommandRunner } from "./types.ts";
-
 export type Warn = (message: string) => void;
+
+type BrowserProcess = {
+  readonly status: Promise<{ success: boolean }>;
+  unref(): void;
+};
+
+type CommandSpawner = (
+  command: string,
+  args: string[],
+  options: Deno.CommandOptions,
+) => BrowserProcess;
+
+export const browserCommandOptions = {
+  detached: true,
+  stdin: "null",
+  stdout: "null",
+  stderr: "null",
+} as const satisfies Deno.CommandOptions;
 
 export function usableUrl(
   address: Deno.NetAddr,
@@ -23,22 +39,29 @@ export function openerCommand(
   return [os === "darwin" ? "open" : "xdg-open", [url]];
 }
 
-export async function openBrowser(
+export function openBrowser(
   url: string,
-  run: CommandRunner = async (command, args) =>
-    await new Deno.Command(command, { args }).output(),
+  spawn: CommandSpawner = (command, args, options) =>
+    new Deno.Command(command, { ...options, args }).spawn(),
   warn: Warn = console.warn,
-): Promise<void> {
+): void {
   try {
     const [command, args] = openerCommand(url);
-    if (!(await run(command, args)).success) {
-      warn(`Could not open browser: ${command} failed`);
-    }
-  } catch (error) {
-    warn(
-      `Could not open browser: ${
-        error instanceof Error ? error.message : error
-      }`,
+    const child = spawn(command, args, browserCommandOptions);
+    child.unref();
+    void child.status.then(
+      ({ success }) => {
+        if (!success) {
+          warn(`Could not open browser: ${command} failed`);
+        }
+      },
+      (error) => warn(`Could not open browser: ${errorMessage(error)}`),
     );
+  } catch (error) {
+    warn(`Could not open browser: ${errorMessage(error)}`);
   }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

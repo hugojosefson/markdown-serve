@@ -94,10 +94,23 @@ Deno.test("generated pages include responsive navigation and active branches", a
       pageCss,
       /\.file-action \{[^}]*color: var\(--code-muted\)/,
     );
+    assertMatch(
+      pageCss,
+      /\.content-header \.page-action \{[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap;/,
+    );
     assert(!pageCss.includes("float: right"));
     assert(!pageCss.includes(".tree:target"));
     assert(!pageScript.body.includes("browse?.addEventListener"));
     assertMatch(pageCss, /@media \(max-width: 560px\)/);
+    assertMatch(
+      plainBody,
+      /<aside class="tree"><details class="tree-disclosure" open><summary>Files<\/summary><nav/,
+    );
+    assertMatch(pageClient, /matchMedia\?\.\('\(max-width: 560px\)'\)/);
+    assertMatch(
+      pageClient,
+      /addEventListener\?\.\('change', syncTreeDisclosure\)/,
+    );
 
     const docsBody = await (await h(new Request("http://x/docs/"))).text();
     assertMatch(docsBody, /data-path="docs" data-loaded="true" open/);

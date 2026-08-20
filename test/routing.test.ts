@@ -203,21 +203,29 @@ Deno.test("directory metadata columns sort missing values first and render copya
     mode: number | null = 0o644,
   ) => ({ uid, mtime, size, mode, isDirectory: false }) as Deno.FileInfo;
   const entries = [
-    { name: "a-missing", directory: false, info: undefined },
-    { name: "b-directory", directory: true, info: info(null, null, 0, null) },
+    { name: "a-missing", directory: false, symlink: false, info: undefined },
+    {
+      name: "b-directory",
+      directory: true,
+      symlink: false,
+      info: info(null, null, 0, null),
+    },
     {
       name: "c-low",
       directory: false,
+      symlink: false,
       info: info(10, new Date("2020-01-02T03:04:05.678Z"), 1),
     },
     {
       name: "d-high",
       directory: false,
+      symlink: false,
       info: info(20, new Date("2021-02-03T04:05:06.789Z"), 2048, 0o755),
     },
     {
       name: "e-tie",
       directory: false,
+      symlink: false,
       info: info(20, new Date("2021-02-03T04:05:06.789Z"), 2048, 0o755),
     },
   ];

@@ -128,6 +128,7 @@ export class FileCatalog {
         return {
           name: entry.name,
           directory: info?.isDirectory ?? false,
+          symlink: entry.isSymlink,
           info,
         };
       }));
@@ -155,7 +156,12 @@ export class FileCatalog {
       const candidates = indexCandidates(names.map((entry) => entry.name));
       const entries = await Promise.all(candidates.map(async (name) => {
         const info = await this.stat(join(path, name));
-        return { name, directory: info?.isDirectory ?? false, info };
+        return {
+          name,
+          directory: info?.isDirectory ?? false,
+          symlink: false,
+          info,
+        };
       }));
       const index = selectedIndex(entries);
       if (generation === this.#generation) {

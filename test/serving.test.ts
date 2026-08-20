@@ -163,7 +163,11 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     );
     assertMatch(
       details,
-      /<a class="file-metadata" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata" aria-controls="file-metadata-details" aria-expanded="true">/,
+      /<header class="content-header metadata-expanded">.*<a class="file-metadata" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata" aria-controls="file-metadata-details" aria-expanded="true"><span class="file-metadata-collapse" aria-hidden="true">Collapse ↑<\/span>/s,
+    );
+    assertMatch(
+      pageStylesheet.body,
+      /\.content-header\.metadata-expanded \.file-metadata \{[^}]*border-bottom-color: var\(--code-bg\);[^}]*border-radius: 6px 6px 0 0;[^}]*margin-bottom: -1px;/,
     );
     const themedDetails = await (await h(
       new Request("http://x/photo.png?theme=dark&metadata=expand"),

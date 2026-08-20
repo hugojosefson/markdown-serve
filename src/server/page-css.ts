@@ -40,6 +40,10 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .content-header .file-metadata:hover { background: var(--code-hover); border-color: var(--code-border); color: var(--focus-color); }
 .content-header .file-metadata:focus-visible { border-color: var(--code-border); outline: 2px solid var(--focus-color); outline-offset: 1px; }
 .content-header .file-metadata span { color: var(--code-border); }
+.content-header.metadata-expanded { margin-bottom: 0; }
+.content-header.metadata-expanded .file-metadata { align-self: flex-end; background: var(--code-bg); border-color: var(--code-border); border-bottom-color: var(--code-bg); border-radius: 6px 6px 0 0; margin-bottom: -1px; padding: 5px 8px 6px; position: relative; z-index: 1; }
+.content-header.metadata-expanded .file-metadata:hover { background: var(--code-hover); border-bottom-color: var(--code-hover); }
+.content-header .file-metadata .file-metadata-collapse { color: var(--focus-color); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-weight: 700; margin-right: 8px; }
 .markdown-body .file-metadata-details { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 6px; margin: 0 0 16px; padding: 14px; }
 .markdown-body .file-metadata-details dl { display: grid; gap: 16px 24px; grid-auto-flow: column; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, auto); margin: 0; padding: 0; }
 .markdown-body .file-metadata-details dl > div { border-left: 2px solid var(--code-border); display: block; margin: 0; min-width: 0; padding: 0 0 0 10px; }

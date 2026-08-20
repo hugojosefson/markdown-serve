@@ -65,7 +65,9 @@ function renderContentHeader(
     model.sourceName,
   );
   const actions = (model.actions ?? []).map(renderPageAction).join("");
-  return `<header class="content-header">${breadcrumb}${actions}${
+  return `<header class="content-header${
+    model.metadata && metadataExpanded ? " metadata-expanded" : ""
+  }">${breadcrumb}${actions}${
     model.metadata
       ? renderFileMetadataSummary(model.metadata, model.url, metadataExpanded)
       : ""

@@ -103,6 +103,7 @@ Deno.test("client carries all current query state across internal navigation", (
   let externalHref = "https://example.test/docs?x=1";
   let hashHref = "#browse";
   let rawHref = "?raw";
+  let downloadHref = "?download";
   let metadataHref = "?theme=dark";
   let clicked = 0;
   const ordinary = {
@@ -138,6 +139,11 @@ Deno.test("client carries all current query state across internal navigation", (
     setAttribute: (_name: string, value: string) => rawHref = value,
     matches: (selector: string) => selector.includes(".raw-link"),
   };
+  const download = {
+    getAttribute: (name: string) => name === "href" ? downloadHref : null,
+    setAttribute: (_name: string, value: string) => downloadHref = value,
+    matches: (selector: string) => selector.includes(".download-link"),
+  };
   const metadata = {
     getAttribute: (name: string) => name === "href" ? metadataHref : null,
     setAttribute: (_name: string, value: string) => metadataHref = value,
@@ -156,6 +162,7 @@ Deno.test("client carries all current query state across internal navigation", (
       external,
       hash,
       raw,
+      download,
       metadata,
     ],
   };
@@ -187,6 +194,7 @@ Deno.test("client carries all current query state across internal navigation", (
   assertEquals(externalHref, "https://example.test/docs?x=1");
   assertEquals(hashHref, "#browse");
   assertEquals(rawHref, "?raw");
+  assertEquals(downloadHref, "?download");
   listeners.get("keydown")?.({ key: "w" });
   assertEquals(clicked, 1);
   location.search = "?order=size-desc&new&unknown=changed";
@@ -200,6 +208,7 @@ Deno.test("client carries all current query state across internal navigation", (
     overrideHref,
     "/files?new&order=modified&order=name&unknown=target",
   );
+  assertEquals(downloadHref, "?download");
   let indexHref = "/docs/";
   const index = link(() => indexHref, (value) => indexHref = value, "dir");
   let filesHref = "/docs/?dir";

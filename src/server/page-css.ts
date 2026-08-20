@@ -41,10 +41,11 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .content-header .file-metadata:focus-visible { border-color: var(--code-border); outline: 2px solid var(--focus-color); outline-offset: 1px; }
 .content-header .file-metadata span { color: var(--code-border); }
 .markdown-body .file-metadata-details { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 6px; margin: 0 0 16px; padding: 14px; }
-.markdown-body .file-metadata-details dl { display: grid; gap: 16px 24px; grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr)); margin: 0; padding: 0; }
+.markdown-body .file-metadata-details dl { display: grid; gap: 16px 24px; grid-auto-flow: column; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, auto); margin: 0; padding: 0; }
 .markdown-body .file-metadata-details dl > div { border-left: 2px solid var(--code-border); display: block; margin: 0; min-width: 0; padding: 0 0 0 10px; }
 .markdown-body .file-metadata-details dt { color: var(--focus-color); font: 700 10px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-style: normal; letter-spacing: .06em; margin: 0 0 5px; padding: 0; text-transform: uppercase; }
 .markdown-body .file-metadata-details dd { color: var(--code-text); font: 500 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin: 0; overflow-wrap: anywhere; padding: 0; }
+.markdown-body .metadata-value-suffix { white-space: nowrap; }
 .media-preview { display: block; max-width: 100%; }
 .media-preview.image { height: auto; max-height: none; max-width: var(--image-max-width, 100%); width: 100%; }
 .media-preview.audio, .media-preview.video { max-width: 100%; width: min(100%, 720px); }
@@ -66,6 +67,9 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .directory-scroll { max-width: 100%; overflow-x: auto; width: 100%; }
 ${codeToolbarCss}
 ${displayControlsCss}
+@media (max-width: 800px) {
+  .markdown-body .file-metadata-details dl { grid-auto-flow: row; grid-template-columns: 1fr; grid-template-rows: none; }
+}
 @media (max-width: 560px) {
   .layout { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
   .content { order: 1; padding: 0; }

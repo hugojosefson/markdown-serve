@@ -5,14 +5,16 @@ import type { CliOptions } from "./types.ts";
 export async function startServer(
   options: CliOptions,
   signal?: AbortSignal,
+  git = false,
 ): Promise<Deno.HttpServer> {
-  return await serveAt(options, options.port, signal);
+  return await serveAt(options, options.port, signal, git);
 }
 
 async function serveAt(
   options: CliOptions,
   port: number,
   signal?: AbortSignal,
+  git = false,
 ): Promise<Deno.HttpServer> {
   try {
     return await serve({
@@ -22,6 +24,7 @@ async function serveAt(
       redirectStatus: options.redirectStatus,
       liveReload: options.reload,
       liveReloadIgnorePaths: packageSourcePaths,
+      git,
       signal,
       onListen: () => {},
     });
@@ -29,7 +32,7 @@ async function serveAt(
     if (options.explicitPort || !isAddressInUse(error) || port === 65535) {
       throw error;
     }
-    return await serveAt(options, port + 1, signal);
+    return await serveAt(options, port + 1, signal, git);
   }
 }
 

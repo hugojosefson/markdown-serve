@@ -5,6 +5,7 @@ import { route } from "./route.ts";
 import { plain } from "./responses.ts";
 import type { HandlerOptions, RequestHandler } from "./server-options.ts";
 import type { ServerConfig } from "./types.ts";
+import { createGitState } from "./git/state.ts";
 
 export async function createRequestHandler(
   options: HandlerOptions,
@@ -59,6 +60,9 @@ export async function createRequestHandler(
     onError: options.onError,
     reloadSource: options.reloadSource,
     catalog,
+    git: options.git === false
+      ? undefined
+      : await createGitState(rootPath, options.reloadSource),
   };
   return async (request) => await respond(config, request);
 }

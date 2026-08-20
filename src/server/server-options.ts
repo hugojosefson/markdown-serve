@@ -7,6 +7,7 @@ export type HandlerOptions = {
   redirectStatus?: 301 | 302;
   onError?: ErrorHandler;
   reloadSource?: ReloadSource;
+  git?: boolean;
 };
 
 export type ServerOptions = HandlerOptions & {

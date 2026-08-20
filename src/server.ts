@@ -41,6 +41,7 @@ export async function serve(options: ServerOptions): Promise<Deno.HttpServer> {
         redirectStatus: options.redirectStatus,
         onError: options.onError,
         reloadSource: options.reloadSource ?? watched,
+        git: options.git,
       }),
     );
     if (watched) {

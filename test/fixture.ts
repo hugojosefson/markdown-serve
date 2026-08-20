@@ -20,6 +20,7 @@ export async function handler(
   return await createHandler({
     root,
     redirectStatus: 302,
+    git: false,
     ...overrides,
   });
 }

@@ -153,7 +153,7 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
     );
     assertMatch(body, /<a href="a-small">a-small<\/a>/);
     assertMatch(body, /-rw-------/);
-    assertMatch(body, /title="1024 bytes">1K<\/td>/);
+    assertMatch(body, /title="1024 bytes">1 KB<\/td>/);
     assertMatch(
       body,
       /href="\?a=1&amp;a=2&amp;theme=dark&amp;width=wide">Name/,
@@ -259,15 +259,15 @@ Deno.test("directory metadata columns sort missing values first and render copya
   assertMatch(html, /<td class="directory-modified">—<\/td>/);
   assertMatch(
     pageCss,
-    /\.directory-table \.timestamp-separator \{ color: var\(--code-muted\); \}/,
+    /\.directory-table \.timestamp-separator, \.file-metadata-details \.timestamp-separator \{ color: var\(--code-muted\); \}/,
   );
   assertMatch(
     pageCss,
-    /\.timestamp-t \{ display: inline-block; margin: 0 \.25ch; \}/,
+    /\.directory-table \.timestamp-t, \.file-metadata-details \.timestamp-t \{ display: inline-block; margin: 0 \.25ch; \}/,
   );
   assertMatch(
     pageCss,
-    /\.directory-table \.timestamp-t, \.directory-table \.timestamp-zone \{ opacity: \.2; \}/,
+    /\.directory-table \.timestamp-t, \.directory-table \.timestamp-zone, \.file-metadata-details \.timestamp-t, \.file-metadata-details \.timestamp-zone \{ opacity: \.2; \}/,
   );
   assertMatch(
     pageCss,
@@ -442,7 +442,7 @@ Deno.test("listing includes dotfiles and Markdown is sanitized", async () => {
       /<th class="directory-name" scope="col" aria-sort="ascending"><a href="\?order=name-desc">Name ↑<\/a><\/th>/,
     );
     assertMatch(listingBody, /<a href="\.dot">\.dot<\/a>/);
-    assertMatch(listingBody, /1K/);
+    assertMatch(listingBody, /1 KB/);
     assert(!listingBody.includes('<h1><a href="/">FILES'));
     const raw = await h(new Request("http://x/raw"));
     const body = await raw.text();

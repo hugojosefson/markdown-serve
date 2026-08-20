@@ -74,9 +74,9 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .directory-table .directory-name { white-space: nowrap; width: 100%; }
 .directory-table .directory-modified { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .directory-table[data-hidden-columns~="permissions"] .directory-permissions, .directory-table[data-hidden-columns~="size"] .directory-size, .directory-table[data-hidden-columns~="user"] .directory-user, .directory-table[data-hidden-columns~="modified"] .directory-modified { display: none; }
-.directory-table .timestamp-separator { color: var(--code-muted); }
-.directory-table .timestamp-t { display: inline-block; margin: 0 .25ch; }
-.directory-table .timestamp-t, .directory-table .timestamp-zone { opacity: .2; }
+.directory-table .timestamp-separator, .file-metadata-details .timestamp-separator { color: var(--code-muted); }
+.directory-table .timestamp-t, .file-metadata-details .timestamp-t { display: inline-block; margin: 0 .25ch; }
+.directory-table .timestamp-t, .directory-table .timestamp-zone, .file-metadata-details .timestamp-t, .file-metadata-details .timestamp-zone { opacity: .2; }
 .directory-scroll { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 6px; max-width: 100%; overflow-x: auto; width: 100%; }
 ${codeToolbarCss}
 ${displayControlsCss}

@@ -342,7 +342,7 @@ Deno.test("indexed directories can switch between their index and file listing",
     )).text();
     assertMatch(
       index,
-      /<a class="raw-link" href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)" aria-label="View raw content \(text\/plain; charset=UTF-8\)">Raw<\/a><a class="page-action download-link" href="\?download" title="Download file \(text\/markdown; charset=UTF-8\)" aria-label="Download file \(text\/markdown; charset=UTF-8\)">Download<\/a>/,
+      /<a class="file-action raw-link" href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)" aria-label="View raw content \(text\/plain; charset=UTF-8\)">Raw<\/a><a class="file-action download-link" href="\?download" title="Download file \(text\/markdown; charset=UTF-8\)" aria-label="Download file \(text\/markdown; charset=UTF-8\)">Download<\/a>/,
     );
     assertMatch(
       index,

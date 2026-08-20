@@ -2,6 +2,7 @@ import { plain } from "./responses.ts";
 import { pageAsset } from "./page-assets.ts";
 import { sseResponse } from "./sse-response.ts";
 import { treeResponse } from "./tree-response.ts";
+import { siteResponse } from "./site-response.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function internalResponse(
@@ -15,6 +16,9 @@ export async function internalResponse(
     });
   }
   const url = new URL(request.url);
+  if (url.pathname.startsWith("/__markdown_server__/site/")) {
+    return await siteResponse(config, request, url);
+  }
   const asset = pageAsset(url.pathname);
   if (asset) {
     return new Response(request.method === "HEAD" ? null : asset.body, {

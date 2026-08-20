@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertMatch } from "@std/assert";
+import { assert, assertEquals, assertMatch, assertNotMatch } from "@std/assert";
 import { pageScript, pageStylesheet } from "../src/server/page-assets.ts";
 import { fixture, handler } from "./fixture.ts";
 
@@ -87,25 +87,30 @@ Deno.test("HEAD generated pages return headers without bodies", async () => {
   }
 });
 
-Deno.test("Markdown source view has gutters and preserves raw/download priority", async () => {
+Deno.test("file actions have stable placements and preserve raw/download priority", async () => {
   const f = await fixture({
     "guide.md": "# Guide\n\n```ts\nconst x = 1;\n```\n",
+    "code.ts": "const x = 1;",
+    "page.html": "<h1>Page</h1>",
+    "photo.png": "",
   });
   try {
     const h = await handler(f.root);
     const rendered = await (await h(new Request("http://x/guide"))).text();
     assertMatch(
       rendered,
-      /<div class="page-content page-content-rendered"><div class="content-view-control"><a class="content-view-action" href="\?source"[^>]*>View source<\/a><\/div>/,
+      /<div class="page-content page-content-heading"><div class="file-actions file-actions-heading"><a class="file-action" href="\?source"[^>]*>View source<\/a><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a><\/div><h1[^>]*>/,
     );
     assertEquals(
       rendered.match(/<header class="content-header[^>]*>[\s\S]*?<\/header>/)
-        ?.[0].includes("View source"),
+        ?.[0].includes("Raw") ||
+        rendered.match(/<header class="content-header[^>]*>[\s\S]*?<\/header>/)
+          ?.[0].includes("Download"),
       false,
     );
     assertMatch(
       pageStylesheet.body,
-      /\.markdown-body \.content-view-action \{[^}]*color: var\(--code-muted\)/,
+      /\.markdown-body \.file-action \{[^}]*color: var\(--code-muted\)/,
     );
     assertEquals(rendered.includes('href="#L1"'), false);
     const source = await (await h(
@@ -114,7 +119,7 @@ Deno.test("Markdown source view has gutters and preserves raw/download priority"
     assertMatch(source, /id="L1"/);
     assertMatch(
       source,
-      /<div class="page-content page-content-source"><div class="content-view-control"><a class="content-view-action" href="\?theme=dark" data-query-remove="source"[^>]*>View rendered<\/a><\/div>/,
+      /View rendered<\/a><\/span><button class="code-copy"[^>]*>Copy<\/button><span class="code-toolbar-file-actions" data-file-actions="trailing"><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a>/,
     );
     assertMatch(
       await (await h(new Request("http://x/guide?source&raw"))).text(),
@@ -125,6 +130,104 @@ Deno.test("Markdown source view has gutters and preserves raw/download priority"
         "content-disposition",
       )!,
       /^attachment; filename="guide\.md"/,
+    );
+    const text = await (await h(new Request("http://x/code.ts"))).text();
+    assertMatch(
+      text,
+      /Copy<\/button><span class="code-toolbar-file-actions" data-file-actions="trailing"><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a>/,
+    );
+    const html = await (await h(new Request("http://x/page.html"))).text();
+    assertMatch(
+      html,
+      /<span class="code-toolbar-file-actions" data-file-actions="leading"><a class="file-action" href="\/__markdown_server__\/site\/page\.html" target="_blank" rel="noopener"[^>]*>View page<\/a><\/span><button class="code-copy"/,
+    );
+    assertNotMatch(
+      html.match(/<header class="content-header[^>]*>[\s\S]*?<\/header>/)
+        ?.[0] ?? "",
+      /Raw|Download|View page/,
+    );
+    const media = await (await h(new Request("http://x/photo.png"))).text();
+    assertMatch(
+      media,
+      /<div class="page-content page-content-top"><div class="file-actions file-actions-top"><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a>/,
+    );
+    const directoryFixture = await fixture({ "docs/README.md": "# Docs" });
+    try {
+      const directoryHandler = await handler(directoryFixture.root);
+      const indexed =
+        await (await directoryHandler(new Request("http://x/docs/"))).text();
+      const header =
+        indexed.match(/<header class="content-header[^>]*>[\s\S]*?<\/header>/)
+          ?.[0] ?? "";
+      assertMatch(header, /Files/);
+      assertNotMatch(header, /Raw|Download/);
+      const listing =
+        await (await directoryHandler(new Request("http://x/docs/\?dir")))
+          .text();
+      assertMatch(
+        listing.match(/<header class="content-header[^>]*>[\s\S]*?<\/header>/)
+          ?.[0] ?? "",
+        /README\.md/,
+      );
+    } finally {
+      await directoryFixture.cleanup();
+    }
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("site previews serve scoped assets and safely resolve directories", async () => {
+  const f = await fixture({
+    "site/index.html":
+      '<link rel="stylesheet" href="style.css"><script src="app.js"></script>',
+    "site/style.css": "body { color: red; }",
+    "site/app.js": "window.ok = true;",
+    "site/image.png": "image",
+  });
+  try {
+    const h = await handler(f.root);
+    const base = "http://x/__markdown_server__/site/site";
+    const redirect = await h(new Request(base));
+    assertEquals([redirect.status, redirect.headers.get("location")], [
+      302,
+      "/__markdown_server__/site/site/",
+    ]);
+    const page = await h(new Request(`${base}/`));
+    assertEquals(page.headers.get("content-type"), "text/html; charset=UTF-8");
+    assertMatch(await page.text(), /style\.css/);
+    assertEquals(
+      page.headers.get("content-security-policy"),
+      "sandbox allow-scripts; default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'none'; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+    );
+    for (
+      const [path, type, body] of [
+        ["style.css", "text/css; charset=UTF-8", "body { color: red; }"],
+        [
+          "app.js",
+          "text/javascript; charset=UTF-8",
+          "window.ok = true;",
+        ],
+        ["image.png", "image/png", "image"],
+      ]
+    ) {
+      const response = await h(new Request(`${base}/${path}`));
+      assertEquals(response.headers.get("content-type"), type);
+      assertEquals(await response.text(), body);
+    }
+    const head = await h(new Request(`${base}/style.css`, { method: "HEAD" }));
+    assertEquals(await head.text(), "");
+    assertEquals((await h(new Request(`${base}/missing`))).status, 404);
+    assertEquals(
+      (await h(new Request("http://x/__markdown_server__/site/%2e%2e%2fsafe")))
+        .status,
+      400,
+    );
+    const post = await h(new Request(`${base}/`, { method: "POST" }));
+    assertEquals([post.status, post.headers.get("allow")], [405, "GET, HEAD"]);
+    assertEquals(
+      (await h(new Request("http://x/__markdown_server__/site/"))).status,
+      404,
     );
   } finally {
     await f.cleanup();
@@ -203,7 +306,7 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     )).text();
     assertMatch(
       details,
-      /<\/header><section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><div class="file-metadata-details-header"><span>File metadata<\/span><a class="file-metadata-close" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 4l8 8M12 4l-8 8"\/><\/svg><\/a><\/div><dl>.*<dt>Modified<\/dt><dd><time datetime="[^"]+" aria-label="[^"]+">.*class="timestamp-separator timestamp-t">T<\/span>.*class="timestamp-separator timestamp-zone">Z<\/span><\/time><wbr> <span class="metadata-value-suffix">\((?:now|today)\)<\/span><\/dd>.*<dt>Size<\/dt><dd>4 bytes<\/dd>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>User<\/dt>.*<dt>Permissions<\/dt>.*<dt>Mode<\/dt>.*<\/dl><\/section><img/s,
+      /<\/header><section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><div class="file-metadata-details-header"><span>File metadata<\/span><a class="file-metadata-close" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 4l8 8M12 4l-8 8"\/><\/svg><\/a><\/div><dl>.*<dt>Modified<\/dt><dd><time datetime="[^"]+" aria-label="[^"]+">.*class="timestamp-separator timestamp-t">T<\/span>.*class="timestamp-separator timestamp-zone">Z<\/span><\/time><wbr> <span class="metadata-value-suffix">\((?:now|today)\)<\/span><\/dd>.*<dt>Size<\/dt><dd>4 bytes<\/dd>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>User<\/dt>.*<dt>Permissions<\/dt>.*<dt>Mode<\/dt>.*<\/dl><\/section><div class="page-content/s,
     );
     assertMatch(
       details,
@@ -226,7 +329,7 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     );
     assertMatch(
       image,
-      /<a class="raw-link" href="\?raw" title="View raw content \(image\/png\)" aria-label="View raw content \(image\/png\)">Raw<\/a><a class="page-action download-link" href="\?download" title="Download file \(image\/png\)" aria-label="Download file \(image\/png\)">Download<\/a>/,
+      /<a class="file-action raw-link" href="\?raw" title="View raw content \(image\/png\)" aria-label="View raw content \(image\/png\)">Raw<\/a><a class="file-action download-link" href="\?download" title="Download file \(image\/png\)" aria-label="Download file \(image\/png\)">Download<\/a>/,
     );
     assertMatch(
       image,

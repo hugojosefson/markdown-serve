@@ -27,7 +27,11 @@ export async function renderDirectory(
       url.pathname,
       join(path, index),
       parts,
-      { directory: true, sourceName: index, actions: [filesPageAction(url)] },
+      {
+        directory: true,
+        sourceName: index,
+        headerActions: [filesPageAction(url)],
+      },
     );
   }
   if (request.method === "HEAD") {
@@ -49,7 +53,7 @@ export async function renderDirectory(
       directory: true,
       content,
       url,
-      actions: index ? [indexPageAction(url, index)] : [],
+      headerActions: index ? [indexPageAction(url, index)] : [],
       directoryView: true,
       gitStatus,
     }),

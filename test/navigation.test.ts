@@ -79,11 +79,11 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assert(plainBody.includes(
       `<header class="content-header"><nav aria-label="Breadcrumb"><a href="/?dir">${
         rootLabel.slice(0, -1)
-      }</a><span class="breadcrumb-separator" aria-hidden="true">/</span><span aria-current="page">plain.txt</span></nav><a class="raw-link"`,
+      }</a><span class="breadcrumb-separator" aria-hidden="true">/</span><span aria-current="page">plain.txt</span></nav>`,
     ));
     assertMatch(
       plainBody,
-      /<a class="raw-link" href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)" aria-label="View raw content \(text\/plain; charset=UTF-8\)">Raw<\/a>/,
+      /<button class="code-copy"[^>]*>Copy<\/button><span class="code-toolbar-file-actions" data-file-actions="trailing"><a class="file-action raw-link" href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)" aria-label="View raw content \(text\/plain; charset=UTF-8\)">Raw<\/a>/,
     );
     assertMatch(
       pageCss,
@@ -91,7 +91,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     );
     assertMatch(
       pageCss,
-      /\.raw-link \{[^}]*flex: 0 0 auto/,
+      /\.file-action \{[^}]*color: var\(--code-muted\)/,
     );
     assert(!pageCss.includes("float: right"));
     assert(!pageCss.includes(".tree:target"));

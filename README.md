@@ -24,7 +24,11 @@ esac
 deno install --global --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM "--allow-run=${browser_opener}" jsr:@hugojosefson/markdown-server
 ```
 
-## Example usage
+## Usage
+
+The command is `markdown-server [root] [options]`.
+
+### Examples
 
 ```sh
 # Serve the current directory, starting at http://localhost:8000.
@@ -38,34 +42,67 @@ markdown-server --redirect=302
 markdown-server --redirect=301
 ```
 
-The command is `markdown-server [root]`. The root defaults to `.`, the host to
-`localhost`, and the port to `8000`. If the default port was omitted and is
-occupied, the server tries successive ports; an occupied explicit `--port`
-fails. Options are `--host`, `--port`, `--redirect=301|302` (default `302`),
-`--reload`/`--no-reload` (default reload), `--open`/`--no-open` (default open),
-`--help`, and `--version`.
+### Options
 
-Installation grants `--allow-read=.` so the server can read the current
-directory tree without granting read access everywhere. It also needs
-`--allow-net`, `--allow-env=CI,FORCE_COLOR,TERM`, and one platform-specific
-browser opener (`xdg-open`, `open`, or `cmd`). Broader read grants can expose
-more files.
+| Argument or option         | Default     | Purpose                                |
+| -------------------------- | ----------- | -------------------------------------- |
+| `[root]`                   | `.`         | Directory to serve.                    |
+| `--host <host>`            | `localhost` | Host to bind.                          |
+| `--port <port>`            | `8000`      | Port to bind.                          |
+| `--redirect=<301\|302>`    | `302`       | Status for canonical URL redirects.    |
+| `--reload` / `--no-reload` | enabled     | Enable or disable browser live reload. |
+| `--open` / `--no-open`     | enabled     | Enable or disable opening the browser. |
+| `-h`, `--help`             | —           | Show command help.                     |
+| `-V`, `--version`          | —           | Show the installed version.            |
+
+### Port selection
+
+When the default port is occupied, the server tries successive ports. An
+occupied explicitly selected `--port` fails instead.
+
+### Permissions
+
+The installation uses narrowly scoped runtime permissions:
+
+| Permission                               | Purpose                                                                          |
+| ---------------------------------------- | -------------------------------------------------------------------------------- |
+| `--allow-read=.`                         | Read the current directory tree without granting access to the whole filesystem. |
+| `--allow-net`                            | Serve HTTP and listen for browser connections.                                   |
+| `--allow-env=CI,FORCE_COLOR,TERM`        | Read the listed terminal and CI settings.                                        |
+| `--allow-run=xdg-open`, `open`, or `cmd` | Open the browser using the platform's standard command.                          |
+
+Broader read grants can expose more files.
 
 ## URLs and pages
 
-Markdown files have clean URLs: `guide.md` is `/guide`, while a directory's
-`README.md` or `index.md` is `/docs/`; `README.md` is preferred. Direct `.md`
-URLs redirect to their clean URL. An ordinary Markdown file wins a conflict at
-`/guide`; `/guide/` accesses the directory. Other static files are served.
+### Routing
 
-Generated Markdown pages, directory-index pages, and no-index listings include a
-desktop sticky lazy navigation tree, a mobile Browse control, and breadcrumbs.
-Live reload is included on generated pages when enabled, not on static assets.
-Fenced code blocks show their language and include a copy button. Dotfiles are
-listed and served, and symlinks are followed; Deno's read permissions remain the
-boundary, including for symlink targets. The reserved `/__markdown_server__/`
-namespace is used internally.
+| Source                              | URL or behavior                                           |
+| ----------------------------------- | --------------------------------------------------------- |
+| `guide.md`                          | Clean URL `/guide`.                                       |
+| `docs/README.md` or `docs/index.md` | Directory URL `/docs/`; `README.md` is preferred.         |
+| Direct `.md` URL                    | Redirects to its clean URL.                               |
+| Both `guide.md` and `guide/`        | `/guide` renders the file; `/guide/` opens the directory. |
+| Other files                         | Served at their exact static path.                        |
 
-The browser opens by default. If opening it fails, the server warns and keeps
-running. Use `--redirect=302` for temporary redirects while testing and
-`--redirect=301` when permanent redirects are desired.
+### Generated-page features
+
+| Feature             | Behavior                                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| Navigation          | Sticky, lazy desktop file tree and a mobile Browse link.                                         |
+| Breadcrumbs         | Show the configured root and actual rendered source filename.                                    |
+| Directory listings  | Sortable metadata columns, including permissions, binary size, user ID, modified time, and name. |
+| Display controls    | Link-based light/auto/dark theme and narrow/wide layout choices.                                 |
+| Source access       | Markdown and text pages include a Raw link.                                                      |
+| Code blocks         | Show the detected language and a Copy button.                                                    |
+| Live reload         | Included on generated pages when enabled; static assets do not include it.                       |
+| Filesystem behavior | Dotfiles are listed and served; symlinks are followed within Deno's read-permission boundary.    |
+| Internal routes     | `/__markdown_server__/` is reserved for server endpoints.                                        |
+
+### Browser and redirects
+
+| Setting          | Behavior                                                                    |
+| ---------------- | --------------------------------------------------------------------------- |
+| Browser opening  | Enabled by default. Failure produces a warning without stopping the server. |
+| `--redirect=302` | Temporary canonical redirects; useful while testing.                        |
+| `--redirect=301` | Permanent canonical redirects.                                              |

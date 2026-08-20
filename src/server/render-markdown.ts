@@ -30,8 +30,8 @@ export async function renderMarkdown(
       options.directory ?? false,
       content,
       new URL(request.url),
-      [rawAction(new URL(request.url)), ...(options.actions ?? [])],
-      options.indexName,
+      [rawAction(), ...(options.actions ?? [])],
+      options.sourceName,
     ),
   );
 }
@@ -39,12 +39,12 @@ export async function renderMarkdown(
 export type MarkdownOptions = {
   actions?: PageAction[];
   directory?: boolean;
-  indexName?: string;
+  sourceName?: string;
 };
 
-function rawAction(url: URL): PageAction {
+function rawAction(): PageAction {
   return {
-    href: rawHref(url),
+    href: rawHref(),
     kind: "raw",
     label: "Raw",
   };

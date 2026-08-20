@@ -102,6 +102,7 @@ Deno.test("client carries all current query state across internal navigation", (
   let optionHref = "?theme=dark";
   let externalHref = "https://example.test/docs?x=1";
   let hashHref = "#browse";
+  let rawHref = "?raw";
   let clicked = 0;
   const ordinary = {
     getAttribute: () => ordinaryHref,
@@ -122,13 +123,18 @@ Deno.test("client carries all current query state across internal navigation", (
   const absolute = link(() => absoluteHref, (value) => absoluteHref = value);
   const external = link(() => externalHref, (value) => externalHref = value);
   const hash = link(() => hashHref, (value) => hashHref = value);
+  const raw = {
+    getAttribute: () => rawHref,
+    setAttribute: (_name: string, value: string) => rawHref = value,
+    matches: (selector: string) => selector.includes(".raw-link"),
+  };
   const width = { querySelector: () => ({ click: () => clicked++ }) };
   const document = {
     documentElement: { dataset: {} as Record<string, string> },
     querySelector: (selector: string) =>
       selector.includes("display-width") ? width : null,
     querySelectorAll:
-      () => [ordinary, override, absolute, option, external, hash],
+      () => [ordinary, override, absolute, option, external, hash, raw],
   };
   new Function(
     "location",
@@ -156,6 +162,7 @@ Deno.test("client carries all current query state across internal navigation", (
   assertEquals(optionHref, "?theme=dark");
   assertEquals(externalHref, "https://example.test/docs?x=1");
   assertEquals(hashHref, "#browse");
+  assertEquals(rawHref, "?raw");
   listeners.get("keydown")?.({ key: "w" });
   assertEquals(clicked, 1);
   location.search = "?order=size-desc&new&unknown=changed";

@@ -25,7 +25,7 @@ export async function renderDirectory(
       url.pathname,
       join(path, index),
       parts,
-      { directory: true, indexName: index, actions: [filesAction(url)] },
+      { directory: true, sourceName: index, actions: [filesAction(url)] },
     );
   }
   const content = directoryIndex(

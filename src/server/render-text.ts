@@ -3,7 +3,6 @@ import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
 import type { PageAction } from "./page.ts";
 import { renderCodeBlock } from "./render-code-markdown.ts";
-import { queryHref, setQuery } from "./query.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function renderText(
@@ -20,18 +19,18 @@ export async function renderText(
   return htmlResponse(
     request,
     await page(config, url.pathname, parts, false, content, url, [
-      rawAction(url),
+      rawAction(),
     ]),
   );
 }
 
-export function rawHref(url: URL): string {
-  return queryHref(url.pathname, setQuery(url.search, "raw", null));
+export function rawHref(): string {
+  return "?raw";
 }
 
-function rawAction(url: URL): PageAction {
+function rawAction(): PageAction {
   return {
-    href: rawHref(url),
+    href: rawHref(),
     kind: "raw",
     label: "Raw",
   };

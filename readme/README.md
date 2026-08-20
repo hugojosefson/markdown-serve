@@ -107,6 +107,8 @@ Broader read grants can expose more files.
   next point when its displayed value can change, using sub-second or second
   updates only for second-level text, minute updates for minute-level text, and
   progressively longer delays for older timestamps.
+- Optionally sort directories before files in both directory listings and the
+  navigation tree while preserving the selected ordering within each group.
 
 Revisit this list after the currently planned work and ask which idea, if any,
 should be pursued next.

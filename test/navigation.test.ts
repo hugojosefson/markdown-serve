@@ -52,7 +52,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     );
     assertMatch(
       guideBody,
-      /\.tree \.tree-files-link \{[^}]*opacity: 0;[^}]*position: absolute; right: 0; top: 0/,
+      /\.tree \.tree-files-link \{[^}]*bottom: 0;[^}]*display: flex;[^}]*opacity: 0;[^}]*position: absolute; right: 0; top: 0/,
     );
     assertMatch(
       guideBody,
@@ -61,6 +61,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(guideBody, /href="\/" data-query-remove="dir">README\.md<\/a>/);
     assert(!guideBody.includes('href="//"'));
     assertMatch(guideBody, /__markdown_server__\/tree\?path=/);
+    assert(!pageClient.includes("addEventListener('click'"));
     assertMatch(guideBody, /class="active"/);
     assert(!guideBody.includes('data-path="docs/nested"'));
 
@@ -131,82 +132,6 @@ Deno.test("breadcrumbs copy as exact configured paths", () => {
   );
   assertEquals(text(breadcrumbs("./", [], true, "README.md")), "./README.md");
   assertEquals(breadcrumbPath("docs///", ["nested"]), "docs/nested/");
-});
-
-Deno.test("current directory links toggle their details without navigation", () => {
-  const listeners = new Map<string, (event: Record<string, unknown>) => void>();
-  class Details {
-    open = true;
-    dataset = { path: "docs" };
-  }
-  const details = new Details();
-  const link = {
-    href: "/docs/",
-    closest: (selector: string) =>
-      selector === "details[data-path]" ? details : null,
-  };
-  const tree = {
-    addEventListener: (
-      name: string,
-      listener: (event: Record<string, unknown>) => void,
-    ) => listeners.set(name, listener),
-  };
-  const location = { href: "http://x/docs/?dir", pathname: "/docs/" };
-  new Function(
-    "document",
-    "HTMLDetailsElement",
-    "location",
-    "fetch",
-    pageClient,
-  )(
-    {
-      documentElement: { dataset: { directoryView: "true" } },
-      querySelector: () => tree,
-    },
-    Details,
-    location,
-    () => Promise.reject(new Error("not fetched")),
-  );
-  const click = (overrides: Record<string, unknown> = {}) => {
-    let prevented = false;
-    listeners.get("click")?.({
-      altKey: false,
-      button: 0,
-      ctrlKey: false,
-      metaKey: false,
-      preventDefault: () => prevented = true,
-      shiftKey: false,
-      target: {
-        closest: (selector: string) =>
-          selector === "details[data-path] > summary > .tree-folder-link"
-            ? link
-            : null,
-      },
-      ...overrides,
-    });
-    return prevented;
-  };
-  assert(click());
-  assertEquals(details.open, false);
-  assertEquals(location, { href: "http://x/docs/?dir", pathname: "/docs/" });
-  assert(click());
-  assertEquals(details.open, true);
-  assert(!click({ ctrlKey: true }));
-  const filesLink = { closest: () => details, href: "/docs/?dir" };
-  assert(
-    !click({
-      target: {
-        closest: (selector: string) =>
-          selector === "details[data-path] > summary > .tree-folder-link"
-            ? null
-            : filesLink,
-      },
-    }),
-  );
-  assert(!click({ target: { closest: () => null } }));
-  link.href = "/other/";
-  assert(!click());
-  assert(!pageClient.includes("history."));
 });
 
 Deno.test("directory listings activate only their current tree directory", async () => {

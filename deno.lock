@@ -8,6 +8,7 @@
     "jsr:@std/internal@^1.0.14": "1.0.14",
     "jsr:@std/media-types@^1.1.0": "1.1.0",
     "jsr:@std/path@^1.1.6": "1.1.6",
+    "npm:file-lang-map@^1.1.11": "1.1.11",
     "npm:github-slugger@2": "2.0.0",
     "npm:he@^1.2.0": "1.2.0",
     "npm:katex@0.16": "0.16.47",
@@ -96,6 +97,9 @@
     },
     "escape-string-regexp@4.0.0": {
       "integrity": "sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA=="
+    },
+    "file-lang-map@1.1.11": {
+      "integrity": "sha512-pzXNJWP49x0ujx87T4DQi9hxfFLUsAY4QXD9tYvyk1zfNvo+Wl7HF2b+cEQdZNSKDELkdjUVAl7/IsG3jSGNBQ=="
     },
     "github-slugger@2.0.0": {
       "integrity": "sha512-IaOQ9puYtjrkq7Y0Ygl9KDZnrf/aiUJYUpVf89y8kyaxbRG7Y1SrX/jaumrv81vc61+kiMempujsM3Yw7w5qcw=="
@@ -195,6 +199,7 @@
       "jsr:@std/assert@^1.0.19",
       "jsr:@std/media-types@^1.1.0",
       "jsr:@std/path@^1.1.6",
+      "npm:file-lang-map@^1.1.11",
       "npm:prismjs@^1.30.0"
     ]
   }

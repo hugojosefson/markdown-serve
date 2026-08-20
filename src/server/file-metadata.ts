@@ -91,19 +91,19 @@ export function renderFileMetadataSummary(
     setQuery(url.search, "metadata", expanded ? undefined : "expand"),
   );
   const action = expanded ? "Collapse metadata" : "Expand metadata";
-  const collapseLabel = expanded
-    ? '<span class="file-metadata-collapse" aria-hidden="true">Collapse ↑</span>'
-    : "";
   return `<a class="file-metadata" href="${
     escapeHtml(href)
-  }" title="${action}" aria-label="${action}" aria-controls="file-metadata-details" aria-expanded="${expanded}">${collapseLabel}${
+  }" title="${action}" aria-label="${action}" aria-controls="file-metadata-details" aria-expanded="${expanded}">${
     [formatSize(metadata.size), relative].map(escapeHtml).join(
       ' <span aria-hidden="true">·</span> ',
     )
   }</a>`;
 }
 
-export function renderFileMetadataDetails(metadata: FileMetadata): string {
+export function renderFileMetadataDetails(
+  metadata: FileMetadata,
+  url: URL,
+): string {
   const modified = metadata.modified?.toISOString();
   const fields: MetadataField[] = [
     {
@@ -143,7 +143,13 @@ export function renderFileMetadataDetails(metadata: FileMetadata): string {
           : ""
       }</dd></div>`
     ).join("");
-  return `<section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><dl>${rows}</dl></section>`;
+  const closeHref = queryHref(
+    url.pathname,
+    setQuery(url.search, "metadata", undefined),
+  );
+  return `<section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><div class="file-metadata-details-header"><span>File metadata</span><a class="file-metadata-close" href="${
+    escapeHtml(closeHref)
+  }" title="Collapse metadata" aria-label="Collapse metadata"><span aria-hidden="true">×</span></a></div><dl>${rows}</dl></section>`;
 }
 
 type MetadataField = {

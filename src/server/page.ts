@@ -46,7 +46,7 @@ function renderBody(
     renderContentHeader(config, model, metadataExpanded)
   }${
     model.metadata && metadataExpanded
-      ? renderFileMetadataDetails(model.metadata)
+      ? renderFileMetadataDetails(model.metadata, model.url)
       : ""
   }${model.content}</main></div><script src="${pageScript.url}"></script>${
     reloadClient(config)

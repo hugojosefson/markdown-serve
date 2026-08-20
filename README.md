@@ -116,6 +116,10 @@ Broader read grants can expose more files.
   identifier is unique on the page.
 - Use tree-sitter to link identifiers to definitions and references within the
   same file and across indexed files.
+- Keep humanized timestamps current in the browser. Schedule each update for the
+  next point when its displayed value can change, using sub-second or second
+  updates only for second-level text, minute updates for minute-level text, and
+  progressively longer delays for older timestamps.
 
 Revisit this list after the currently planned work and ask which idea, if any,
 should be pursued next.

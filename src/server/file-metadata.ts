@@ -118,7 +118,7 @@ export function renderFileMetadataDetails(
     },
     {
       label: "Size",
-      value: `${metadata.size} bytes (${formatSize(metadata.size)})`,
+      value: detailedSize(metadata.size),
     },
     { label: "Media type", value: metadata.mime },
     {
@@ -163,6 +163,12 @@ type MetadataField = {
   valueIsHtml?: boolean;
   suffix?: string;
 };
+
+function detailedSize(bytes: number): string {
+  const exact = `${bytes} byte${bytes === 1 ? "" : "s"}`;
+  const compact = formatSize(bytes);
+  return compact.endsWith(" B") ? exact : `${exact} (${compact})`;
+}
 
 function formatRelativeTime(date: Date, now = new Date()): string {
   const ranges: [number, Intl.RelativeTimeFormatUnit][] = [

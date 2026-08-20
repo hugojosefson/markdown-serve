@@ -20,7 +20,7 @@ export async function navigationTree(
   const rootFilesLink = await indexName(config.rootPath)
     ? filesLink("/?dir", config.rootLabel)
     : "";
-  return `<nav aria-label="Files"><a href="/?dir" class="tree-heading">Files</a><div class="tree-root-row">${rootLink}${rootFilesLink}</div>${await treeList(
+  return `<nav aria-label="Files"><div class="tree-root-row">${rootLink}${rootFilesLink}</div>${await treeList(
     config,
     [],
     active,

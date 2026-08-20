@@ -17,12 +17,9 @@ Deno.test("generated pages include responsive navigation and active branches", a
   try {
     const h = await handler(f.root);
     const guideBody = await (await h(new Request("http://x/guide"))).text();
-    assertMatch(guideBody, /<a class="browse" href="#browse">Browse<\/a>/);
     assertMatch(guideBody, /class="tree"/);
-    assertMatch(
-      guideBody,
-      /<a href="\/\?dir" class="tree-heading">Files<\/a>/,
-    );
+    assert(!guideBody.includes('class="browse"'));
+    assert(!guideBody.includes("tree-heading"));
     assertMatch(guideBody, /markdown-body/);
     assertMatch(guideBody, /data-color-mode="auto"/);
     assertMatch(guideBody, /color-scheme: light dark/);
@@ -93,7 +90,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
       /\.raw-link \{[^}]*flex: 0 0 auto/,
     );
     assert(!plainBody.includes("float: right"));
-    assertMatch(plainBody, /\.tree:target \{ display: block; \}/);
+    assert(!plainBody.includes(".tree:target"));
     assert(!plainBody.includes("browse?.addEventListener"));
 
     const docsBody = await (await h(new Request("http://x/docs/"))).text();

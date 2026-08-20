@@ -13,7 +13,7 @@ export async function navigationTree(
   const rootClass = active.length === 0 && directoryView
     ? "tree-root active"
     : "tree-root";
-  return `<nav aria-label="Files"><a href="/?dir" class="tree-heading">Files</a><a class="${rootClass}" href="/?dir">${
+  return `<nav aria-label="Files"><a href="/?dir" class="tree-heading">Files</a><a class="${rootClass}" href="/" data-query-remove="dir">${
     escapeHtml(config.rootLabel)
   }</a>${await treeList(
     config,
@@ -63,17 +63,20 @@ async function treeItem(
     : markdown
     ? [...path.slice(0, -1), entry.name.slice(0, -3)]
     : path;
-  const href = entry.directory
-    ? `${canonicalPath(route, true)}?dir`
-    : canonicalPath(route, index);
+  const href = canonicalPath(route, entry.directory || index);
   const activeItem = entry.directory
     ? directoryView && active.join("/") === route.join("/")
     : index
     ? !directoryView && active.join("/") === route.join("/") &&
       sourceName === entry.name
     : active.join("/") === route.join("/");
-  const link = `<a${activeItem ? ' class="active"' : ""} href="${href}"${
-    index ? ' data-query-remove="dir"' : ""
+  const linkClass = entry.directory
+    ? `${activeItem ? "active " : ""}tree-folder-link`
+    : activeItem
+    ? "active"
+    : undefined;
+  const link = `<a${linkClass ? ` class="${linkClass}"` : ""} href="${href}"${
+    entry.directory || index ? ' data-query-remove="dir"' : ""
   }>${escapeHtml(entry.name)}${entry.directory ? "/" : ""}</a>`;
   if (!entry.directory) {
     return `<li>${link}</li>`;
@@ -81,7 +84,11 @@ async function treeItem(
   const descendants = activeDirectory
     ? await treeList(config, path, active, directoryView, sourceName)
     : "<ul></ul>";
+  const filesLink =
+    `<a class="tree-files-link" href="${href}?dir" title="Show files in ${
+      escapeHtml(entry.name)
+    }" aria-label="Show files in ${escapeHtml(entry.name)}">Files</a>`;
   return `<li><details data-path="${escapeHtml(path.join("/"))}"${
     activeDirectory ? ' data-loaded="true" open' : ""
-  }><summary>${link}</summary>${descendants}</details></li>`;
+  }><summary>${link}${filesLink}</summary>${descendants}</details></li>`;
 }

@@ -294,7 +294,7 @@ Deno.test("indexed directories can switch between their index and file listing",
     );
     assertMatch(
       index,
-      /<summary><a href="\/docs\/\?dir">docs\/<\/a><\/summary><ul><li><a class="active" href="\/docs\/" data-query-remove="dir">README\.md/,
+      /<summary><a class="tree-folder-link" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"[^>]*>Files<\/a><\/summary><ul><li><a class="active" href="\/docs\/" data-query-remove="dir">README\.md/,
     );
     assert(!index.includes('<table class="directory-table">'));
 
@@ -307,12 +307,12 @@ Deno.test("indexed directories can switch between their index and file listing",
     assertMatch(listing, /data-directory-view="true"/);
     assertMatch(
       listing,
-      /<summary><a class="active" href="\/docs\/\?dir">docs\/<\/a><\/summary><ul><li><a href="\/docs\/" data-query-remove="dir">README\.md/,
+      /<summary><a class="active tree-folder-link" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"[^>]*>Files<\/a><\/summary><ul><li><a href="\/docs\/" data-query-remove="dir">README\.md/,
     );
     assertMatch(listing, /<a href="note\.txt">note\.txt<\/a>/);
     assertMatch(
       listing,
-      /<nav aria-label="Breadcrumb">[\s\S]*?<\/nav><a class="page-action" href="\?a=1&amp;a=2&amp;order=size&amp;theme=dark&amp;width=wide" data-query-remove="dir" title="Return to README\.md">README\.md<\/a>/,
+      /<nav aria-label="Breadcrumb">[\s\S]*?<\/nav><a class="page-action" href="\?a=1&amp;a=2&amp;order=size&amp;theme=dark&amp;width=wide" data-query-remove="dir" title="View README\.md">README\.md<\/a>/,
     );
     assertMatch(
       listing,
@@ -328,7 +328,7 @@ Deno.test("indexed directories can switch between their index and file listing",
     )).text();
     assertMatch(
       mixed,
-      /title="Return to rEaDmE\.md">rEaDmE\.md<\/a>/,
+      /title="View rEaDmE\.md">rEaDmE\.md<\/a>/,
     );
     const mixedIndex = await (await h(new Request("http://x/mixed/"))).text();
     assertMatch(mixedIndex, /aria-current="page">rEaDmE\.md<\/span>/);

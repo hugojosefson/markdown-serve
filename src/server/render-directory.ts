@@ -68,6 +68,6 @@ function indexAction(url: URL, index: string): PageAction {
     kind: "index",
     label: index,
     queryRemove: ["dir"],
-    title: `Return to ${index}`,
+    title: `View ${index}`,
   };
 }

@@ -1,11 +1,16 @@
 import type { SourceLineAnnotation } from "./git/diff.ts";
+import { escapeHtml } from "./html.ts";
+import type { SymbolDeclarationLink } from "./symbols/types.ts";
 
 /** Adds source-file line links without changing the highlighted code text. */
 export function renderSourceLines(
   highlighted: string,
   annotations: ReadonlyMap<number, SourceLineAnnotation> = new Map(),
+  declarations: ReadonlySet<number> = new Set(),
+  declarationLinks: ReadonlyMap<number, SymbolDeclarationLink> = new Map(),
 ): string {
   let line = 1;
+  const symbolGutter = declarations.size > 0;
   const activeTags: string[] = [];
   const openLine = () => {
     const annotation = annotations.get(line);
@@ -34,11 +39,23 @@ export function renderSourceLines(
     const deletion = deletionLabel
       ? `<span class="source-line-deletions" data-deletions="${annotation?.deletions}" aria-hidden="true"></span>`
       : "";
+    const declaration = declarationLinks.get(line);
+    const symbol = declaration
+      ? `<a class="source-symbol-marker" href="${
+        escapeHtml(declaration.href)
+      }" aria-label="Go to ${
+        escapeHtml(declaration.name)
+      } declaration on line ${line}"></a>`
+      : symbolGutter
+      ? '<span class="source-symbol-marker" aria-hidden="true"></span>'
+      : "";
     return `<span class="source-line${
+      symbolGutter ? " source-symbol-gutter" : ""
+    }${declarations.has(line) ? " source-line-symbol" : ""}${
       change ? ` source-line-${change}` : ""
     }" id="L${line}"${
       change ? ` data-git-change="${change}"` : ""
-    }><a class="source-line-number" href="#L${line}" aria-label="${lineLabel}" data-line="${line}">${deletion}</a><span class="source-line-content">`;
+    }><a class="source-line-number" href="#L${line}" aria-label="${lineLabel}" data-line="${line}">${deletion}</a>${symbol}<span class="source-line-content">`;
   };
   const closeTags = () => activeTags.toReversed().map(closeTag).join("");
   const reopenTags = () => activeTags.join("");

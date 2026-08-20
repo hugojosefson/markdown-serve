@@ -4,7 +4,7 @@ import { filePageActions, markdownViewPageAction } from "./page-action.ts";
 import type { HeaderAction } from "./page-action.ts";
 import {
   renderCodeMarkdown,
-  renderSourceCodeBlock,
+  renderSourceCodeBlockWithSymbols,
 } from "./render-code-markdown.ts";
 import { codeLanguageForPath } from "./code-language.ts";
 import { sourceAnnotations } from "./git/source.ts";
@@ -38,7 +38,7 @@ export async function renderMarkdown(
   const url = new URL(request.url);
   const source = url.searchParams.has("source");
   const content = source
-    ? renderSourceCodeBlock(
+    ? await renderSourceCodeBlockWithSymbols(
       text,
       codeLanguageForPath(file, text),
       await sourceAnnotations(config, file, text),

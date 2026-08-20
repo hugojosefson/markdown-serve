@@ -3,6 +3,8 @@ import { CodeRenderer } from "./code-renderer.ts";
 import "./prism-languages.ts";
 import { renderSourceLines } from "./render-source-lines.ts";
 import type { SourceLineAnnotation } from "./git/diff.ts";
+import { analyzeSymbols } from "./symbols/analyze.ts";
+import { injectSymbols } from "./symbols/inject.ts";
 
 export function renderCodeMarkdown(markdown: string, baseUrl: string): string {
   return render(markdown, {
@@ -75,6 +77,32 @@ export function renderSourceCodeBlock(
   return code === rendered
     ? replaceSourceCode(rendered, "pre", annotations)
     : code;
+}
+
+export async function renderSourceCodeBlockWithSymbols(
+  text: string,
+  language: string,
+  annotations?: ReadonlyMap<number, SourceLineAnnotation>,
+): Promise<string> {
+  const rendered = renderCodeBlock(text, language);
+  const symbols = await analyzeSymbols(text, language);
+  const replace = (tag: "code" | "pre") =>
+    rendered.replace(
+      new RegExp(`(<${tag}(?:\\s[^>]*)?>)([\\s\\S]*?)(<\\/${tag}>)`),
+      (_, open, highlighted, close) =>
+        `${open}${
+          renderSourceLines(
+            symbols
+              ? injectSymbols(highlighted, symbols.occurrences)
+              : highlighted,
+            annotations,
+            symbols?.declarationLines,
+            symbols?.declarationLinks,
+          )
+        }${close}`,
+    );
+  const code = replace("code");
+  return code === rendered ? replace("pre") : code;
 }
 
 function replaceSourceCode(

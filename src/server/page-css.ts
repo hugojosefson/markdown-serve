@@ -109,6 +109,9 @@ ${displayControlsCss}
 .source-line-both .source-line-number { border-image: linear-gradient(to bottom, var(--git-added) 50%, var(--git-modified) 50%) 1; }
 .source-line-deletions { color: var(--git-deleted); font: 700 10px/1 ui-monospace, monospace; margin-left: 3px; }
 .source-line-deletions::after { content: "−" attr(data-deletions); }
+.source-line.source-symbol-gutter { grid-template-columns: max-content 1.2em minmax(max-content, 1fr); }.source-symbol-marker { align-items: center; color: var(--focus-color); display: flex; justify-content: center; text-decoration: none; }.source-line-symbol .source-symbol-marker::after { content: "◆"; font-size: .55em; }.source-symbol-marker:focus-visible { outline: 2px solid var(--focus-color); outline-offset: -2px; }
+.markdown-body .symbol-link { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--focus-color) 35%, transparent); text-underline-offset: .14em; }.markdown-body .symbol-link:hover, .markdown-body .symbol-link:focus-visible { color: var(--focus-color); text-decoration-color: currentColor; }
+.markdown-body .symbol-declaration:target { background: var(--code-hover); outline: 2px solid var(--focus-color); outline-offset: 1px; }
 @media (max-width: 800px) {
   .markdown-body .file-metadata-details dl { grid-auto-flow: row; grid-template-columns: 1fr; grid-template-rows: none; }
 }

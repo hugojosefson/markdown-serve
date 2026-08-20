@@ -63,6 +63,14 @@ Broader read grants can expose more files.
 
 ## URLs and pages
 
+### Source symbols
+
+Source views recognize page-local declarations in Bash, C, C++, C#, Go, Java,
+JavaScript/JSX, Python, Rust, and TypeScript/TSX. Declaration names link to a
+unique `#symbol-name` anchor when possible; all source lines retain their `#L`
+anchors. Parsing is skipped above 1 MiB or when a grammar fails, without
+affecting source rendering.
+
 ### Routing
 
 | Request or case                      | Behavior                                                               |
@@ -83,6 +91,9 @@ table ordering applies within each group.
 
 ### Browser and redirects
 
+Humanized timestamps update in the browser when their displayed value changes,
+with progressively longer delays for older timestamps.
+
 | Setting          | Behavior                                                                    |
 | ---------------- | --------------------------------------------------------------------------- |
 | Browser opening  | Enabled by default. Failure produces a warning without stopping the server. |
@@ -91,6 +102,8 @@ table ordering applies within each group.
 
 ## Future features
 
+- Link source identifiers to page-local and indexed definitions and references
+  when resolution is unambiguous.
 - Add repository search opened with `/`, scoped to the viewed directory or the
   viewed file's directory. Use `rg` with a `search` query parameter, bounded and
   cancellable subprocesses, and UI controls or syntax for useful options such as
@@ -103,15 +116,6 @@ table ordering applies within each group.
   Writes should be atomic. Explore cursor-preserving external updates,
   pause/focus-based autosave, and explicit conflict handling before attempting
   collaborative-style live updates.
-- Use tree-sitter to offer predictable symbol anchors as an alternative to line
-  anchors. Generate a symbol anchor only when its function, type, or other
-  identifier is unique on the page.
-- Use tree-sitter to link identifiers to definitions and references within the
-  same file and across indexed files.
-- Keep humanized timestamps current in the browser. Schedule each update for the
-  next point when its displayed value can change, using sub-second or second
-  updates only for second-level text, minute updates for minute-level text, and
-  progressively longer delays for older timestamps.
 
 Revisit this list after the currently planned work and ask which idea, if any,
 should be pursued next.

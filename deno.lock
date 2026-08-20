@@ -17,7 +17,9 @@
     "npm:marked-gfm-heading-id@^4.1.3": "4.1.4_marked@17.0.6",
     "npm:marked@^17.0.1": "17.0.6",
     "npm:prismjs@^1.30.0": "1.30.0",
-    "npm:sanitize-html@^2.17.0": "2.17.7"
+    "npm:sanitize-html@^2.17.0": "2.17.7",
+    "npm:tree-sitter-wasms@0.1.13": "0.1.13",
+    "npm:web-tree-sitter@0.25.10": "0.25.10"
   },
   "jsr": {
     "@deno/gfm@0.12.0": {
@@ -191,6 +193,12 @@
     },
     "source-map-js@1.2.1": {
       "integrity": "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA=="
+    },
+    "tree-sitter-wasms@0.1.13": {
+      "integrity": "sha512-wT+cR6DwaIz80/vho3AvSF0N4txuNx/5bcRKoXouOfClpxh/qqrF4URNLQXbbt8MaAxeksZcZd1j8gcGjc+QxQ=="
+    },
+    "web-tree-sitter@0.25.10": {
+      "integrity": "sha512-Y09sF44/13XvgVKgO2cNDw5rGk6s26MgoZPXLESvMXeefBf7i6/73eFurre0IsTW6E14Y0ArIzhUMmjoc7xyzA=="
     }
   },
   "workspace": {
@@ -200,7 +208,9 @@
       "jsr:@std/media-types@^1.1.0",
       "jsr:@std/path@^1.1.6",
       "npm:file-lang-map@^1.1.11",
-      "npm:prismjs@^1.30.0"
+      "npm:prismjs@^1.30.0",
+      "npm:tree-sitter-wasms@0.1.13",
+      "npm:web-tree-sitter@0.25.10"
     ]
   }
 }

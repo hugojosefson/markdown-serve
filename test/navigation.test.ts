@@ -61,7 +61,6 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(guideBody, /href="\/" data-query-remove="dir">README\.md<\/a>/);
     assert(!guideBody.includes('href="//"'));
     assertMatch(guideBody, /__markdown_server__\/tree\?path=/);
-    assert(!pageClient.includes("addEventListener('click'"));
     assertMatch(guideBody, /class="active"/);
     assert(!guideBody.includes('data-path="docs/nested"'));
 
@@ -132,6 +131,67 @@ Deno.test("breadcrumbs copy as exact configured paths", () => {
   );
   assertEquals(text(breadcrumbs("./", [], true, "README.md")), "./README.md");
   assertEquals(breadcrumbPath("docs///", ["nested"]), "docs/nested/");
+});
+
+Deno.test("folder links toggle only when they already target the current page", () => {
+  const listeners = new Map<string, (event: Record<string, unknown>) => void>();
+  const details = { open: true };
+  const link = {
+    href: "/readme/",
+    closest: (selector: string) =>
+      selector === "details[data-path]" ? details : null,
+  };
+  const tree = {
+    addEventListener: (
+      name: string,
+      listener: (event: Record<string, unknown>) => void,
+    ) => listeners.set(name, listener),
+  };
+  const location = {
+    href: "http://x/readme/",
+    pathname: "/readme/",
+    search: "",
+  };
+  new Function(
+    "document",
+    "HTMLDetailsElement",
+    "location",
+    "fetch",
+    pageClient,
+  )(
+    { querySelector: () => tree },
+    class {},
+    location,
+    () => Promise.reject(new Error("not fetched")),
+  );
+  const click = () => {
+    let prevented = false;
+    listeners.get("click")?.({
+      altKey: false,
+      button: 0,
+      ctrlKey: false,
+      metaKey: false,
+      preventDefault: () => prevented = true,
+      shiftKey: false,
+      target: {
+        closest: (selector: string) =>
+          selector === "details[data-path] > summary > .tree-folder-link"
+            ? link
+            : null,
+      },
+    });
+    return prevented;
+  };
+  assert(click());
+  assertEquals(details.open, false);
+  location.href = "http://x/readme/?dir";
+  location.search = "?dir";
+  assert(!click());
+  assertEquals(details.open, false);
+  location.href = "http://x/other/";
+  location.pathname = "/other/";
+  location.search = "";
+  assert(!click());
 });
 
 Deno.test("directory listings activate only their current tree directory", async () => {

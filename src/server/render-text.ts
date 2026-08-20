@@ -18,9 +18,9 @@ export async function renderText(
   );
   return htmlResponse(
     request,
-    await page(config, url.pathname, parts, false, content, url, [
-      rawAction(),
-    ]),
+    await page(config, url.pathname, parts, false, content, url, {
+      actions: [rawAction()],
+    }),
   );
 }
 

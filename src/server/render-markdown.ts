@@ -30,8 +30,11 @@ export async function renderMarkdown(
       options.directory ?? false,
       content,
       new URL(request.url),
-      [rawAction(), ...(options.actions ?? [])],
-      options.sourceName,
+      {
+        actions: [rawAction(), ...(options.actions ?? [])],
+        directoryView: options.directoryView,
+        sourceName: options.sourceName,
+      },
     ),
   );
 }
@@ -39,6 +42,7 @@ export async function renderMarkdown(
 export type MarkdownOptions = {
   actions?: PageAction[];
   directory?: boolean;
+  directoryView?: boolean;
   sourceName?: string;
 };
 

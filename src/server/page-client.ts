@@ -2,9 +2,9 @@ export const pageClient = `
 const tree = document.querySelector('.tree');
 tree?.addEventListener('click', (event) => {
   if (event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) { return; }
-  const link = event.target.closest?.('a');
+  const link = event.target.closest?.('details[data-path] > summary > a');
   const details = link?.closest?.('details[data-path]');
-  if (!details || new URL(link.href, location.href).pathname !== location.pathname) { return; }
+  if (!details || document.documentElement.dataset.directoryView !== 'true' || new URL(link.href, location.href).pathname !== location.pathname) { return; }
   event.preventDefault();
   details.open = !details.open;
 });
@@ -12,6 +12,7 @@ const addEntries = (list, entries) => entries.forEach((entry) => {
   const item = document.createElement('li');
   const link = document.createElement('a');
   link.href = entry.href;
+  if (entry.queryRemove) { link.dataset.queryRemove = entry.queryRemove.join(' '); }
   syncNavigationLinks([link]);
   link.textContent = entry.name + (entry.directory ? '/' : '');
   if (!entry.directory) { item.append(link); list.append(item); return; }

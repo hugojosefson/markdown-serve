@@ -40,10 +40,12 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .content-header .file-metadata:hover { background: var(--code-hover); border-color: var(--code-border); color: var(--focus-color); }
 .content-header .file-metadata:focus-visible { border-color: var(--code-border); outline: 2px solid var(--focus-color); outline-offset: 1px; }
 .content-header .file-metadata span { color: var(--code-border); }
-.content-header.metadata-expanded .file-metadata { background: var(--code-hover); border-color: var(--code-border); color: var(--focus-color); }
-.markdown-body .file-metadata-details { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 6px; margin: 14px 0 16px; overflow: hidden; padding: 0; }
-.markdown-body .file-metadata-details-header { align-items: center; background: var(--code-hover); border-bottom: 1px solid var(--code-border); color: var(--focus-color); display: flex; font: 700 10px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: .06em; min-height: 30px; padding: 0 7px 0 12px; text-transform: uppercase; }
-.markdown-body .file-metadata-close { align-items: center; border: 1px solid var(--code-border); border-radius: 4px; color: var(--code-muted); display: inline-flex; font: 700 16px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; height: 22px; justify-content: center; margin-left: auto; text-decoration: none; width: 22px; }
+.content-header.metadata-expanded { margin-bottom: 0; }
+.content-header.metadata-expanded .file-metadata { background: var(--code-hover); border-color: var(--code-border); border-bottom-color: var(--code-hover); border-radius: 6px 6px 0 0; color: var(--focus-color); position: relative; top: 1px; z-index: 1; }
+.markdown-body .file-metadata-details { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 6px; margin: 0 0 16px; overflow: hidden; padding: 0; }
+.markdown-body .file-metadata-details-header { align-items: center; background: var(--code-hover); border-bottom: 1px solid var(--code-border); color: var(--focus-color); display: flex; font: 700 10px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: .06em; min-height: 30px; padding: 0 6px 0 12px; text-transform: uppercase; }
+.markdown-body .file-metadata-close { align-items: center; border: 1px solid var(--code-border); border-radius: 4px; box-sizing: border-box; color: var(--code-muted); display: inline-flex; height: 22px; justify-content: center; margin-left: auto; text-decoration: none; width: 22px; }
+.markdown-body .file-metadata-close svg { fill: none; height: 12px; stroke: currentColor; stroke-linecap: round; stroke-width: 1.5; width: 12px; }
 .markdown-body .file-metadata-close:hover, .markdown-body .file-metadata-close:focus-visible { background: var(--code-bg); color: var(--focus-color); }
 .markdown-body .file-metadata-close:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 1px; }
 .markdown-body .file-metadata-details dl { display: grid; gap: 16px 24px; grid-auto-flow: column; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(3, auto); margin: 0; padding: 14px; }

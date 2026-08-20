@@ -1,8 +1,8 @@
 export const codeToolbarCss = `
 .code-block { border: 1px solid var(--code-border); border-radius: 6px; margin: 16px 0; overflow: hidden; }
-.code-toolbar { align-items: center; background: var(--code-bg); border-bottom: 1px solid var(--code-border); box-sizing: border-box; display: flex; height: 26px; padding: 0 6px 0 8px; }
+.code-toolbar { align-items: center; background: var(--code-bg); border-bottom: 1px solid var(--code-border); box-sizing: border-box; display: flex; height: 30px; padding: 0 6px 0 8px; }
 .code-language { color: var(--code-muted); font: 600 11px/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .03em; text-transform: lowercase; }
-.code-copy { align-items: center; appearance: none; background: transparent; border: 1px solid var(--code-border); border-radius: 4px; box-sizing: border-box; color: var(--code-text); cursor: pointer; display: inline-flex; font: 500 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; height: 22px; margin-left: auto; padding: 0 7px; }
+.code-copy { align-items: center; appearance: none; background: transparent; border: 1px solid var(--code-border); border-radius: 4px; box-sizing: border-box; color: var(--code-text); cursor: pointer; display: inline-flex; font: 500 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; height: 22px; justify-content: center; margin-left: auto; min-width: 46px; padding: 0 7px; }
 .code-copy:hover { background: var(--code-hover); }
 .code-copy:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 1px; }
 .code-copy-status { height: 1px; margin: -1px; overflow: hidden; position: absolute; width: 1px; clip: rect(0 0 0 0); white-space: nowrap; }

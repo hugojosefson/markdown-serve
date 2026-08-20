@@ -159,7 +159,7 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     )).text();
     assertMatch(
       details,
-      /<\/header><section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><div class="file-metadata-details-header"><span>File metadata<\/span><a class="file-metadata-close" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata"><span aria-hidden="true">×<\/span><\/a><\/div><dl>.*<dt>Modified<\/dt><dd>[^<]+<wbr> <span class="metadata-value-suffix">\((?:now|today)\)<\/span><\/dd>.*<dt>Size<\/dt><dd>4 bytes \(4B\)<\/dd>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>User<\/dt>.*<dt>Permissions<\/dt>.*<dt>Mode<\/dt>.*<\/dl><\/section><img/s,
+      /<\/header><section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><div class="file-metadata-details-header"><span>File metadata<\/span><a class="file-metadata-close" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 4l8 8M12 4l-8 8"\/><\/svg><\/a><\/div><dl>.*<dt>Modified<\/dt><dd>[^<]+<wbr> <span class="metadata-value-suffix">\((?:now|today)\)<\/span><\/dd>.*<dt>Size<\/dt><dd>4 bytes \(4B\)<\/dd>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>User<\/dt>.*<dt>Permissions<\/dt>.*<dt>Mode<\/dt>.*<\/dl><\/section><img/s,
     );
     assertMatch(
       details,
@@ -167,7 +167,7 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     );
     assertMatch(
       pageStylesheet.body,
-      /\.markdown-body \.file-metadata-details \{[^}]*margin: 14px 0 16px;[^}]*overflow: hidden; padding: 0;/,
+      /\.content-header\.metadata-expanded \{ margin-bottom: 0; \}.*\.content-header\.metadata-expanded \.file-metadata \{[^}]*border-bottom-color: var\(--code-hover\); border-radius: 6px 6px 0 0;[^}]*top: 1px; z-index: 1; \}.*\.markdown-body \.file-metadata-details \{[^}]*margin: 0 0 16px;[^}]*overflow: hidden; padding: 0;/s,
     );
     const themedDetails = await (await h(
       new Request("http://x/photo.png?theme=dark&metadata=expand"),

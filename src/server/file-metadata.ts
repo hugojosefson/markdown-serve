@@ -2,6 +2,7 @@ import { contentType } from "@std/media-types";
 import { basename } from "@std/path";
 import { escapeHtml } from "./html.ts";
 import { queryHref, setQuery } from "./query.ts";
+import { renderIsoTimestamp } from "./render-iso-timestamp.ts";
 
 export type FileMetadata = {
   mime: string;
@@ -52,7 +53,7 @@ export function metadataForFile(
 }
 
 export function formatSize(bytes: number): string {
-  const units = ["B", "K", "M", "G", "T", "P"];
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
   let value = bytes;
   let unit = 0;
   while (value >= 1024 && unit < units.length - 1) {
@@ -62,7 +63,7 @@ export function formatSize(bytes: number): string {
   const formatted = value < 10 && unit
     ? value.toFixed(1).replace(/\.0$/, "")
     : Math.round(value);
-  return `${formatted}${units[unit]}`;
+  return `${formatted} ${units[unit]}`;
 }
 
 export function permissions(
@@ -104,11 +105,13 @@ export function renderFileMetadataDetails(
   metadata: FileMetadata,
   url: URL,
 ): string {
-  const modified = metadata.modified?.toISOString();
   const fields: MetadataField[] = [
     {
       label: "Modified",
-      value: modified,
+      value: metadata.modified
+        ? renderIsoTimestamp(metadata.modified)
+        : undefined,
+      valueIsHtml: true,
       suffix: metadata.modified
         ? `(${formatRelativeTime(metadata.modified)})`
         : undefined,
@@ -134,8 +137,10 @@ export function renderFileMetadataDetails(
     .filter((field): field is MetadataField & { value: string } =>
       field.value !== undefined
     )
-    .map(({ label, value, suffix }) =>
-      `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}${
+    .map(({ label, value, valueIsHtml, suffix }) =>
+      `<div><dt>${escapeHtml(label)}</dt><dd>${
+        valueIsHtml ? value : escapeHtml(value)
+      }${
         suffix
           ? `<wbr> <span class="metadata-value-suffix">${
             escapeHtml(suffix)
@@ -155,6 +160,7 @@ export function renderFileMetadataDetails(
 type MetadataField = {
   label: string;
   value: string | undefined;
+  valueIsHtml?: boolean;
   suffix?: string;
 };
 

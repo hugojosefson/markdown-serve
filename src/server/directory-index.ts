@@ -3,6 +3,7 @@ import { escapeHtml } from "./html.ts";
 import { queryHref, setQuery } from "./query.ts";
 import { classifyEntry, entryRoute } from "./entry-route.ts";
 import { formatSize, permissions } from "./file-metadata.ts";
+import { renderIsoTimestamp } from "./render-iso-timestamp.ts";
 
 type DirectoryOrder =
   | "name"
@@ -92,7 +93,7 @@ function row(entry: DirectoryEntry, url: URL): string {
   }</td><td class="directory-user">${
     user(entry.info) ?? "—"
   }</td><td class="directory-modified">${
-    modified === undefined ? "—" : isoTime(modified)
+    modified === undefined ? "—" : renderIsoTimestamp(new Date(modified))
   }</td></tr>`;
 }
 
@@ -124,19 +125,6 @@ function value(
     case "modified":
       return modifiedTime(entry.info);
   }
-}
-
-function isoTime(milliseconds: number): string {
-  const value = new Date(milliseconds).toISOString();
-  return `<time datetime="${value}" aria-label="${value}">${
-    value.replace(
-      /[-T:.Z]/g,
-      (separator) =>
-        `<span class="timestamp-separator${
-          separator === "T" ? " timestamp-t" : ""
-        }${separator === "Z" ? " timestamp-zone" : ""}">${separator}</span>`,
-    )
-  }</time>`;
 }
 
 function header(

@@ -11,9 +11,9 @@ export const codeToolbarCss = `
 .code-block > .highlight pre:has(.source-line), .code-block > pre:has(.source-line) { overflow-x: auto; padding: 0; }
 .source-line { display: grid; grid-template-columns: max-content minmax(max-content, 1fr); min-width: max-content; }
 .source-line:target { background: var(--code-hover); }
-.source-line-number { color: var(--code-muted); padding: 0 12px 0 10px; text-align: right; text-decoration: none; user-select: none; }
+.code-block .source-line-number { color: var(--code-muted); font-weight: 400; opacity: .6; padding: 0 12px 0 10px; text-align: right; text-decoration: none; user-select: none; }
 .source-line-number::before { content: attr(data-line); }
-.source-line-number:hover, .source-line-number:focus-visible { background: var(--code-hover); color: var(--focus-color); }
+.code-block .source-line-number:hover, .code-block .source-line-number:focus-visible { background: var(--code-hover); color: var(--focus-color); opacity: 1; }
 .source-line-number:focus-visible { outline: 2px solid var(--focus-color); outline-offset: -2px; }
 .source-line-content { min-width: 0; white-space: pre; }
 .source-line-break { display: none; }

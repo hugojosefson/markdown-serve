@@ -260,32 +260,13 @@ Deno.test("directory metadata columns sort missing values first and render copya
     /\.directory-table \.directory-permissions,[^}]*\.directory-modified \{ white-space: nowrap; width: 1%; \}/,
   );
   assert(!pageCss.includes(".directory-table th:last-child"));
-  assertMatch(pageCss, /@container \(max-width: 54rem\)/);
   assertMatch(
     pageCss,
-    /\.directory-table \.directory-user \{ display: none; \}/,
-  );
-  assertMatch(pageCss, /@container \(max-width: 46rem\)/);
-  assertMatch(
-    pageCss,
-    /\.directory-table \.directory-permissions \{ display: none; \}/,
-  );
-  assertMatch(pageCss, /@container \(max-width: 34rem\)/);
-  assertMatch(
-    pageCss,
-    /\.directory-table \.directory-modified \{ display: none; \}/,
+    /\.directory-table \.directory-name \{ white-space: nowrap; width: 100%; \}/,
   );
   assertMatch(
     pageCss,
-    /\.markdown-body \.directory-table, \.directory-table thead, \.directory-table tbody, \.directory-table tr \{ display: block; min-width: 0; width: 100%; \}/,
-  );
-  assertMatch(
-    pageCss,
-    /\.directory-table tr \{ display: grid; grid-template-columns: minmax\(0, 1fr\) 5rem; \}/,
-  );
-  assertMatch(
-    pageCss,
-    /\.directory-table \.directory-name \{ grid-column: 1; grid-row: 1; min-width: 0; width: auto; \}/,
+    /\.directory-table\[data-hidden-columns~="size"\] \.directory-size/,
   );
 });
 

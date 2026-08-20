@@ -1,5 +1,6 @@
 import { breadcrumbs } from "./breadcrumb.ts";
 import { codeToolbarClient } from "./code-toolbar-client.ts";
+import { directoryTableClient } from "./directory-table-client.ts";
 import {
   displayControlsClient,
   displayInitialClient,
@@ -51,7 +52,7 @@ export async function page(
     breadcrumbs(config.rootLabel, parts, directory, options.sourceName)
   }${actions.map(renderPageAction).join("")}${
     displayLinks(url)
-  }</header>${content}</main></div><script>${displayControlsClient}${pageClient}${codeToolbarClient}</script>${reload}</body></html>`;
+  }</header>${content}</main></div><script>${displayControlsClient}${directoryTableClient}${pageClient}${codeToolbarClient}</script>${reload}</body></html>`;
 }
 
 function renderPageAction(action: PageAction): string {

@@ -3,6 +3,7 @@ import { codeToolbarClient } from "./code-toolbar-client.ts";
 import { directoryTableClient } from "./directory-table-client.ts";
 import { displayControlsClient } from "./display-controls-client.ts";
 import { pageClient } from "./page-client.ts";
+import { relativeTimeClient } from "./relative-time-client.ts";
 import { pageCss } from "./page-css.ts";
 
 type PageAsset = { body: string; contentType: string; url: string };
@@ -27,7 +28,7 @@ export const pageStylesheet = versioned(
 );
 export const pageScript = versioned(
   "client",
-  `${displayControlsClient}${directoryTableClient}${pageClient}${codeToolbarClient}`,
+  `${displayControlsClient}${directoryTableClient}${relativeTimeClient}${pageClient}${codeToolbarClient}`,
   "text/javascript; charset=UTF-8",
 );
 

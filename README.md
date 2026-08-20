@@ -85,7 +85,9 @@ Broader read grants can expose more files.
 | `/docs/` with a Markdown index       | Renders `docs/README.md` or `docs/index.md`; `README.md` is preferred. |
 | `/docs/?dir`                         | Lists directory entries, including dotfiles, with sortable metadata.   |
 | Both `guide.md` and `guide/`         | `/guide` renders the file; `/guide/` opens the directory.              |
-| Exact path to another file           | Serves the file as static content.                                     |
+| Exact path to another text file      | Shows highlighted source with file actions.                            |
+| `View page` on an HTML source page   | Opens a sandboxed website preview in a new tab.                        |
+| `/__markdown_server__/site/...`      | Serves preview files and relative assets with their normal MIME types. |
 | Symlink                              | Follows its target within Deno's read-permission boundary.             |
 | `/__markdown_server__/`              | Reserves this namespace for internal server endpoints.                 |
 

@@ -1,9 +1,11 @@
 import type { ReloadSource } from "./reload-source.ts";
 
+export type ErrorHandler = (error: unknown) => Response | Promise<Response>;
+
 export type HandlerOptions = {
   root: string;
   redirectStatus?: 301 | 302;
-  onError?: (error: unknown) => Response | Promise<Response>;
+  onError?: ErrorHandler;
   reloadSource?: ReloadSource;
 };
 

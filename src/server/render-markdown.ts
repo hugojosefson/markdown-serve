@@ -1,8 +1,8 @@
 import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
-import type { PageAction } from "./page.ts";
+import { rawPageAction } from "./page-action.ts";
+import type { PageAction } from "./page-action.ts";
 import { renderCodeMarkdown } from "./render-code-markdown.ts";
-import { rawHref } from "./render-text.ts";
 import { rawTextFile } from "./responses.ts";
 import type { ServerConfig } from "./types.ts";
 
@@ -17,25 +17,25 @@ export async function renderMarkdown(
   if (new URL(request.url).searchParams.has("raw")) {
     return await rawTextFile(request, file);
   }
+  if (request.method === "HEAD") {
+    return htmlResponse(request, "");
+  }
   const base = new URL(request.url);
   base.pathname = pathname;
   base.search = "";
   const content = renderCodeMarkdown(await Deno.readTextFile(file), base.href);
   return htmlResponse(
     request,
-    await page(
-      config,
-      pathname,
+    await page(config, {
+      title: pathname,
       parts,
-      options.directory ?? false,
+      directory: options.directory ?? false,
       content,
-      new URL(request.url),
-      {
-        actions: [rawAction(), ...(options.actions ?? [])],
-        directoryView: options.directoryView,
-        sourceName: options.sourceName,
-      },
-    ),
+      url: new URL(request.url),
+      actions: [rawPageAction(), ...(options.actions ?? [])],
+      directoryView: options.directoryView,
+      sourceName: options.sourceName,
+    }),
   );
 }
 
@@ -45,11 +45,3 @@ export type MarkdownOptions = {
   directoryView?: boolean;
   sourceName?: string;
 };
-
-function rawAction(): PageAction {
-  return {
-    href: rawHref(),
-    kind: "raw",
-    label: "Raw",
-  };
-}

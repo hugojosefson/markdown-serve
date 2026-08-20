@@ -51,6 +51,32 @@ Deno.test("Markdown routes, redirects, and relative URLs are canonical", async (
   }
 });
 
+Deno.test("clean Markdown routes select mixed-case extensions deterministically", async () => {
+  const f = await fixture({
+    "guide.md": "lowercase",
+    "guide.MD": "uppercase",
+    "topic.mD": "first fallback",
+    "topic.Md": "second fallback",
+  });
+  try {
+    const h = await handler(f.root);
+    assertMatch(
+      await (await h(new Request("http://x/guide"))).text(),
+      /lowercase/,
+    );
+    assertMatch(
+      await (await h(new Request("http://x/topic"))).text(),
+      /second fallback/,
+    );
+    assertEquals(
+      (await h(new Request("http://x/guide.MD"))).headers.get("location"),
+      "/guide",
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
 Deno.test("directory tables expose metadata and support deterministic sorting", async () => {
   const f = await fixture({
     "list/a-small": "x",

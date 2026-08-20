@@ -33,7 +33,9 @@ export async function serve(options: ServerOptions): Promise<Deno.HttpServer> {
         onListen: options.onListen,
       },
       await createHandler({
-        ...options,
+        root: options.root,
+        redirectStatus: options.redirectStatus,
+        onError: options.onError,
         reloadSource: options.reloadSource ?? watched,
       }),
     );

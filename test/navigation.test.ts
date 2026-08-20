@@ -1,6 +1,8 @@
 import { assert, assertEquals, assertMatch } from "@std/assert";
 import { breadcrumbPath, breadcrumbs } from "../src/server/breadcrumb.ts";
 import { ensureEndsWithSlash } from "../src/server/create-handler.ts";
+import { pageScript, pageStylesheet } from "../src/server/page-assets.ts";
+import { pageCss } from "../src/server/page-css.ts";
 import { pageClient } from "../src/server/page-client.ts";
 import { fixture, handler } from "./fixture.ts";
 
@@ -22,16 +24,18 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assert(!guideBody.includes("tree-heading"));
     assertMatch(guideBody, /markdown-body/);
     assertMatch(guideBody, /data-color-mode="auto"/);
-    assertMatch(guideBody, /color-scheme: light dark/);
-    assertMatch(guideBody, /prefers-color-scheme: dark/);
-    assertMatch(guideBody, /font-family: -apple-system, BlinkMacSystemFont/);
+    assertMatch(guideBody, new RegExp(`href="${pageStylesheet.url}"`));
+    assertMatch(guideBody, new RegExp(`src="${pageScript.url}"`));
+    assertMatch(pageCss, /color-scheme: light dark/);
+    assertMatch(pageCss, /prefers-color-scheme: dark/);
+    assertMatch(pageCss, /font-family: -apple-system, BlinkMacSystemFont/);
     assertMatch(
-      guideBody,
+      pageCss,
       /\.tree \.active \{ background: var\(--tree-active\); color: #fff/,
     );
-    assertMatch(guideBody, /tree\?path=/);
-    assertMatch(guideBody, /tree\?\.addEventListener\('toggle'/);
-    assertMatch(guideBody, /}, true\);/);
+    assertMatch(pageScript.body, /tree\?path=/);
+    assertMatch(pageScript.body, /tree\?\.addEventListener\('toggle'/);
+    assertMatch(pageScript.body, /}, true\);/);
     const rootLabel = `${f.root}/`;
     assert(
       guideBody.includes(
@@ -47,21 +51,18 @@ Deno.test("generated pages include responsive navigation and active branches", a
       /aria-label="Breadcrumb"><a href="\/\?dir">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">guide\.md<\/span>/,
     );
     assertMatch(guideBody, /data-path="docs"/);
+    assertMatch(guideBody, /data-path="docs" data-index-pending="true"/);
     assertMatch(
-      guideBody,
-      /<summary><a class="tree-folder-link" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir" title="Show files in docs" aria-label="Show files in docs">Files<\/a><\/summary>/,
-    );
-    assertMatch(
-      guideBody,
+      pageCss,
       /\.tree \.tree-files-link \{[^}]*bottom: 0;[^}]*display: flex;[^}]*opacity: 0;[^}]*position: absolute; right: 0; top: 0/,
     );
     assertMatch(
-      guideBody,
+      pageCss,
       /\.tree summary:hover \.tree-files-link, \.tree summary:focus-within \.tree-files-link, \.tree \.tree-root-row:hover \.tree-files-link/,
     );
     assertMatch(guideBody, /href="\/" data-query-remove="dir">README\.md<\/a>/);
     assert(!guideBody.includes('href="//"'));
-    assertMatch(guideBody, /__markdown_server__\/tree\?path=/);
+    assertMatch(pageScript.body, /__markdown_server__\/tree\?path=/);
     assertMatch(guideBody, /class="active"/);
     assert(!guideBody.includes('data-path="docs/nested"'));
 
@@ -82,17 +83,17 @@ Deno.test("generated pages include responsive navigation and active branches", a
       /<a class="raw-link" href="\?raw">Raw<\/a>/,
     );
     assertMatch(
-      plainBody,
+      pageCss,
       /\.content-header \{ align-items: center; display: flex/,
     );
     assertMatch(
-      plainBody,
+      pageCss,
       /\.raw-link \{[^}]*flex: 0 0 auto/,
     );
-    assert(!plainBody.includes("float: right"));
-    assert(!plainBody.includes(".tree:target"));
-    assert(!plainBody.includes("browse?.addEventListener"));
-    assertMatch(plainBody, /@media \(max-width: 560px\)/);
+    assert(!pageCss.includes("float: right"));
+    assert(!pageCss.includes(".tree:target"));
+    assert(!pageScript.body.includes("browse?.addEventListener"));
+    assertMatch(pageCss, /@media \(max-width: 560px\)/);
 
     const docsBody = await (await h(new Request("http://x/docs/"))).text();
     assertMatch(docsBody, /data-path="docs" data-loaded="true" open/);
@@ -347,22 +348,43 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
         path: "docs/indexed",
         directory: true,
         href: "/docs/indexed/",
-        filesHref: "/docs/indexed/?dir",
+        indexPending: true,
         queryRemove: ["dir"],
       },
     );
     assertEquals(
-      children.find((child) => child.name === "unindexed") as unknown,
-      {
-        name: "unindexed",
-        path: "docs/unindexed",
-        directory: true,
-        href: "/docs/unindexed/",
-        queryRemove: ["dir"],
-      },
+      (children.find((child) => child.name === "unindexed") as {
+        filesHref?: string;
+      }).filesHref,
+      undefined,
     );
-    assert(pageClient.includes("filesLink.href = entry.filesHref"));
-    assert(pageClient.includes("if (entry.filesHref)"));
+    assert(pageClient.includes("/__markdown_server__/index?path="));
+    assert(pageClient.includes("runningIndexes < 4"));
+
+    const indexResponse = await h(
+      new Request("http://x/__markdown_server__/index?path=docs%2Findexed"),
+    );
+    assertEquals(await indexResponse.json(), {
+      filesHref: "/docs/indexed/?dir",
+    });
+    assertEquals(
+      await (await h(
+        new Request("http://x/__markdown_server__/index?path=docs%2Funindexed"),
+      )).json(),
+      {},
+    );
+    const cachedBody = await (await h(new Request("http://x/docs/ordinary")))
+      .text();
+    assertMatch(
+      cachedBody,
+      /data-path="docs\/indexed"><summary>.*tree-files-link/s,
+    );
+    assertMatch(cachedBody, /data-path="docs\/unindexed"><summary>/);
+    assert(
+      !cachedBody.includes(
+        'data-path="docs/unindexed" data-index-pending="true"',
+      ),
+    );
 
     const percentResponse = await h(
       new Request(
@@ -385,6 +407,11 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
       new Request("http://x/__markdown_server__/tree?path=%2e%2e%2f"),
     );
     assertEquals(traversalResponse.status, 400);
+    assertEquals(
+      (await h(new Request("http://x/__markdown_server__/index?path=%2e%2e")))
+        .status,
+      400,
+    );
     const rootResponse = await h(
       new Request("http://x/__markdown_server__/tree"),
     );

@@ -1,67 +1,74 @@
 import { breadcrumbs } from "./breadcrumb.ts";
-import { codeToolbarClient } from "./code-toolbar-client.ts";
-import { directoryTableClient } from "./directory-table-client.ts";
-import {
-  displayControlsClient,
-  displayInitialClient,
-} from "./display-controls-client.ts";
+import { displayInitialClient } from "./display-controls-client.ts";
 import { displayLinks } from "./display-links.ts";
 import { escapeHtml } from "./html.ts";
 import { navigationTree } from "./navigation-tree.ts";
-import { pageClient } from "./page-client.ts";
-import { pageCss } from "./page-css.ts";
+import type { PageAction } from "./page-action.ts";
+import { pageScript, pageStylesheet } from "./page-assets.ts";
+import type { PageModel } from "./page-model.ts";
 import type { ServerConfig } from "./types.ts";
-
-export type PageAction = {
-  href: string;
-  label: string;
-  title?: string;
-  kind: "files" | "index" | "raw";
-  queryRemove?: string[];
-};
-
-export type PageOptions = {
-  actions?: PageAction[];
-  directoryView?: boolean;
-  sourceName?: string;
-};
 
 export async function page(
   config: ServerConfig,
-  title: string,
-  parts: string[],
-  directory: boolean,
-  content: string,
-  url: URL,
-  options: PageOptions = {},
+  model: PageModel,
 ): Promise<string> {
-  const reload = config.reloadSource
+  const navigation = await navigationTree(
+    config,
+    model.parts,
+    model.directoryView ?? false,
+    model.sourceName,
+  );
+  return `<!doctype html><html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark" data-width="narrow" data-directory-view="${
+    model.directoryView ? "true" : "false"
+  }">${renderHead(model)}${renderBody(config, model, navigation)}</html>`;
+}
+
+function renderHead(model: PageModel): string {
+  return `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${
+    escapeHtml(model.title)
+  }</title><script>${displayInitialClient}</script><link rel="stylesheet" href="${pageStylesheet.url}"></head>`;
+}
+
+function renderBody(
+  config: ServerConfig,
+  model: PageModel,
+  navigation: string,
+): string {
+  return `<body><div class="layout"><aside class="tree">${navigation}</aside><main class="content markdown-body">${
+    renderContentHeader(config, model)
+  }${model.content}</main></div><script src="${pageScript.url}"></script>${
+    reloadClient(config)
+  }</body>`;
+}
+
+function renderContentHeader(config: ServerConfig, model: PageModel): string {
+  const breadcrumb = breadcrumbs(
+    config.rootLabel,
+    model.parts,
+    model.directory,
+    model.sourceName,
+  );
+  const actions = (model.actions ?? []).map(renderPageAction).join("");
+  return `<header class="content-header">${breadcrumb}${actions}${
+    displayLinks(model.url)
+  }</header>`;
+}
+
+function reloadClient(config: ServerConfig): string {
+  return config.reloadSource
     ? `<script>new EventSource("/__markdown_server__/events").addEventListener("reload",()=>location.reload())</script>`
     : "";
-  const actions = options.actions ?? [];
-  return `<!doctype html><html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark" data-width="narrow" data-directory-view="${
-    options.directoryView ? "true" : "false"
-  }"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${
-    escapeHtml(title)
-  }</title><script>${displayInitialClient}</script><style>${pageCss}</style></head><body><div class="layout"><aside class="tree">${await navigationTree(
-    config,
-    parts,
-    options.directoryView ?? false,
-    options.sourceName,
-  )}</aside><main class="content markdown-body"><header class="content-header">${
-    breadcrumbs(config.rootLabel, parts, directory, options.sourceName)
-  }${actions.map(renderPageAction).join("")}${
-    displayLinks(url)
-  }</header>${content}</main></div><script>${displayControlsClient}${directoryTableClient}${pageClient}${codeToolbarClient}</script>${reload}</body></html>`;
 }
 
 function renderPageAction(action: PageAction): string {
   const className = action.kind === "raw" ? "raw-link" : "page-action";
+  const queryRemove = action.kind === "index" ? action.queryRemove : undefined;
+  const title = action.kind === "raw" ? undefined : action.title;
   return `<a class="${className}" href="${escapeHtml(action.href)}"${
-    action.queryRemove?.length
-      ? ` data-query-remove="${escapeHtml(action.queryRemove.join(" "))}"`
+    queryRemove?.length
+      ? ` data-query-remove="${escapeHtml(queryRemove.join(" "))}"`
       : ""
-  }${action.title ? ` title="${escapeHtml(action.title)}"` : ""}>${
+  }${title ? ` title="${escapeHtml(title)}"` : ""}>${
     escapeHtml(action.label)
   }</a>`;
 }

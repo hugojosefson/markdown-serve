@@ -1,6 +1,7 @@
 import type { DirectoryEntry } from "./fs.ts";
 import { escapeHtml } from "./html.ts";
 import { queryHref, setQuery } from "./query.ts";
+import { classifyEntry, entryRoute } from "./entry-route.ts";
 
 type DirectoryOrder =
   | "name"
@@ -69,10 +70,12 @@ function compareEntries(order: DirectoryOrder) {
 
 function row(entry: DirectoryEntry, url: URL): string {
   const suffix = entry.directory ? "/" : "";
-  const index = !entry.directory && /^(readme|index)\.md$/i.test(entry.name);
+  const index = classifyEntry(entry).index;
+  const route = entryRoute([], entry);
   const href = index
     ? url.pathname
-    : encodeURIComponent(entry.name) + suffix + (entry.directory ? "?dir" : "");
+    : encodeURIComponent(route.parts.at(-1)!) + suffix +
+      (entry.directory ? "?dir" : "");
   const bytes = size(entry);
   const modified = modifiedTime(entry.info);
   return `<tr><td class="directory-name"><a href="${escapeHtml(href)}"${

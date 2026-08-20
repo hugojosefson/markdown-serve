@@ -1,7 +1,6 @@
 import { join } from "@std/path";
-import { directoryEntries } from "./fs.ts";
 import { escapeHtml } from "./html.ts";
-import { indexName } from "./indexes.ts";
+import { classifyEntry, entryRoute } from "./entry-route.ts";
 import { canonicalPath } from "./paths.ts";
 import type { ServerConfig } from "./types.ts";
 
@@ -17,7 +16,7 @@ export async function navigationTree(
   const rootLink = `<a class="${rootClass}" href="/" data-query-remove="dir">${
     escapeHtml(config.rootLabel)
   }</a>`;
-  const rootFilesLink = await indexName(config.rootPath)
+  const rootFilesLink = await config.catalog.index(config.rootPath)
     ? filesLink("/?dir", config.rootLabel)
     : "";
   return `<nav aria-label="Files"><div class="tree-root-row">${rootLink}${rootFilesLink}</div>${await treeList(
@@ -36,7 +35,9 @@ async function treeList(
   directoryView: boolean,
   sourceName: string | undefined,
 ): Promise<string> {
-  const entries = await directoryEntries(join(config.rootPath, ...parent));
+  const entries = await config.catalog.entries(
+    join(config.rootPath, ...parent),
+  );
   const children = await Promise.all(entries.map(async (entry) => {
     const path = [...parent, entry.name];
     return await treeItem(
@@ -61,17 +62,14 @@ async function treeItem(
   sourceName: string | undefined,
   activeDirectory: boolean,
 ): Promise<string> {
-  const markdown = entry.name.toLowerCase().endsWith(".md");
-  const index = markdown && /^(readme|index)\.md$/i.test(entry.name);
-  const route = index
-    ? path.slice(0, -1)
-    : markdown
-    ? [...path.slice(0, -1), entry.name.slice(0, -3)]
-    : path;
-  const href = canonicalPath(route, entry.directory || index);
+  const classification = classifyEntry(entry);
+  const isIndex = classification.index;
+  const resolved = entryRoute(path.slice(0, -1), entry);
+  const route = resolved.parts;
+  const href = canonicalPath(route, resolved.trailing);
   const activeItem = entry.directory
     ? directoryView && active.join("/") === route.join("/")
-    : index
+    : isIndex
     ? !directoryView && active.join("/") === route.join("/") &&
       sourceName === entry.name
     : active.join("/") === route.join("/");
@@ -81,7 +79,7 @@ async function treeItem(
     ? "active"
     : undefined;
   const link = `<a${linkClass ? ` class="${linkClass}"` : ""} href="${href}"${
-    entry.directory || index ? ' data-query-remove="dir"' : ""
+    entry.directory || isIndex ? ' data-query-remove="dir"' : ""
   }>${escapeHtml(entry.name)}${entry.directory ? "/" : ""}</a>`;
   if (!entry.directory) {
     return `<li>${link}</li>`;
@@ -89,10 +87,12 @@ async function treeItem(
   const descendants = activeDirectory
     ? await treeList(config, path, active, directoryView, sourceName)
     : "<ul></ul>";
-  const files = await indexName(join(config.rootPath, ...path))
+  const index = config.catalog.indexState(join(config.rootPath, ...path));
+  const files = index.known && index.index
     ? filesLink(`${href}?dir`, entry.name)
     : "";
-  return `<li><details data-path="${escapeHtml(path.join("/"))}"${
+  const pending = index.known ? "" : ' data-index-pending="true"';
+  return `<li><details data-path="${escapeHtml(path.join("/"))}"${pending}${
     activeDirectory ? ' data-loaded="true" open' : ""
   }><summary>${link}${files}</summary>${descendants}</details></li>`;
 }

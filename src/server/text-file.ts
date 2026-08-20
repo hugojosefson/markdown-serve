@@ -38,8 +38,7 @@ const sourceExtensions = new Set([
 ]);
 
 export async function isTextFile(path: string): Promise<boolean> {
-  const type = contentType(extension(path));
-  if (type && !isTextMime(type) && !sourceExtensions.has(extension(path))) {
+  if (!isLikelyTextFile(path)) {
     return false;
   }
   const file = await Deno.open(path);
@@ -50,6 +49,11 @@ export async function isTextFile(path: string): Promise<boolean> {
   } finally {
     file.close();
   }
+}
+
+function isLikelyTextFile(path: string): boolean {
+  const type = contentType(extension(path));
+  return !type || isTextMime(type) || sourceExtensions.has(extension(path));
 }
 
 function isTextMime(type: string): boolean {

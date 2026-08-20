@@ -90,7 +90,7 @@ Deno.test("HEAD generated pages return headers without bodies", async () => {
 Deno.test("file actions have stable placements and preserve raw/download priority", async () => {
   const f = await fixture({
     "guide.md": "# Guide\n\n```ts\nconst x = 1;\n```\n",
-    "code.ts": "const x = 1;",
+    "code.ts": "function sourceSymbol() { return 1; }",
     "page.html": "<h1>Page</h1>",
     "photo.png": "",
   });
@@ -132,6 +132,11 @@ Deno.test("file actions have stable placements and preserve raw/download priorit
       /^attachment; filename="guide\.md"/,
     );
     const text = await (await h(new Request("http://x/code.ts"))).text();
+    assertMatch(text, /id="symbol-sourceSymbol"/);
+    assertMatch(
+      text,
+      /source-symbol-marker" href="#symbol-sourceSymbol" aria-label="Go to sourceSymbol declaration on line 1"/,
+    );
     assertMatch(
       text,
       /Copy<\/button><span class="code-toolbar-file-actions" data-file-actions="trailing"><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a>/,

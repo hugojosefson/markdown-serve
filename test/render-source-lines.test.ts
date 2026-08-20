@@ -2,6 +2,7 @@ import { assert, assertEquals, assertMatch } from "@std/assert";
 import {
   renderCodeMarkdown,
   renderSourceCodeBlock,
+  renderSourceCodeBlockWithSymbols,
 } from "../src/server/render-code-markdown.ts";
 import { renderSourceLines } from "../src/server/render-source-lines.ts";
 
@@ -17,6 +18,24 @@ Deno.test("source lines add accessible links without adding numbers to code text
     /<\/span><\/span><span class="source-line-break" aria-hidden="true">\n<\/span><span class="source-line"/,
   );
   assertEquals(rendered.replaceAll(/<[^>]+>/g, ""), "one\ntwo\n");
+});
+
+Deno.test("source symbols preserve escaped and non-ASCII source offsets", async () => {
+  const rendered = await renderSourceCodeBlockWithSymbols(
+    'const café = "<tag>";\nfunction greet() { return greet; }',
+    "typescript",
+  );
+  assertMatch(rendered, /id="symbol-greet"/);
+  assertMatch(rendered, /href="#symbol-greet"/);
+  assertMatch(
+    rendered,
+    /source-symbol-marker" href="#symbol-greet" aria-label="Go to greet declaration on line 2"/,
+  );
+  assert(rendered.includes("&lt;tag>"));
+  assertEquals(
+    sourceText(rendered),
+    'const café = "<tag>";\nfunction greet() { return greet; }',
+  );
 });
 
 Deno.test("source lines retain Prism tokens that cross a newline", () => {
@@ -41,6 +60,7 @@ Deno.test("normal Markdown fenced code keeps its existing non-anchor markup", ()
     "http://x/",
   );
   assertEquals(rendered.includes('href="#L1"'), false);
+  assertEquals(rendered.includes("symbol-declaration"), false);
 });
 
 Deno.test("source lines expose Git markers and deletion labels without changing source text", () => {

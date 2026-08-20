@@ -21,5 +21,6 @@ export async function readDirectory(path: string): Promise<Deno.DirEntry[]> {
 export type DirectoryEntry = {
   name: string;
   directory: boolean;
+  symlink: boolean;
   info: Deno.FileInfo | undefined;
 };

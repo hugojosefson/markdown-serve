@@ -53,9 +53,15 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .binary-sample { overflow-x: auto; }
 .binary-sample pre { white-space: pre; }
 .sr-only { height: 1px; margin: -1px; overflow: hidden; position: absolute; width: 1px; clip: rect(0, 0, 0, 0); }
-.directory-table { border-collapse: collapse; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; min-width: 100%; width: max-content; }
-.directory-table th, .directory-table td { border-bottom: 1px solid var(--code-border); padding: 6px 8px; text-align: left; }
+.directory-table { border-collapse: collapse; color: var(--code-text); font: 500 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; min-width: 100%; width: max-content; }
+.directory-table th, .directory-table td { border-bottom: 1px solid var(--code-border); padding: 8px 10px; text-align: left; }
+.directory-table th { background: var(--code-hover); color: var(--focus-color); font: 700 10px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: .06em; text-transform: uppercase; }
 .directory-table th a { color: inherit; text-decoration: none; }
+.directory-table td a { color: var(--code-text); text-decoration: none; }
+.directory-table td a:hover, .directory-table td a:focus-visible { color: var(--focus-color); text-decoration: underline; }
+.directory-table tbody tr { background: var(--code-bg); }
+.directory-table tbody tr:hover { background: var(--code-hover); }
+.directory-table tbody tr:last-child td { border-bottom: 0; }
 .directory-table .directory-size, .directory-table .directory-user { font-variant-numeric: tabular-nums; text-align: right; }
 .directory-table .directory-permissions, .directory-table .directory-size, .directory-table .directory-user, .directory-table .directory-modified { white-space: nowrap; width: 1%; }
 .directory-table .directory-name { white-space: nowrap; width: 100%; }
@@ -64,7 +70,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .directory-table .timestamp-separator { color: var(--code-muted); }
 .directory-table .timestamp-t { display: inline-block; margin: 0 .25ch; }
 .directory-table .timestamp-t, .directory-table .timestamp-zone { opacity: .2; }
-.directory-scroll { max-width: 100%; overflow-x: auto; width: 100%; }
+.directory-scroll { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 6px; max-width: 100%; overflow-x: auto; width: 100%; }
 ${codeToolbarCss}
 ${displayControlsCss}
 @media (max-width: 800px) {

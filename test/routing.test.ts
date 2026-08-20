@@ -275,7 +275,15 @@ Deno.test("directory metadata columns sort missing values first and render copya
   );
   assertMatch(
     pageCss,
-    /\.directory-scroll \{ max-width: 100%; overflow-x: auto; width: 100%; \}/,
+    /\.directory-scroll \{[^}]*background: var\(--code-bg\);[^}]*border: 1px solid var\(--code-border\);[^}]*border-radius: 6px;[^}]*overflow-x: auto; width: 100%; \}/,
+  );
+  assertMatch(
+    pageCss,
+    /\.directory-table th \{[^}]*color: var\(--focus-color\);[^}]*font: 700 10px\/1\.2[^}]*text-transform: uppercase;/,
+  );
+  assertMatch(
+    pageCss,
+    /\.directory-table \{[^}]*font: 500 13px\/1\.45 ui-monospace/,
   );
   assertMatch(
     pageCss,

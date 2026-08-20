@@ -149,7 +149,7 @@ export function renderFileMetadataDetails(
   );
   return `<section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><div class="file-metadata-details-header"><span>File metadata</span><a class="file-metadata-close" href="${
     escapeHtml(closeHref)
-  }" title="Collapse metadata" aria-label="Collapse metadata"><span aria-hidden="true">×</span></a></div><dl>${rows}</dl></section>`;
+  }" title="Collapse metadata" aria-label="Collapse metadata"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 4l8 8M12 4l-8 8"/></svg></a></div><dl>${rows}</dl></section>`;
 }
 
 type MetadataField = {

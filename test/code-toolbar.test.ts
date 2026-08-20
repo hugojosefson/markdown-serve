@@ -1,6 +1,7 @@
 import { assert, assertMatch, assertNotMatch } from "@std/assert";
 import { renderCodeMarkdown } from "../src/server/render-code-markdown.ts";
 import { codeToolbarClient } from "../src/server/code-toolbar-client.ts";
+import { codeToolbarCss } from "../src/server/code-toolbar-css.ts";
 
 Deno.test("fences normalize aliases and render Prism tokens", () => {
   const html = renderCodeMarkdown(
@@ -13,6 +14,11 @@ Deno.test("fences normalize aliases and render Prism tokens", () => {
   assertMatch(html, /class="token keyword">const/);
   assertMatch(html, /&lt;tag&gt;/);
   assertNotMatch(html, /onclick/);
+  assertMatch(codeToolbarCss, /\.code-toolbar \{[^}]*height: 30px;/);
+  assertMatch(
+    codeToolbarCss,
+    /\.code-copy \{[^}]*height: 22px; justify-content: center;[^}]*min-width: 46px;/,
+  );
 });
 
 Deno.test("shell aliases load the Bash grammar", () => {

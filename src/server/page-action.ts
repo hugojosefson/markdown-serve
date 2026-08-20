@@ -1,9 +1,18 @@
 import { queryHref, setQuery } from "./query.ts";
 
-export type PageAction =
+export type HeaderAction =
+  | { kind: "files"; href: string; label: "Files"; title: string }
+  | {
+    kind: "index";
+    href: string;
+    label: string;
+    title: string;
+    queryRemove: ["dir"];
+  };
+
+export type FileAction =
   | { kind: "raw"; href: string; label: "Raw"; title: string }
   | { kind: "download"; href: string; label: "Download"; title: string }
-  | { kind: "files"; href: string; label: "Files"; title: string }
   | { kind: "source"; href: string; label: "View source"; title: string }
   | {
     kind: "rendered";
@@ -13,14 +22,14 @@ export type PageAction =
     queryRemove: ["source"];
   }
   | {
-    kind: "index";
+    kind: "page";
     href: string;
-    label: string;
-    title: string;
-    queryRemove: ["dir"];
+    label: "View page";
+    title: "Open HTML page preview";
+    target: "_blank";
   };
 
-export function rawPageAction(contentType: string): PageAction {
+export function rawPageAction(contentType: string): FileAction {
   return {
     kind: "raw",
     href: "?raw",
@@ -29,7 +38,7 @@ export function rawPageAction(contentType: string): PageAction {
   };
 }
 
-export function markdownViewPageAction(url: URL, source: boolean): PageAction {
+export function markdownViewPageAction(url: URL, source: boolean): FileAction {
   if (source) {
     return {
       kind: "rendered",
@@ -50,7 +59,7 @@ export function markdownViewPageAction(url: URL, source: boolean): PageAction {
 export function filePageActions(
   rawContentType: string,
   downloadContentType: string,
-): PageAction[] {
+): FileAction[] {
   return [rawPageAction(rawContentType), {
     kind: "download",
     href: "?download",
@@ -59,7 +68,7 @@ export function filePageActions(
   }];
 }
 
-export function filesPageAction(url: URL): PageAction {
+export function filesPageAction(url: URL): HeaderAction {
   return {
     kind: "files",
     href: queryHref(
@@ -71,7 +80,7 @@ export function filesPageAction(url: URL): PageAction {
   };
 }
 
-export function indexPageAction(url: URL, index: string): PageAction {
+export function indexPageAction(url: URL, index: string): HeaderAction {
   return {
     kind: "index",
     href: queryHref(
@@ -81,5 +90,17 @@ export function indexPageAction(url: URL, index: string): PageAction {
     label: index,
     queryRemove: ["dir"],
     title: `View ${index}`,
+  };
+}
+
+export function htmlPageAction(parts: string[]): FileAction {
+  return {
+    kind: "page",
+    href: `/__markdown_server__/site/${
+      parts.map(encodeURIComponent).join("/")
+    }`,
+    label: "View page",
+    title: "Open HTML page preview",
+    target: "_blank",
   };
 }

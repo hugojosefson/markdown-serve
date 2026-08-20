@@ -1,7 +1,7 @@
 import { codeLanguageForPath } from "./code-language.ts";
 import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
-import { filePageActions } from "./page-action.ts";
+import { filePageActions, htmlPageAction } from "./page-action.ts";
 import { fileMime, metadataForFile, textFileMime } from "./file-metadata.ts";
 import { renderSourceCodeBlock } from "./render-code-markdown.ts";
 import { sourceAnnotations } from "./git/source.ts";
@@ -32,11 +32,16 @@ export async function renderText(
       directory: false,
       content,
       url,
-      actions: filePageActions(
-        "text/plain; charset=UTF-8",
-        fileMime(file),
-      ),
+      fileActionPlacement: "toolbar",
+      fileActions: [
+        ...(isHtml(file) ? [htmlPageAction(parts)] : []),
+        ...filePageActions("text/plain; charset=UTF-8", fileMime(file)),
+      ],
       metadata: { ...metadataForFile(file, info), mime: textFileMime(file) },
     }),
   );
+}
+
+function isHtml(path: string): boolean {
+  return /\.html?$/i.test(path) || fileMime(path).startsWith("text/html");
 }

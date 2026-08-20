@@ -7,7 +7,7 @@ import {
   renderFileMetadataDetails,
   renderFileMetadataSummary,
 } from "./file-metadata.ts";
-import type { PageAction } from "./page-action.ts";
+import type { FileAction, HeaderAction } from "./page-action.ts";
 import { pageScript, pageStylesheet } from "./page-assets.ts";
 import type { PageModel } from "./page-model.ts";
 import { reloadClientScript } from "./reload-client.ts";
@@ -91,7 +91,7 @@ function renderContentHeader(
     model.directory,
     model.sourceName,
   );
-  const actions = (model.actions ?? []).map((action) =>
+  const actions = (model.headerActions ?? []).map((action) =>
     renderPageAction(action)
   )
     .join("");
@@ -105,12 +105,32 @@ function renderContentHeader(
 }
 
 function renderPageContent(model: PageModel): string {
-  if (!model.contentAction) {
+  if (!model.fileActions?.length) {
     return model.content;
   }
-  const view = model.contentAction.kind === "rendered" ? "source" : "rendered";
-  return `<div class="page-content page-content-${view}"><div class="content-view-control">${
-    renderPageAction(model.contentAction, "content-view-action")
+  if (model.fileActionPlacement === "toolbar") {
+    const conditional = model.fileActions.filter((action) =>
+      action.kind === "source" || action.kind === "rendered" ||
+      action.kind === "page"
+    );
+    const common = model.fileActions.filter((action) =>
+      action.kind === "raw" || action.kind === "download"
+    );
+    return model.content.replace(
+      '<span class="code-toolbar-file-actions" data-file-actions="leading"></span>',
+      `<span class="code-toolbar-file-actions" data-file-actions="leading">${
+        renderFileActions(conditional)
+      }</span>`,
+    ).replace(
+      '<span class="code-toolbar-file-actions" data-file-actions="trailing"></span>',
+      `<span class="code-toolbar-file-actions" data-file-actions="trailing">${
+        renderFileActions(common)
+      }</span>`,
+    );
+  }
+  const placement = model.fileActionPlacement ?? "top";
+  return `<div class="page-content page-content-${placement}"><div class="file-actions file-actions-${placement}">${
+    renderFileActions(model.fileActions)
   }</div>${model.content}</div>`;
 }
 
@@ -118,16 +138,29 @@ function reloadClient(config: ServerConfig): string {
   return config.reloadSource ? `<script>${reloadClientScript}</script>` : "";
 }
 
-function renderPageAction(action: PageAction, classOverride?: string): string {
-  const className = classOverride ??
-    (action.kind === "raw"
-      ? "raw-link"
-      : action.kind === "download"
-      ? "page-action download-link"
-      : "page-action");
+function renderFileActions(actions: FileAction[]): string {
+  return actions.map((action) =>
+    renderPageAction(
+      action,
+      action.kind === "raw"
+        ? "file-action raw-link"
+        : action.kind === "download"
+        ? "file-action download-link"
+        : "file-action",
+    )
+  ).join("");
+}
+
+function renderPageAction(
+  action: HeaderAction | FileAction,
+  className = "page-action",
+): string {
   const queryRemove = "queryRemove" in action ? action.queryRemove : undefined;
   const title = action.title;
-  return `<a class="${className}" href="${escapeHtml(action.href)}"${
+  const target = "target" in action
+    ? ` target="${action.target}" rel="noopener"`
+    : "";
+  return `<a class="${className}" href="${escapeHtml(action.href)}"${target}${
     queryRemove?.length
       ? ` data-query-remove="${escapeHtml(queryRemove.join(" "))}"`
       : ""

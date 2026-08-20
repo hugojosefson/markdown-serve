@@ -25,7 +25,8 @@ export async function renderFile(
       directory: false,
       url,
       metadata,
-      actions: filePageActions(metadata.mime, metadata.mime),
+      fileActions: filePageActions(metadata.mime, metadata.mime),
+      fileActionPlacement: "top",
       content: await fileContent(
         file,
         parts.at(-1) ?? "file",

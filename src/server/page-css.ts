@@ -42,20 +42,20 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .content { min-width: 0; padding: 8px 16px 32px; }
 .page-content { position: relative; }
 .page-content > :nth-child(2) { margin-top: 0 !important; }
-.page-content-rendered > :nth-child(2) { min-height: 27px; padding-right: 6rem; }
-.page-content-source { padding-top: 29px; }
-.content-view-control { display: flex; justify-content: flex-end; position: absolute; right: 0; top: 0; z-index: 1; }
-.markdown-body .content-view-action { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 4px; color: var(--code-muted); font: 500 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 6px 8px; text-decoration: none; }
-.markdown-body .content-view-action:hover, .markdown-body .content-view-action:focus-visible { background: var(--code-hover); color: var(--focus-color); }
-.markdown-body .content-view-action:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 1px; }
-.page-content-source > .content-view-control + .code-block { margin-top: 8px !important; }
+.page-content-heading > :nth-child(2) { min-height: 27px; padding-right: 12rem; }
+.page-content-top { padding-top: 30px; }
+.file-actions { align-items: center; display: flex; gap: 4px; }
+.file-actions-heading, .file-actions-top { justify-content: flex-end; position: absolute; right: 0; top: 0; z-index: 1; }
+.markdown-body .file-action { align-items: center; background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 4px; box-sizing: border-box; color: var(--code-muted); display: inline-flex; font: 500 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; height: 22px; padding: 0 7px; text-decoration: none; }
+.markdown-body .file-action:hover, .markdown-body .file-action:focus-visible { background: var(--code-hover); color: var(--focus-color); }
+.markdown-body .file-action:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 1px; }
 .content-header { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .content-header nav { line-height: 22px; min-width: 0; overflow-wrap: anywhere; }
 .breadcrumb-separator { margin: 0 4px; }
-.content-header .page-action, .content-header .raw-link { align-items: center; background: transparent; border: 1px solid var(--code-border); border-radius: 4px; box-sizing: border-box; color: var(--code-muted); display: inline-flex; flex: 0 0 auto; font: 500 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; height: 22px; padding: 0 7px; text-decoration: none; }
-.content-header .page-action:hover, .content-header .page-action:focus-visible, .content-header .raw-link:hover, .content-header .raw-link:focus-visible { color: var(--focus-color); }
-.content-header .page-action:hover, .content-header .raw-link:hover { background: var(--code-hover); }
-.content-header .page-action:focus-visible, .content-header .raw-link:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 1px; }
+.content-header .page-action { align-items: center; background: transparent; border: 1px solid var(--code-border); border-radius: 4px; box-sizing: border-box; color: var(--code-muted); display: inline-flex; flex: 0 0 auto; font: 500 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; height: 22px; padding: 0 7px; text-decoration: none; }
+.content-header .page-action:hover, .content-header .page-action:focus-visible { color: var(--focus-color); }
+.content-header .page-action:hover { background: var(--code-hover); }
+.content-header .page-action:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 1px; }
 .content-header .file-metadata { border: 1px solid transparent; border-radius: 4px; color: var(--code-muted); flex: 0 0 auto; font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin-left: auto; padding: 2px 5px; text-align: right; text-decoration: none; }
 .content-header .file-metadata + .display-theme { margin-left: 0; }
 .content-header .file-metadata:hover { background: var(--code-hover); border-color: var(--code-border); color: var(--focus-color); }

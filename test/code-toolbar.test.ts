@@ -17,8 +17,9 @@ Deno.test("fences normalize aliases and render Prism tokens", () => {
   assertMatch(codeToolbarCss, /\.code-toolbar \{[^}]*height: 30px;/);
   assertMatch(
     codeToolbarCss,
-    /\.code-copy \{[^}]*height: 22px; justify-content: center;[^}]*min-width: 46px;/,
+    /\.code-toolbar \.file-action, \.code-copy \{[^}]*height: 22px; justify-content: center;/,
   );
+  assertMatch(codeToolbarCss, /\.code-copy \{ min-width: 46px; \}/);
 });
 
 Deno.test("shell aliases load the Bash grammar", () => {

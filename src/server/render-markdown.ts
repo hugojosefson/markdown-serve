@@ -1,7 +1,7 @@
 import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
 import { filePageActions, markdownViewPageAction } from "./page-action.ts";
-import type { PageAction } from "./page-action.ts";
+import type { HeaderAction } from "./page-action.ts";
 import {
   renderCodeMarkdown,
   renderSourceCodeBlock,
@@ -52,11 +52,17 @@ export async function renderMarkdown(
       directory: options.directory ?? false,
       content,
       url,
-      actions: [
-        ...filePageActions("text/plain; charset=UTF-8", metadata.mime),
-        ...(options.actions ?? []),
-      ],
-      contentAction: markdownViewPageAction(url, source),
+      headerActions: options.headerActions,
+      fileActions: source
+        ? [
+          markdownViewPageAction(url, true),
+          ...filePageActions("text/plain; charset=UTF-8", metadata.mime),
+        ]
+        : [
+          markdownViewPageAction(url, false),
+          ...filePageActions("text/plain; charset=UTF-8", metadata.mime),
+        ],
+      fileActionPlacement: source ? "toolbar" : "heading",
       metadata,
       directoryView: options.directoryView,
       sourceName: options.sourceName,
@@ -65,7 +71,7 @@ export async function renderMarkdown(
 }
 
 export type MarkdownOptions = {
-  actions?: PageAction[];
+  headerActions?: HeaderAction[];
   directory?: boolean;
   directoryView?: boolean;
   sourceName?: string;

@@ -6,10 +6,18 @@ const directoryColumnCandidates = [
   'user permissions modified',
   'user permissions modified size',
 ];
+const compactDirectoryColumnCandidates = [
+  'user permissions modified',
+  'user permissions modified size',
+];
+const directoryNavigation = document.querySelector('.tree');
 const fitDirectoryColumns = (container) => {
   const table = container.querySelector('.directory-table');
   if (!table) { return; }
-  for (const hidden of directoryColumnCandidates) {
+  const candidates = directoryNavigation && getComputedStyle(directoryNavigation).display === 'none'
+    ? compactDirectoryColumnCandidates
+    : directoryColumnCandidates;
+  for (const hidden of candidates) {
     table.dataset.hiddenColumns = hidden;
     if (table.scrollWidth <= container.clientWidth + 1) { return; }
   }

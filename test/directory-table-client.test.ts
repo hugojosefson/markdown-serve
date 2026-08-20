@@ -19,6 +19,8 @@ Deno.test("directory columns hide until filenames fit without wrapping", () => {
     clientWidth: 300,
     querySelector: () => table,
   };
+  const navigation = {};
+  let navigationDisplay = "block";
   let resized = () => {};
   class Observer {
     constructor(
@@ -31,11 +33,17 @@ Deno.test("directory columns hide until filenames fit without wrapping", () => {
   new Function(
     "document",
     "ResizeObserver",
+    "getComputedStyle",
     "addEventListener",
     directoryTableClient,
   )(
-    { querySelectorAll: () => [container] },
+    {
+      querySelector: (selector: string) =>
+        selector === ".tree" ? navigation : null,
+      querySelectorAll: () => [container],
+    },
     Observer,
+    () => ({ display: navigationDisplay }),
     () => {},
   );
   assertEquals(table.dataset.hiddenColumns, "user permissions modified");
@@ -47,6 +55,10 @@ Deno.test("directory columns hide until filenames fit without wrapping", () => {
   container.clientWidth = 800;
   resized();
   assertEquals(table.dataset.hiddenColumns, "");
+
+  navigationDisplay = "none";
+  resized();
+  assertEquals(table.dataset.hiddenColumns, "user permissions modified");
 
   container.clientWidth = 170;
   resized();

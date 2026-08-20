@@ -50,7 +50,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .directory-scroll { max-width: 100%; overflow-x: auto; width: 100%; }
 ${codeToolbarCss}
 ${displayControlsCss}
-@media (max-width: 700px) {
+@media (max-width: 560px) {
   .layout { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
   .content { order: 1; padding: 0; }
   .tree { display: none; max-height: none; order: 2; position: static; width: auto; }

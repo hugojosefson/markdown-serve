@@ -92,6 +92,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assert(!plainBody.includes("float: right"));
     assert(!plainBody.includes(".tree:target"));
     assert(!plainBody.includes("browse?.addEventListener"));
+    assertMatch(plainBody, /@media \(max-width: 560px\)/);
 
     const docsBody = await (await h(new Request("http://x/docs/"))).text();
     assertMatch(docsBody, /data-path="docs" data-loaded="true" open/);

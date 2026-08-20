@@ -89,6 +89,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
       pageCss,
       /\.content-header \{ align-items: center; display: flex/,
     );
+    assertMatch(pageCss, /html \{ scrollbar-gutter: stable; \}/);
     assertMatch(
       pageCss,
       /\.file-action \{[^}]*color: var\(--code-muted\)/,

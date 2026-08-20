@@ -102,27 +102,52 @@ export function renderFileMetadataSummary(
 
 export function renderFileMetadataDetails(metadata: FileMetadata): string {
   const modified = metadata.modified?.toISOString();
-  const fields: [string, string | undefined][] = [
-    ["Media type", metadata.mime],
-    ["Size", `${metadata.size} bytes (${formatSize(metadata.size)})`],
-    [
-      "Modified",
-      modified && `${modified} (${formatRelativeTime(metadata.modified!)})`,
-    ],
-    ["Permissions", metadata.permissions],
-    [
-      "Mode",
-      metadata.mode === undefined ? undefined : metadata.mode.toString(8),
-    ],
-    ["User ID", metadata.uid === undefined ? undefined : String(metadata.uid)],
+  const fields: MetadataField[] = [
+    {
+      label: "Modified",
+      value: modified,
+      suffix: metadata.modified
+        ? `(${formatRelativeTime(metadata.modified)})`
+        : undefined,
+    },
+    {
+      label: "Size",
+      value: `${metadata.size} bytes (${formatSize(metadata.size)})`,
+    },
+    { label: "Media type", value: metadata.mime },
+    {
+      label: "User",
+      value: metadata.uid === undefined ? undefined : String(metadata.uid),
+    },
+    { label: "Permissions", value: metadata.permissions },
+    {
+      label: "Mode",
+      value: metadata.mode === undefined
+        ? undefined
+        : metadata.mode.toString(8),
+    },
   ];
   const rows = fields
-    .filter((field): field is [string, string] => field[1] !== undefined)
-    .map(([label, value]) =>
-      `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`
+    .filter((field): field is MetadataField & { value: string } =>
+      field.value !== undefined
+    )
+    .map(({ label, value, suffix }) =>
+      `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}${
+        suffix
+          ? `<wbr> <span class="metadata-value-suffix">${
+            escapeHtml(suffix)
+          }</span>`
+          : ""
+      }</dd></div>`
     ).join("");
   return `<section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><dl>${rows}</dl></section>`;
 }
+
+type MetadataField = {
+  label: string;
+  value: string | undefined;
+  suffix?: string;
+};
 
 function formatRelativeTime(date: Date, now = new Date()): string {
   const ranges: [number, Intl.RelativeTimeFormatUnit][] = [

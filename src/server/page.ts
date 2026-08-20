@@ -78,7 +78,11 @@ function reloadClient(config: ServerConfig): string {
 }
 
 function renderPageAction(action: PageAction): string {
-  const className = action.kind === "raw" ? "raw-link" : "page-action";
+  const className = action.kind === "raw"
+    ? "raw-link"
+    : action.kind === "download"
+    ? "page-action download-link"
+    : "page-action";
   const queryRemove = action.kind === "index" ? action.queryRemove : undefined;
   const title = action.title;
   return `<a class="${className}" href="${escapeHtml(action.href)}"${

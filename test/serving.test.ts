@@ -159,7 +159,7 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     )).text();
     assertMatch(
       details,
-      /<\/header><section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><dl>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>Size<\/dt><dd>4 bytes \(4B\)<\/dd>.*<dt>Modified<\/dt><dd>[^<]+ \((?:now|today)\)<\/dd>.*<\/dl><\/section><img/s,
+      /<\/header><section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><dl>.*<dt>Modified<\/dt><dd>[^<]+<wbr> <span class="metadata-value-suffix">\((?:now|today)\)<\/span><\/dd>.*<dt>Size<\/dt><dd>4 bytes \(4B\)<\/dd>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>User<\/dt>.*<dt>Permissions<\/dt>.*<dt>Mode<\/dt>.*<\/dl><\/section><img/s,
     );
     assertMatch(
       details,
@@ -174,7 +174,7 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     );
     assertMatch(
       image,
-      /<a class="raw-link" href="\?raw" title="View raw content \(image\/png\)" aria-label="View raw content \(image\/png\)">Raw<\/a><a class="page-action" href="\?download" title="Download file \(image\/png\)" aria-label="Download file \(image\/png\)">Download<\/a>/,
+      /<a class="raw-link" href="\?raw" title="View raw content \(image\/png\)" aria-label="View raw content \(image\/png\)">Raw<\/a><a class="page-action download-link" href="\?download" title="Download file \(image\/png\)" aria-label="Download file \(image\/png\)">Download<\/a>/,
     );
     assertMatch(
       image,

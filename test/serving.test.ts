@@ -159,15 +159,15 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     )).text();
     assertMatch(
       details,
-      /<\/header><section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><dl>.*<dt>Modified<\/dt><dd>[^<]+<wbr> <span class="metadata-value-suffix">\((?:now|today)\)<\/span><\/dd>.*<dt>Size<\/dt><dd>4 bytes \(4B\)<\/dd>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>User<\/dt>.*<dt>Permissions<\/dt>.*<dt>Mode<\/dt>.*<\/dl><\/section><img/s,
+      /<\/header><section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><div class="file-metadata-details-header"><span>File metadata<\/span><a class="file-metadata-close" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata"><span aria-hidden="true">×<\/span><\/a><\/div><dl>.*<dt>Modified<\/dt><dd>[^<]+<wbr> <span class="metadata-value-suffix">\((?:now|today)\)<\/span><\/dd>.*<dt>Size<\/dt><dd>4 bytes \(4B\)<\/dd>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>User<\/dt>.*<dt>Permissions<\/dt>.*<dt>Mode<\/dt>.*<\/dl><\/section><img/s,
     );
     assertMatch(
       details,
-      /<header class="content-header metadata-expanded">.*<a class="file-metadata" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata" aria-controls="file-metadata-details" aria-expanded="true"><span class="file-metadata-collapse" aria-hidden="true">Collapse ↑<\/span>/s,
+      /<header class="content-header metadata-expanded">.*<a class="file-metadata" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata" aria-controls="file-metadata-details" aria-expanded="true">4B <span[^>]*>·<\/span> (?:now|today)<\/a>/s,
     );
     assertMatch(
       pageStylesheet.body,
-      /\.content-header\.metadata-expanded \.file-metadata \{[^}]*border-bottom-color: var\(--code-bg\);[^}]*border-radius: 6px 6px 0 0;[^}]*margin-bottom: -1px;/,
+      /\.markdown-body \.file-metadata-details \{[^}]*margin: 14px 0 16px;[^}]*overflow: hidden; padding: 0;/,
     );
     const themedDetails = await (await h(
       new Request("http://x/photo.png?theme=dark&metadata=expand"),
@@ -175,6 +175,10 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     assertMatch(
       themedDetails,
       /<a class="file-metadata" href="\?theme=dark" title="Collapse metadata" aria-label="Collapse metadata" aria-controls="file-metadata-details" aria-expanded="true">/,
+    );
+    assertMatch(
+      themedDetails,
+      /<a class="file-metadata-close" href="\?theme=dark" title="Collapse metadata" aria-label="Collapse metadata">/,
     );
     assertMatch(
       image,

@@ -1,7 +1,12 @@
 import { relative } from "@std/path";
 import type { ReloadSource } from "../reload-source.ts";
 import { runGit } from "./command.ts";
-import { type GitStatus, parseGitStatus } from "./status.ts";
+import {
+  mergeDiffAnnotations,
+  type SourceLineAnnotation,
+  untrackedAnnotations,
+} from "./diff.ts";
+import { type GitStatus, gitStatusAt, parseGitStatus } from "./status.ts";
 
 export type GitState = {
   readonly root: string;
@@ -9,6 +14,10 @@ export type GitState = {
   readonly subdirectory: string;
   readonly worktree: boolean;
   status(): Promise<GitStatus | undefined>;
+  diff(
+    path: string,
+    lineCount: number,
+  ): Promise<ReadonlyMap<number, SourceLineAnnotation> | undefined>;
   refresh(): Promise<void>;
 };
 
@@ -76,6 +85,44 @@ class CachedGitState implements GitState {
     if (this.#flight) return await this.#flight;
     this.#flight = this.load().finally(() => this.#flight = undefined);
     return await this.#flight;
+  }
+  async diff(
+    path: string,
+    lineCount: number,
+  ): Promise<ReadonlyMap<number, SourceLineAnnotation> | undefined> {
+    const status = await this.status();
+    const located = gitStatusAt(status, path);
+    const file = located && "status" in located ? located.status : located;
+    if (!file || file.kind === "ignored") {
+      return undefined;
+    }
+    if (file.index === "?" && file.worktree === "?") {
+      return untrackedAnnotations(lineCount);
+    }
+    try {
+      const [staged, unstaged] = await Promise.all([
+        file.index === " " ? undefined : this.runDiff(path, true),
+        file.worktree === " " ? undefined : this.runDiff(path, false),
+      ]);
+      if ((staged && !staged.success) || (unstaged && !unstaged.success)) {
+        return undefined;
+      }
+      return mergeDiffAnnotations(staged?.stdout, unstaged?.stdout, lineCount);
+    } catch {
+      return undefined;
+    }
+  }
+  async runDiff(path: string, cached: boolean) {
+    return await runGit(this.root, [
+      "diff",
+      ...(cached ? ["--cached"] : []),
+      "--no-ext-diff",
+      "--no-textconv",
+      "--no-color",
+      "--unified=0",
+      "--",
+      path,
+    ]);
   }
   async load(): Promise<void> {
     const result = await runGit(this.root, [

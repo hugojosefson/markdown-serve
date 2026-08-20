@@ -92,6 +92,13 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .directory-scroll { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 6px; max-width: 100%; overflow-x: auto; width: 100%; }
 ${codeToolbarCss}
 ${displayControlsCss}
+.source-line { position: relative; }
+.source-line-number { border-left: 3px solid transparent; box-sizing: border-box; position: relative; width: 9ch; }
+.source-line-staged .source-line-number { border-left-color: var(--git-added); }
+.source-line-unstaged .source-line-number { border-left-color: var(--git-modified); }
+.source-line-both .source-line-number { border-image: linear-gradient(to bottom, var(--git-added) 50%, var(--git-modified) 50%) 1; }
+.source-line-deletions { color: var(--git-deleted); font: 700 10px/1 ui-monospace, monospace; margin-left: 3px; }
+.source-line-deletions::after { content: "−" attr(data-deletions); }
 @media (max-width: 800px) {
   .markdown-body .file-metadata-details dl { grid-auto-flow: row; grid-template-columns: 1fr; grid-template-rows: none; }
 }

@@ -27,7 +27,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .tree .tree-files-link { align-items: center; background: var(--tree-hover); bottom: 0; color: var(--tree-muted); display: flex; font-size: 11px; opacity: 0; padding: 0 5px; pointer-events: none; position: absolute; right: 0; top: 0; }
 .tree summary:hover .tree-files-link, .tree summary:focus-within .tree-files-link, .tree .tree-root-row:hover .tree-files-link, .tree .tree-root-row:focus-within .tree-files-link, .tree .tree-files-link:focus-visible { opacity: 1; pointer-events: auto; }
 .tree-root { font-weight: 600; }
-.content { container-type: inline-size; min-width: 0; padding: 8px 16px 32px; }
+.content { min-width: 0; padding: 8px 16px 32px; }
 .content-header { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .content-header nav { line-height: 22px; min-width: 0; overflow-wrap: anywhere; }
 .breadcrumb-separator { margin: 0 4px; }
@@ -41,29 +41,15 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .directory-table th a { color: inherit; text-decoration: none; }
 .directory-table .directory-size, .directory-table .directory-user { font-variant-numeric: tabular-nums; text-align: right; }
 .directory-table .directory-permissions, .directory-table .directory-size, .directory-table .directory-user, .directory-table .directory-modified { white-space: nowrap; width: 1%; }
-.directory-table .directory-name { min-width: 12rem; width: 100%; }
+.directory-table .directory-name { white-space: nowrap; width: 100%; }
 .directory-table .directory-modified { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.directory-table[data-hidden-columns~="permissions"] .directory-permissions, .directory-table[data-hidden-columns~="size"] .directory-size, .directory-table[data-hidden-columns~="user"] .directory-user, .directory-table[data-hidden-columns~="modified"] .directory-modified { display: none; }
 .directory-table .timestamp-separator { color: var(--code-muted); }
 .directory-table .timestamp-t { display: inline-block; margin: 0 .25ch; }
 .directory-table .timestamp-t, .directory-table .timestamp-zone { opacity: .2; }
 .directory-scroll { max-width: 100%; overflow-x: auto; width: 100%; }
 ${codeToolbarCss}
 ${displayControlsCss}
-@container (max-width: 54rem) {
-  .directory-table .directory-user { display: none; }
-}
-@container (max-width: 46rem) {
-  .directory-table .directory-permissions { display: none; }
-  .directory-table .directory-name { min-width: 10rem; overflow-wrap: anywhere; white-space: normal; }
-}
-@container (max-width: 34rem) {
-  .directory-scroll { overflow-x: visible; }
-  .markdown-body .directory-table, .directory-table thead, .directory-table tbody, .directory-table tr { display: block; min-width: 0; width: 100%; }
-  .directory-table tr { display: grid; grid-template-columns: minmax(0, 1fr) 5rem; }
-  .directory-table .directory-modified { display: none; }
-  .directory-table .directory-name { grid-column: 1; grid-row: 1; min-width: 0; width: auto; }
-  .directory-table .directory-size { grid-column: 2; grid-row: 1; width: auto; }
-}
 @media (max-width: 700px) {
   .layout { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
   .content { order: 1; padding: 0; }

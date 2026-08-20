@@ -167,7 +167,7 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     );
     assertMatch(
       pageStylesheet.body,
-      /\.content-header\.metadata-expanded \{ margin-bottom: 0; \}.*\.content-header\.metadata-expanded \.file-metadata \{[^}]*border-bottom-color: var\(--code-hover\); border-radius: 6px 6px 0 0;[^}]*top: 1px; z-index: 1; \}.*\.markdown-body \.file-metadata-details \{[^}]*margin: 0 0 16px;[^}]*overflow: hidden; padding: 0;/s,
+      /\.content-header\.metadata-expanded \.file-metadata \{[^}]*border-bottom-color: var\(--code-hover\); border-radius: 6px 6px 0 0;[^}]*position: relative; z-index: 1; \}.*\.content-header\.metadata-expanded \.file-metadata::after \{[^}]*height: 16px; left: -1px;[^}]*right: -1px; top: 100%; \}.*\.markdown-body \.file-metadata-details \{[^}]*margin: 14px 0 16px;[^}]*overflow: hidden; padding: 0;/s,
     );
     const themedDetails = await (await h(
       new Request("http://x/photo.png?theme=dark&metadata=expand"),

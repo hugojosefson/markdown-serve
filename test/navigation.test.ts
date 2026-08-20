@@ -50,14 +50,13 @@ Deno.test("generated pages include responsive navigation and active branches", a
       guideBody,
       /<summary><a class="tree-folder-link" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir" title="Show files in docs" aria-label="Show files in docs">Files<\/a><\/summary>/,
     );
-    assertMatch(guideBody, /\.tree \.(?:tree-files-link) \{[^}]*opacity: 0/);
     assertMatch(
       guideBody,
-      /\.tree summary:hover \.tree-files-link, \.tree summary:focus-within \.tree-files-link, \.tree \.tree-files-link:focus-visible \{ opacity: 1; pointer-events: auto; \}/,
+      /\.tree \.tree-files-link \{[^}]*opacity: 0;[^}]*position: absolute; right: 0; top: 0/,
     );
     assertMatch(
       guideBody,
-      /@media \(hover: none\) \{ \.tree \.tree-files-link \{ opacity: 1; pointer-events: auto; \} \}/,
+      /\.tree summary:hover \.tree-files-link, \.tree summary:focus-within \.tree-files-link, \.tree \.tree-files-link:focus-visible \{ opacity: 1; pointer-events: auto; \}/,
     );
     assertMatch(guideBody, /href="\/" data-query-remove="dir">README\.md<\/a>/);
     assert(!guideBody.includes('href="//"'));

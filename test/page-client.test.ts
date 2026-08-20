@@ -11,6 +11,51 @@ Deno.test("lazy tree entries construct Files controls without index discovery", 
   );
   assert(!pageClient.includes("/__markdown_server__/index"));
   assert(!pageClient.includes("indexPending"));
+  assertMatch(pageClient, /details\.dataset\.loading === 'true'/);
+  assertMatch(pageClient, /delete details\.dataset\.loading/);
+});
+
+Deno.test("lazy tree expansion ignores duplicate requests while loading", async () => {
+  let toggle: (event: { target: Details }) => Promise<void> = async () => {};
+  let requests = 0;
+  let finish!: (value: { ok: false }) => void;
+  class Details {
+    open = true;
+    dataset: Record<string, string> = { path: "src" };
+    matches = () => true;
+  }
+  const tree = {
+    querySelector: () => null,
+    addEventListener: (type: string, listener: typeof toggle) => {
+      if (type === "toggle") toggle = listener;
+    },
+  };
+  new Function(
+    "document",
+    "HTMLDetailsElement",
+    "location",
+    "syncNavigationLinks",
+    "fetch",
+    pageClient,
+  )(
+    { querySelector: () => tree, querySelectorAll: () => [] },
+    Details,
+    { href: "http://x/" },
+    () => {},
+    () => {
+      requests++;
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    },
+  );
+  const details = new Details();
+  const first = toggle({ target: details });
+  const second = toggle({ target: details });
+  assertEquals(requests, 1);
+  finish({ ok: false });
+  await Promise.all([first, second]);
+  assertEquals(details.dataset.loading, undefined);
 });
 
 Deno.test("relative-time client uses one visibility-aware scheduler", () => {

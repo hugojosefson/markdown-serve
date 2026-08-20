@@ -1,5 +1,12 @@
 export const pageClient = `
 const tree = document.querySelector('.tree');
+const treeDisclosure = tree?.querySelector?.('.tree-disclosure');
+const narrowTree = globalThis.matchMedia?.('(max-width: 560px)');
+const syncTreeDisclosure = (event) => { if (treeDisclosure) { treeDisclosure.open = !event.matches; } };
+if (narrowTree) {
+  syncTreeDisclosure(narrowTree);
+  narrowTree.addEventListener?.('change', syncTreeDisclosure);
+}
 const filesLink = (href, name) => {
   const filesLink = document.createElement('a');
   filesLink.className = 'tree-files-link';
@@ -62,10 +69,13 @@ const addEntries = (list, entries) => entries.forEach((entry) => {
 tree?.addEventListener('toggle', async (event) => {
   const details = event.target;
   if (!(details instanceof HTMLDetailsElement) || !details.matches('[data-path]') ||
-    !details.open || details.dataset.loaded === 'true') { return; }
-  const response = await fetch('/__markdown_server__/tree?path=' +
-    encodeURIComponent(details.dataset.path));
-  if (!response.ok) { return; }
-  addEntries(details.querySelector('ul'), await response.json());
-  details.dataset.loaded = 'true';
+    !details.open || details.dataset.loaded === 'true' || details.dataset.loading === 'true') { return; }
+  details.dataset.loading = 'true';
+  try {
+    const response = await fetch('/__markdown_server__/tree?path=' +
+      encodeURIComponent(details.dataset.path));
+    if (!response.ok || details.dataset.loaded === 'true') { return; }
+    addEntries(details.querySelector('ul'), await response.json());
+    details.dataset.loaded = 'true';
+  } finally { delete details.dataset.loading; }
 }, true);`;

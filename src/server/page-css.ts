@@ -9,7 +9,7 @@ html { scrollbar-gutter: stable; }
 html[data-color-mode="light"] { color-scheme: light; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; }
 html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; --kind-directory: #d2a8ff; --kind-symlink: #58a6ff; --kind-executable: #7ee787; --kind-archive: #e3b341; --kind-image: #ff7b72; --kind-media: #79c0ff; --kind-file: var(--code-text); --git-conflict: #ff7b72; --git-renamed: #d2a8ff; --git-deleted: #ff7b72; --git-modified: #e3b341; --git-added: #7ee787; --git-untracked: #58a6ff; --git-ignored: var(--code-muted); }
 .layout { display: grid; grid-template-columns: 17rem minmax(0, 1fr); gap: 24px; margin: 0 auto; max-width: 1280px; padding: 16px; }
-.tree { align-self: start; background: var(--tree-bg); border: 1px solid var(--tree-border); border-radius: 6px; color: var(--tree-text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.45; max-height: calc(100vh - 32px); overflow: auto; padding: 8px; position: sticky; top: 16px; }
+.tree { align-self: start; background: var(--tree-bg); border: 1px solid var(--tree-border); border-radius: 6px; box-sizing: border-box; color: var(--tree-text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.45; max-height: calc(100vh - 32px); overflow: auto; padding: 8px; position: sticky; top: 16px; }
 .tree nav > ul, .tree ul { list-style: none; margin: 4px 0; padding: 0; }
 .tree ul ul { border-left: 1px solid var(--tree-border); margin-left: 11px; padding-left: 8px; }
 .tree li { margin: 1px 0; min-width: 0; }
@@ -36,6 +36,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .tree summary::-webkit-details-marker { display: none; }
 .tree summary::before { border: 4px solid transparent; border-left-color: var(--tree-muted); content: ""; flex: 0 0 auto; margin: 0 2px 0 4px; transform: translateY(1px); }
 .tree details[open] > summary::before { transform: rotate(90deg) translateX(2px); }
+.tree-disclosure > summary { display: none; }
  .tree summary > .tree-folder-link, .tree .tree-root-row > .tree-root, .tree .tree-entry-row > :first-child { flex: 1; }
 .tree .tree-files-link { align-items: center; background: var(--tree-hover); bottom: 0; color: var(--tree-muted); display: flex; font-size: 11px; opacity: 0; padding: 0 5px; pointer-events: none; position: absolute; right: 0; top: 0; }
  .tree summary:hover .tree-files-link, .tree summary:focus-within .tree-files-link, .tree .tree-root-row:hover .tree-files-link, .tree .tree-root-row:focus-within .tree-files-link, .tree .tree-entry-row:hover .tree-files-link, .tree .tree-entry-row:focus-within .tree-files-link, .tree .tree-files-link:focus-visible { opacity: 1; pointer-events: auto; }
@@ -53,7 +54,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .content-header { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .content-header nav { line-height: 22px; min-width: 0; overflow-wrap: anywhere; }
 .breadcrumb-separator { margin: 0 4px; }
-.content-header .page-action { align-items: center; background: transparent; border: 1px solid var(--code-border); border-radius: 4px; box-sizing: border-box; color: var(--code-muted); display: inline-flex; flex: 0 0 auto; font: 500 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; height: 22px; padding: 0 7px; text-decoration: none; }
+.content-header .page-action { align-items: center; background: transparent; border: 1px solid var(--code-border); border-radius: 4px; box-sizing: border-box; color: var(--code-muted); display: inline-flex; flex: 0 0 auto; font: 500 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; height: 22px; max-width: min(50vw, 20rem); overflow: hidden; padding: 0 7px; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
 .content-header .page-action:hover, .content-header .page-action:focus-visible { color: var(--focus-color); }
 .content-header .page-action:hover { background: var(--code-hover); }
 .content-header .page-action:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 1px; }
@@ -118,8 +119,11 @@ ${displayControlsCss}
 @media (max-width: 560px) {
   .layout { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
   .content { order: 1; padding: 0; }
-   .tree { display: none; max-height: none; order: 2; position: static; width: auto; }
+   .tree { max-height: none; order: 0; overflow: visible; padding: 0; position: static; width: 100%; }
+  .tree-disclosure > summary { align-items: center; display: flex; font-weight: 600; min-height: 34px; padding: 0 8px; }
+  .tree-disclosure > nav { border-top: 1px solid var(--tree-border); max-height: 40vh; overflow: auto; padding: 8px; }
    .repo-context { color: var(--code-muted); display: block; flex: 1 1 100%; font: 12px/1.4 ui-monospace, monospace; }
   .content-header nav { flex: 1 1 100%; }
+  .directory-table .directory-permissions, .directory-table .directory-user, .directory-table .directory-modified { display: none; }
   .markdown-body .file-metadata-details dl { padding: 12px; }
 }`;

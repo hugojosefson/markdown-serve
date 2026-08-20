@@ -48,7 +48,7 @@ function renderBody(
   const metadataExpanded = model.url.searchParams.getAll("metadata").includes(
     "expand",
   );
-  return `<body><div class="layout"><aside class="tree">${navigation}</aside><main class="content markdown-body">${
+  return `<body><div class="layout"><aside class="tree"><details class="tree-disclosure" open><summary>Files</summary>${navigation}</details></aside><main class="content markdown-body">${
     repoContext(status)
   }${renderContentHeader(config, model, metadataExpanded)}${
     model.metadata && metadataExpanded

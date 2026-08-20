@@ -1,5 +1,6 @@
 import { join } from "@std/path";
 import { directoryEntries, statOrUndefined } from "./fs.ts";
+import { indexName } from "./indexes.ts";
 import { canonicalPath, lexical, splitPath } from "./paths.ts";
 import { plain } from "./responses.ts";
 import type { ServerConfig } from "./types.ts";
@@ -18,7 +19,13 @@ export async function treeResponse(
     return plain("Not Found", 404, request.method);
   }
   const entries = await directoryEntries(path);
-  const json = entries.map((entry) => treeEntry(parts, entry)).sort((
+  const json = (await Promise.all(entries.map((entry) =>
+    treeEntry(
+      config,
+      parts,
+      entry,
+    )
+  ))).sort((
     left,
     right,
   ) => lexical(left.name, right.name));
@@ -27,10 +34,18 @@ export async function treeResponse(
   });
 }
 
-function treeEntry(
+async function treeEntry(
+  config: ServerConfig,
   parts: string[],
   entry: { name: string; directory: boolean },
-) {
+): Promise<{
+  name: string;
+  path: string;
+  directory: boolean;
+  href: string;
+  filesHref?: string;
+  queryRemove?: string[];
+}> {
   const child = [...parts, entry.name];
   const lower = entry.name.toLowerCase();
   const index = !entry.directory && /^(readme|index)\.md$/.test(lower);
@@ -39,14 +54,22 @@ function treeEntry(
     : !entry.directory && lower.endsWith(".md")
     ? [...parts, entry.name.slice(0, -3)]
     : child;
+  if (entry.directory) {
+    const index = await indexName(join(config.rootPath, ...child));
+    return {
+      name: entry.name,
+      path: child.join("/"),
+      directory: true,
+      href: canonicalPath(route, true),
+      filesHref: index ? `${canonicalPath(route, true)}?dir` : undefined,
+      queryRemove: ["dir"],
+    };
+  }
   return {
     name: entry.name,
     path: child.join("/"),
     directory: entry.directory,
     href: canonicalPath(route, entry.directory || index),
-    filesHref: entry.directory
-      ? `${canonicalPath(route, true)}?dir`
-      : undefined,
     queryRemove: entry.directory || index ? ["dir"] : undefined,
   };
 }

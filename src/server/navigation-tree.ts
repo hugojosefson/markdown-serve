@@ -1,6 +1,7 @@
 import { join } from "@std/path";
 import { directoryEntries } from "./fs.ts";
 import { escapeHtml } from "./html.ts";
+import { indexName } from "./indexes.ts";
 import { canonicalPath } from "./paths.ts";
 import type { ServerConfig } from "./types.ts";
 
@@ -13,9 +14,13 @@ export async function navigationTree(
   const rootClass = active.length === 0 && directoryView
     ? "tree-root active"
     : "tree-root";
-  return `<nav aria-label="Files"><a href="/?dir" class="tree-heading">Files</a><a class="${rootClass}" href="/" data-query-remove="dir">${
+  const rootLink = `<a class="${rootClass}" href="/" data-query-remove="dir">${
     escapeHtml(config.rootLabel)
-  }</a>${await treeList(
+  }</a>`;
+  const rootFilesLink = await indexName(config.rootPath)
+    ? filesLink("/?dir", config.rootLabel)
+    : "";
+  return `<nav aria-label="Files"><a href="/?dir" class="tree-heading">Files</a><div class="tree-root-row">${rootLink}${rootFilesLink}</div>${await treeList(
     config,
     [],
     active,
@@ -84,11 +89,15 @@ async function treeItem(
   const descendants = activeDirectory
     ? await treeList(config, path, active, directoryView, sourceName)
     : "<ul></ul>";
-  const filesLink =
-    `<a class="tree-files-link" href="${href}?dir" title="Show files in ${
-      escapeHtml(entry.name)
-    }" aria-label="Show files in ${escapeHtml(entry.name)}">Files</a>`;
+  const files = await indexName(join(config.rootPath, ...path))
+    ? filesLink(`${href}?dir`, entry.name)
+    : "";
   return `<li><details data-path="${escapeHtml(path.join("/"))}"${
     activeDirectory ? ' data-loaded="true" open' : ""
-  }><summary>${link}${filesLink}</summary>${descendants}</details></li>`;
+  }><summary>${link}${files}</summary>${descendants}</details></li>`;
+}
+
+function filesLink(href: string, name: string): string {
+  const label = escapeHtml(name);
+  return `<a class="tree-files-link" href="${href}" title="Show files in ${label}" aria-label="Show files in ${label}">Files</a>`;
 }

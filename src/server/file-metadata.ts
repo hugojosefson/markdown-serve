@@ -90,10 +90,10 @@ export function renderFileMetadataSummary(
     url.pathname,
     setQuery(url.search, "metadata", expanded ? undefined : "expand"),
   );
-  const action = expanded ? "Hide file details" : "Show file details";
+  const action = expanded ? "Collapse metadata" : "Expand metadata";
   return `<a class="file-metadata" href="${
     escapeHtml(href)
-  }" title="${action}" aria-label="${action}" aria-expanded="${expanded}">${
+  }" title="${action}" aria-label="${action}" aria-controls="file-metadata-details" aria-expanded="${expanded}">${
     [formatSize(metadata.size), relative].map(escapeHtml).join(
       ' <span aria-hidden="true">·</span> ',
     )
@@ -121,7 +121,7 @@ export function renderFileMetadataDetails(metadata: FileMetadata): string {
     .map(([label, value]) =>
       `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`
     ).join("");
-  return `<section class="file-metadata-details" aria-label="File details"><dl>${rows}</dl></section>`;
+  return `<section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><dl>${rows}</dl></section>`;
 }
 
 function formatRelativeTime(date: Date, now = new Date()): string {

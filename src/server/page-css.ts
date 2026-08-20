@@ -40,12 +40,11 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .content-header .file-metadata:hover { background: var(--code-hover); border-color: var(--code-border); color: var(--focus-color); }
 .content-header .file-metadata:focus-visible { border-color: var(--code-border); outline: 2px solid var(--focus-color); outline-offset: 1px; }
 .content-header .file-metadata span { color: var(--code-border); }
-.file-metadata-details { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 6px; margin: 0 0 16px; overflow: hidden; }
-.file-metadata-details dl { margin: 0; }
-.file-metadata-details dl > div { align-items: baseline; border-bottom: 1px solid var(--code-border); display: grid; grid-template-columns: 9rem minmax(0, 1fr); }
-.file-metadata-details dl > div:last-child { border-bottom: 0; }
-.file-metadata-details dt { align-self: stretch; background: var(--code-hover); color: var(--code-muted); font: 600 12px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; padding: 7px 10px; }
-.file-metadata-details dd { font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin: 0; overflow-wrap: anywhere; padding: 7px 10px; }
+.markdown-body .file-metadata-details { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 6px; margin: 0 0 16px; padding: 14px; }
+.markdown-body .file-metadata-details dl { display: grid; gap: 16px 24px; grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr)); margin: 0; padding: 0; }
+.markdown-body .file-metadata-details dl > div { border-left: 2px solid var(--code-border); display: block; margin: 0; min-width: 0; padding: 0 0 0 10px; }
+.markdown-body .file-metadata-details dt { color: var(--code-muted); font: 600 10px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-style: normal; letter-spacing: .05em; margin: 0 0 4px; padding: 0; text-transform: uppercase; }
+.markdown-body .file-metadata-details dd { color: var(--code-text); font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin: 0; overflow-wrap: anywhere; padding: 0; }
 .media-preview { display: block; max-width: 100%; }
 .media-preview.image { height: auto; max-height: none; max-width: var(--image-max-width, 100%); width: 100%; }
 .media-preview.audio, .media-preview.video { max-width: 100%; width: min(100%, 720px); }
@@ -72,6 +71,5 @@ ${displayControlsCss}
   .content { order: 1; padding: 0; }
   .tree { display: none; max-height: none; order: 2; position: static; width: auto; }
   .content-header nav { flex: 1 1 100%; }
-  .file-metadata-details dl > div { grid-template-columns: 1fr; }
-  .file-metadata-details dd { padding-top: 5px; }
+  .markdown-body .file-metadata-details { padding: 12px; }
 }`;

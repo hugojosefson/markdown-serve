@@ -151,26 +151,26 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     const image = await (await h(new Request("http://x/photo.png"))).text();
     assertMatch(
       image,
-      /<a class="file-metadata" href="\?metadata=expand" title="Show file details" aria-label="Show file details" aria-expanded="false">4B <span[^>]*>·<\/span> (?:now|today)<\/a>/,
+      /<a class="file-metadata" href="\?metadata=expand" title="Expand metadata" aria-label="Expand metadata" aria-controls="file-metadata-details" aria-expanded="false">4B <span[^>]*>·<\/span> (?:now|today)<\/a>/,
     );
-    assert(!image.includes("file-metadata-details"));
+    assert(!image.includes('<section class="file-metadata-details"'));
     const details = await (await h(
       new Request("http://x/photo.png?metadata=expand"),
     )).text();
     assertMatch(
       details,
-      /<\/header><section class="file-metadata-details"[^>]*><dl>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>Size<\/dt><dd>4 bytes \(4B\)<\/dd>.*<dt>Modified<\/dt><dd>[^<]+ \((?:now|today)\)<\/dd>.*<\/dl><\/section><img/s,
+      /<\/header><section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><dl>.*<dt>Media type<\/dt><dd>image\/png<\/dd>.*<dt>Size<\/dt><dd>4 bytes \(4B\)<\/dd>.*<dt>Modified<\/dt><dd>[^<]+ \((?:now|today)\)<\/dd>.*<\/dl><\/section><img/s,
     );
     assertMatch(
       details,
-      /<a class="file-metadata" href="\/photo\.png" title="Hide file details" aria-label="Hide file details" aria-expanded="true">/,
+      /<a class="file-metadata" href="\/photo\.png" title="Collapse metadata" aria-label="Collapse metadata" aria-controls="file-metadata-details" aria-expanded="true">/,
     );
     const themedDetails = await (await h(
       new Request("http://x/photo.png?theme=dark&metadata=expand"),
     )).text();
     assertMatch(
       themedDetails,
-      /<a class="file-metadata" href="\?theme=dark" title="Hide file details" aria-label="Hide file details" aria-expanded="true">/,
+      /<a class="file-metadata" href="\?theme=dark" title="Collapse metadata" aria-label="Collapse metadata" aria-controls="file-metadata-details" aria-expanded="true">/,
     );
     assertMatch(
       image,

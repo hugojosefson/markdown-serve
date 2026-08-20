@@ -29,14 +29,23 @@ export async function route(
       ? await renderDirectory(config, request, url, target, parts)
       : plain("Not Found", 404, request.method);
   }
+  const routeLeaf = parts.at(-1)!;
+  const sourceName = `${routeLeaf}.md`;
   const markdown = filePath(config.rootPath, [
     ...parts.slice(0, -1),
-    `${parts.at(-1)}.md`,
+    sourceName,
   ]);
   if (
     (!stat || stat.isDirectory) && (await statOrUndefined(markdown))?.isFile
   ) {
-    return await renderMarkdown(config, request, url.pathname, markdown, parts);
+    return await renderMarkdown(
+      config,
+      request,
+      url.pathname,
+      markdown,
+      parts,
+      { sourceName },
+    );
   }
   if (stat?.isDirectory) {
     return redirect(

@@ -286,7 +286,7 @@ Deno.test("indexed directories can switch between their index and file listing",
     )).text();
     assertMatch(
       index,
-      /<a class="raw-link"[^>]*>Raw<\/a><a class="page-action" href="\?a=1&amp;a=2&amp;order=size&amp;theme=dark&amp;view=files&amp;width=wide" title="Browse directory files">Files<\/a>/,
+      /<a class="raw-link" href="\?raw">Raw<\/a><a class="page-action" href="\?a=1&amp;a=2&amp;order=size&amp;theme=dark&amp;view=files&amp;width=wide" title="Browse directory files">Files<\/a>/,
     );
     assertMatch(
       index,
@@ -368,7 +368,7 @@ Deno.test("listing includes dotfiles and Markdown is sanitized", async () => {
   }
 });
 
-Deno.test("exact text paths render code and raw source preserves queries", async () => {
+Deno.test("exact text paths render code and raw source accepts queries", async () => {
   const f = await fixture({
     "guide.ts": "const answer: number = 42;\n",
     "data.json": '{"enabled":true}\n',
@@ -382,7 +382,7 @@ Deno.test("exact text paths render code and raw source preserves queries", async
     const guide = await (await h(new Request("http://x/guide.ts?q=1"))).text();
     assertMatch(guide, /code-language">typescript/);
     assertMatch(guide, /token keyword">const/);
-    assertMatch(guide, /href="\?q=1&amp;raw">Raw/);
+    assertMatch(guide, /href="\?raw">Raw/);
     assertEquals((await h(new Request("http://x/guide"))).status, 404);
     const json = await (await h(new Request("http://x/data.json"))).text();
     assertMatch(json, /code-language">json/);

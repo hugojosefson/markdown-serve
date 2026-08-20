@@ -1,11 +1,13 @@
 import { assert, assertEquals, assertMatch } from "@std/assert";
 import { breadcrumbPath, breadcrumbs } from "../src/server/breadcrumb.ts";
 import { ensureEndsWithSlash } from "../src/server/create-handler.ts";
+import { pageClient } from "../src/server/page-client.ts";
 import { fixture, handler } from "./fixture.ts";
 
 Deno.test("generated pages include responsive navigation and active branches", async () => {
   const f = await fixture({
     "README.md": "root",
+    "AGENTS.md": "agents",
     "guide.md": "guide",
     "docs/README.md": "docs",
     "docs/nested/note.md": "note",
@@ -37,7 +39,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assert(guideBody.includes(`href="/">${rootLabel}</a>`));
     assertMatch(
       guideBody,
-      /aria-label="Breadcrumb"><a href="\/">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">guide<\/span>/,
+      /aria-label="Breadcrumb"><a href="\/">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">guide\.md<\/span>/,
     );
     assertMatch(guideBody, /data-path="docs"/);
     assertMatch(guideBody, /href="\/">README\.md<\/a>/);
@@ -45,6 +47,12 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(guideBody, /__markdown_server__\/tree\?path=/);
     assertMatch(guideBody, /class="active"/);
     assert(!guideBody.includes('data-path="docs/nested"'));
+
+    const agentsBody = await (await h(new Request("http://x/AGENTS"))).text();
+    assertMatch(
+      agentsBody,
+      /aria-label="Breadcrumb"><a href="\/">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">AGENTS\.md<\/span>/,
+    );
 
     const plainBody = await (await h(new Request("http://x/plain.txt"))).text();
     assert(plainBody.includes(
@@ -101,7 +109,68 @@ Deno.test("breadcrumbs copy as exact configured paths", () => {
     text(breadcrumbs("./", ["docs"], true, "README.md")),
     "./docs/README.md",
   );
+  assertEquals(
+    text(breadcrumbs("./", ["AGENTS"], false, "AGENTS.md")),
+    "./AGENTS.md",
+  );
+  assertEquals(text(breadcrumbs("./", [], true, "README.md")), "./README.md");
   assertEquals(breadcrumbPath("docs///", ["nested"]), "docs/nested/");
+});
+
+Deno.test("current directory links toggle their details without navigation", () => {
+  const listeners = new Map<string, (event: Record<string, unknown>) => void>();
+  class Details {
+    open = true;
+    dataset = { path: "docs" };
+  }
+  const details = new Details();
+  const link = {
+    href: "/docs/",
+    closest: (selector: string) =>
+      selector === "details[data-path]" ? details : null,
+  };
+  const tree = {
+    addEventListener: (
+      name: string,
+      listener: (event: Record<string, unknown>) => void,
+    ) => listeners.set(name, listener),
+  };
+  const location = { href: "http://x/docs/", pathname: "/docs/" };
+  new Function(
+    "document",
+    "HTMLDetailsElement",
+    "location",
+    "fetch",
+    pageClient,
+  )(
+    { querySelector: () => tree },
+    Details,
+    location,
+    () => Promise.reject(new Error("not fetched")),
+  );
+  const click = (overrides: Record<string, unknown> = {}) => {
+    let prevented = false;
+    listeners.get("click")?.({
+      altKey: false,
+      button: 0,
+      ctrlKey: false,
+      metaKey: false,
+      preventDefault: () => prevented = true,
+      shiftKey: false,
+      target: { closest: (selector: string) => selector === "a" ? link : null },
+      ...overrides,
+    });
+    return prevented;
+  };
+  assert(click());
+  assertEquals(details.open, false);
+  assertEquals(location, { href: "http://x/docs/", pathname: "/docs/" });
+  assert(click());
+  assertEquals(details.open, true);
+  assert(!click({ ctrlKey: true }));
+  link.href = "/other/";
+  assert(!click());
+  assert(!pageClient.includes("history."));
 });
 
 Deno.test("root labels preserve the configured argument and escape HTML", async () => {

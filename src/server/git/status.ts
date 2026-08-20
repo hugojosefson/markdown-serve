@@ -39,10 +39,25 @@ export function gitStatusAt(
   path: string,
   directory = false,
 ): GitFileStatus | GitDirectoryStatus | undefined {
-  if (!status) return undefined;
-  return directory
-    ? status.byPath.get(path) ?? status.directories.get(path)
-    : status.byPath.get(path);
+  if (!status) {
+    return undefined;
+  }
+  const exact = status.byPath.get(path);
+  if (exact || directory) {
+    return exact ?? status.directories.get(path);
+  }
+  const parts = path.split("/");
+  while (parts.length > 1) {
+    parts.pop();
+    const ancestor = status.byPath.get(parts.join("/"));
+    if (
+      ancestor?.directory &&
+      (ancestor.kind === "untracked" || ancestor.kind === "ignored")
+    ) {
+      return ancestor;
+    }
+  }
+  return undefined;
 }
 
 export function gitDisplay(

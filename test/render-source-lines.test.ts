@@ -39,6 +39,27 @@ Deno.test("normal Markdown fenced code keeps its existing non-anchor markup", ()
   assertEquals(rendered.includes('href="#L1"'), false);
 });
 
+Deno.test("source lines expose Git markers and deletion labels without changing source text", () => {
+  const rendered = renderSourceCodeBlock(
+    "one\ntwo",
+    "text",
+    new Map([
+      [1, { staged: true, unstaged: true, deletions: 2 }],
+      [2, { unstaged: true }],
+    ]),
+  );
+  assertMatch(rendered, /source-line-both" id="L1" data-git-change="both"/);
+  assertMatch(
+    rendered,
+    /aria-label="Line 1, staged and unstaged change, 2 deleted lines" data-line="1"><span class="source-line-deletions" data-deletions="2" aria-hidden="true"/,
+  );
+  assertMatch(
+    rendered,
+    /source-line-unstaged" id="L2" data-git-change="unstaged"/,
+  );
+  assertEquals(sourceText(rendered), "one\ntwo");
+});
+
 function sourceText(rendered: string): string | undefined {
   return rendered.match(/<pre[^>]*>([\s\S]*?)<\/pre>/)?.[1]
     .replaceAll(/<[^>]+>/g, "")

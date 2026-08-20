@@ -30,6 +30,13 @@ Deno.test("looks up display status and excludes ignored files from dirty count",
   assertEquals(gitDirtyCount(status), 2);
 });
 
+Deno.test("looks up files collapsed under untracked and ignored directories", () => {
+  const status = parseGitStatus("## main\0?? new/\0!! cache/\0");
+  assertEquals(gitStatusAt(status, "new/nested/file.ts")?.kind, "untracked");
+  assertEquals(gitStatusAt(status, "cache/data.bin")?.kind, "ignored");
+  assertEquals(gitStatusAt(status, "other/file.ts"), undefined);
+});
+
 Deno.test("normalizes collapsed directories and chooses dominant status", () => {
   const status = parseGitStatus(
     "## main\0?? dir/new/\0 M dir/changed.md\0UU dir/conflict.md\0!! .cache/\0",

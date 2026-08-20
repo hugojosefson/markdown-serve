@@ -2,6 +2,7 @@ import { render } from "@deno/gfm";
 import { CodeRenderer } from "./code-renderer.ts";
 import "./prism-languages.ts";
 import { renderSourceLines } from "./render-source-lines.ts";
+import type { SourceLineAnnotation } from "./git/diff.ts";
 
 export function renderCodeMarkdown(markdown: string, baseUrl: string): string {
   return render(markdown, {
@@ -64,19 +65,29 @@ export function renderCodeBlock(text: string, language: string): string {
   });
 }
 
-export function renderSourceCodeBlock(text: string, language: string): string {
+export function renderSourceCodeBlock(
+  text: string,
+  language: string,
+  annotations?: ReadonlyMap<number, SourceLineAnnotation>,
+): string {
   const rendered = renderCodeBlock(text, language);
-  const code = replaceSourceCode(rendered, "code");
-  return code === rendered ? replaceSourceCode(rendered, "pre") : code;
+  const code = replaceSourceCode(rendered, "code", annotations);
+  return code === rendered
+    ? replaceSourceCode(rendered, "pre", annotations)
+    : code;
 }
 
-function replaceSourceCode(rendered: string, tag: "code" | "pre"): string {
+function replaceSourceCode(
+  rendered: string,
+  tag: "code" | "pre",
+  annotations?: ReadonlyMap<number, SourceLineAnnotation>,
+): string {
   const expression = new RegExp(
     `(<${tag}(?:\\s[^>]*)?>)([\\s\\S]*?)(<\\/${tag}>)`,
   );
   return rendered.replace(
     expression,
     (_, open, highlighted, close) =>
-      `${open}${renderSourceLines(highlighted)}${close}`,
+      `${open}${renderSourceLines(highlighted, annotations)}${close}`,
   );
 }

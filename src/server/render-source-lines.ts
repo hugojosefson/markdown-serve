@@ -1,9 +1,45 @@
+import type { SourceLineAnnotation } from "./git/diff.ts";
+
 /** Adds source-file line links without changing the highlighted code text. */
-export function renderSourceLines(highlighted: string): string {
+export function renderSourceLines(
+  highlighted: string,
+  annotations: ReadonlyMap<number, SourceLineAnnotation> = new Map(),
+): string {
   let line = 1;
   const activeTags: string[] = [];
-  const openLine = () =>
-    `<span class="source-line" id="L${line}"><a class="source-line-number" href="#L${line}" aria-label="Line ${line}" data-line="${line}"></a><span class="source-line-content">`;
+  const openLine = () => {
+    const annotation = annotations.get(line);
+    const change = annotation?.staged && annotation?.unstaged
+      ? "both"
+      : annotation?.staged
+      ? "staged"
+      : annotation?.unstaged
+      ? "unstaged"
+      : undefined;
+    const deletionLabel = annotation?.deletions
+      ? `${annotation.deletions} deleted line${
+        annotation.deletions === 1 ? "" : "s"
+      }`
+      : "";
+    const changeLabel = change === "both"
+      ? "staged and unstaged change"
+      : change
+      ? `${change} change`
+      : "";
+    const lineLabel = [
+      `Line ${line}`,
+      changeLabel,
+      deletionLabel,
+    ].filter(Boolean).join(", ");
+    const deletion = deletionLabel
+      ? `<span class="source-line-deletions" data-deletions="${annotation?.deletions}" aria-hidden="true"></span>`
+      : "";
+    return `<span class="source-line${
+      change ? ` source-line-${change}` : ""
+    }" id="L${line}"${
+      change ? ` data-git-change="${change}"` : ""
+    }><a class="source-line-number" href="#L${line}" aria-label="${lineLabel}" data-line="${line}">${deletion}</a><span class="source-line-content">`;
+  };
   const closeTags = () => activeTags.toReversed().map(closeTag).join("");
   const reopenTags = () => activeTags.join("");
   const parts = highlighted.split(/(<[^>]+>)/);

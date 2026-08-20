@@ -7,6 +7,7 @@ import {
   renderSourceCodeBlock,
 } from "./render-code-markdown.ts";
 import { codeLanguageForPath } from "./code-language.ts";
+import { sourceAnnotations } from "./git/source.ts";
 import { downloadFile, rawFile } from "./responses.ts";
 import { metadataForFile } from "./file-metadata.ts";
 import type { ServerConfig } from "./types.ts";
@@ -37,7 +38,11 @@ export async function renderMarkdown(
   const url = new URL(request.url);
   const source = url.searchParams.has("source");
   const content = source
-    ? renderSourceCodeBlock(text, codeLanguageForPath(file, text))
+    ? renderSourceCodeBlock(
+      text,
+      codeLanguageForPath(file, text),
+      await sourceAnnotations(config, file, text),
+    )
     : renderCodeMarkdown(text, base.href);
   return htmlResponse(
     request,

@@ -1,8 +1,12 @@
 import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
-import { filePageActions } from "./page-action.ts";
+import { filePageActions, markdownViewPageAction } from "./page-action.ts";
 import type { PageAction } from "./page-action.ts";
-import { renderCodeMarkdown } from "./render-code-markdown.ts";
+import {
+  renderCodeMarkdown,
+  renderSourceCodeBlock,
+} from "./render-code-markdown.ts";
+import { codeLanguageForPath } from "./code-language.ts";
 import { downloadFile, rawFile } from "./responses.ts";
 import { metadataForFile } from "./file-metadata.ts";
 import type { ServerConfig } from "./types.ts";
@@ -29,7 +33,12 @@ export async function renderMarkdown(
   const base = new URL(request.url);
   base.pathname = pathname;
   base.search = "";
-  const content = renderCodeMarkdown(await Deno.readTextFile(file), base.href);
+  const text = await Deno.readTextFile(file);
+  const url = new URL(request.url);
+  const source = url.searchParams.has("source");
+  const content = source
+    ? renderSourceCodeBlock(text, codeLanguageForPath(file, text))
+    : renderCodeMarkdown(text, base.href);
   return htmlResponse(
     request,
     await page(config, {
@@ -37,9 +46,10 @@ export async function renderMarkdown(
       parts,
       directory: options.directory ?? false,
       content,
-      url: new URL(request.url),
+      url,
       actions: [
         ...filePageActions("text/plain; charset=UTF-8", metadata.mime),
+        markdownViewPageAction(url, source),
         ...(options.actions ?? []),
       ],
       metadata,

@@ -3,7 +3,7 @@ import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
 import { filePageActions } from "./page-action.ts";
 import { fileMime, metadataForFile, textFileMime } from "./file-metadata.ts";
-import { renderCodeBlock } from "./render-code-markdown.ts";
+import { renderSourceCodeBlock } from "./render-code-markdown.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function renderText(
@@ -18,7 +18,7 @@ export async function renderText(
   }
   const text = await Deno.readTextFile(file);
   const info = await Deno.stat(file);
-  const content = renderCodeBlock(text, codeLanguageForPath(file, text));
+  const content = renderSourceCodeBlock(text, codeLanguageForPath(file, text));
   return htmlResponse(
     request,
     await page(config, {

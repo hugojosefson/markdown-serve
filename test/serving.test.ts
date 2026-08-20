@@ -87,6 +87,41 @@ Deno.test("HEAD generated pages return headers without bodies", async () => {
   }
 });
 
+Deno.test("Markdown source view has gutters and preserves raw/download priority", async () => {
+  const f = await fixture({
+    "guide.md": "# Guide\n\n```ts\nconst x = 1;\n```\n",
+  });
+  try {
+    const h = await handler(f.root);
+    const rendered = await (await h(new Request("http://x/guide"))).text();
+    assertMatch(
+      rendered,
+      /<a class="page-action" href="\?source"[^>]*>Source<\/a>/,
+    );
+    assertEquals(rendered.includes('href="#L1"'), false);
+    const source = await (await h(
+      new Request("http://x/guide?source&theme=dark"),
+    )).text();
+    assertMatch(source, /id="L1"/);
+    assertMatch(
+      source,
+      /<a class="page-action" href="\?theme=dark" data-query-remove="source"[^>]*>Rendered<\/a>/,
+    );
+    assertMatch(
+      await (await h(new Request("http://x/guide?source&raw"))).text(),
+      /# Guide/,
+    );
+    assertMatch(
+      (await h(new Request("http://x/guide?source&download"))).headers.get(
+        "content-disposition",
+      )!,
+      /^attachment; filename="guide\.md"/,
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
 Deno.test("text files render only at their exact paths and binaries render pages", async () => {
   const f = await fixture({
     ".editorconfig": "root = true\n# café\n",

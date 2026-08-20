@@ -1,7 +1,10 @@
 import { assertEquals } from "@std/assert";
 import { canonicalQuery, queryHref, setQuery } from "../src/server/query.ts";
 import { navigationQueryClient } from "../src/server/client-query.ts";
-import { rawPageAction } from "../src/server/page-action.ts";
+import {
+  markdownViewPageAction,
+  rawPageAction,
+} from "../src/server/page-action.ts";
 import { canonicalQueryFixtures } from "./query-fixtures.ts";
 
 Deno.test("canonical queries sort decoded keys and values stably and preserve flags", () => {
@@ -30,5 +33,27 @@ Deno.test("raw links are always query-relative and clean", () => {
   assertEquals(
     rawPageAction("text/plain").href,
     "?raw",
+  );
+});
+
+Deno.test("Markdown view actions preserve unrelated query state", () => {
+  assertEquals(
+    markdownViewPageAction(new URL("http://x/guide?theme=dark"), false),
+    {
+      kind: "source",
+      href: "?source&theme=dark",
+      label: "Source",
+      title: "View Markdown source",
+    },
+  );
+  assertEquals(
+    markdownViewPageAction(new URL("http://x/guide?source&theme=dark"), true),
+    {
+      kind: "rendered",
+      href: "?theme=dark",
+      label: "Rendered",
+      queryRemove: ["source"],
+      title: "View rendered Markdown",
+    },
   );
 });

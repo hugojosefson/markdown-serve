@@ -109,7 +109,7 @@ function renderPageAction(action: PageAction): string {
     : action.kind === "download"
     ? "page-action download-link"
     : "page-action";
-  const queryRemove = action.kind === "index" ? action.queryRemove : undefined;
+  const queryRemove = "queryRemove" in action ? action.queryRemove : undefined;
   const title = action.title;
   return `<a class="${className}" href="${escapeHtml(action.href)}"${
     queryRemove?.length

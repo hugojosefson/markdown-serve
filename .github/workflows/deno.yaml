@@ -9,15 +9,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        deno-version: [v2.9.5, v2.x]
     steps:
       - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
+        with:
+          deno-version: ${{ matrix.deno-version }}
       - run: deno task test
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - run: deno fmt --check
       - run: deno lint
       - run: deno check

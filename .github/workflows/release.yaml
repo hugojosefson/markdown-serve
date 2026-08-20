@@ -11,12 +11,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.5
       - run: deno task test
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.5
       - run: deno fmt --check
       - run: deno lint
       - run: deno check
@@ -32,6 +36,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.5
 
       - name: Configure git
         run: |

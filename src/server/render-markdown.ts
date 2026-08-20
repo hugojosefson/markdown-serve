@@ -54,9 +54,9 @@ export async function renderMarkdown(
       url,
       actions: [
         ...filePageActions("text/plain; charset=UTF-8", metadata.mime),
-        markdownViewPageAction(url, source),
         ...(options.actions ?? []),
       ],
+      contentAction: markdownViewPageAction(url, source),
       metadata,
       directoryView: options.directoryView,
       sourceName: options.sourceName,

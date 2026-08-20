@@ -9,6 +9,7 @@ export type PageModel = {
   content: string;
   url: URL;
   actions?: PageAction[];
+  contentAction?: PageAction;
   directoryView?: boolean;
   sourceName?: string;
   metadata?: FileMetadata;

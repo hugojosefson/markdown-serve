@@ -40,6 +40,15 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
  .tree summary:hover .tree-files-link, .tree summary:focus-within .tree-files-link, .tree .tree-root-row:hover .tree-files-link, .tree .tree-root-row:focus-within .tree-files-link, .tree .tree-entry-row:hover .tree-files-link, .tree .tree-entry-row:focus-within .tree-files-link, .tree .tree-files-link:focus-visible { opacity: 1; pointer-events: auto; }
 .tree-root { font-weight: 600; }
 .content { min-width: 0; padding: 8px 16px 32px; }
+.page-content { position: relative; }
+.page-content > :nth-child(2) { margin-top: 0 !important; }
+.page-content-rendered > :nth-child(2) { min-height: 27px; padding-right: 6rem; }
+.page-content-source { padding-top: 29px; }
+.content-view-control { display: flex; justify-content: flex-end; position: absolute; right: 0; top: 0; z-index: 1; }
+.markdown-body .content-view-action { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 4px; color: var(--code-muted); font: 500 11px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 6px 8px; text-decoration: none; }
+.markdown-body .content-view-action:hover, .markdown-body .content-view-action:focus-visible { background: var(--code-hover); color: var(--focus-color); }
+.markdown-body .content-view-action:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 1px; }
+.page-content-source > .content-view-control + .code-block { margin-top: 8px !important; }
 .content-header { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .content-header nav { line-height: 22px; min-width: 0; overflow-wrap: anywhere; }
 .breadcrumb-separator { margin: 0 4px; }

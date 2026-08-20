@@ -76,7 +76,7 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
       const rows = body.match(/<tbody>([\s\S]*?)<\/tbody>/)?.[1] ?? "";
       return [
         ...rows.matchAll(
-          /<tr>[\s\S]*?<td class="directory-name"><a href="[^"]+">([^<]+)<\/a><\/td><\/tr>/g,
+          /<td class="directory-name"><a href="[^"]+">([^<]+)<\/a><\/td>/g,
         ),
       ]
         .map((match) => match[1]);
@@ -161,7 +161,7 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
       ]);
       assertMatch(
         body,
-        /<td class="directory-permissions">\?{10}<\/td><td class="directory-size">—<\/td><td class="directory-user">—<\/td><td class="directory-modified">—<\/td><td class="directory-name"><a href="y-broken">y-broken/,
+        /<td class="directory-name"><a href="y-broken">y-broken<\/a><\/td><td class="directory-permissions">\?{10}<\/td><td class="directory-size">—<\/td><td class="directory-user">—<\/td><td class="directory-modified">—<\/td>/,
       );
     }
   } finally {
@@ -218,7 +218,7 @@ Deno.test("directory metadata columns sort missing values first and render copya
   );
   assertMatch(
     html,
-    /<thead><tr><th class="directory-permissions"[^>]*>.*Permissions.*<th class="directory-size"[^>]*>.*Size.*<th class="directory-user"[^>]*>.*User.*<th class="directory-modified"[^>]*>.*Modified.*<th class="directory-name"[^>]*>.*Name/,
+    /<thead><tr><th class="directory-name"[^>]*>.*Name.*<th class="directory-permissions"[^>]*>.*Permissions.*<th class="directory-size"[^>]*>.*Size.*<th class="directory-user"[^>]*>.*User.*<th class="directory-modified"[^>]*>.*Modified/,
   );
   assertMatch(html, /href="\?order=user&amp;theme=dark">User/);
   assertMatch(html, /href="\?order=modified&amp;theme=dark">Modified/);
@@ -245,7 +245,11 @@ Deno.test("directory metadata columns sort missing values first and render copya
   );
   assertMatch(
     pageCss,
-    /\.directory-table \{[^}]*min-width: 100%;[^}]*width: max-content;/,
+    /\.directory-table \{[^}]*min-width: 100%; width: max-content;/,
+  );
+  assertMatch(
+    pageCss,
+    /\.directory-scroll \{ max-width: 100%; overflow-x: auto; width: 100%; \}/,
   );
   assertMatch(
     pageCss,
@@ -256,6 +260,33 @@ Deno.test("directory metadata columns sort missing values first and render copya
     /\.directory-table \.directory-permissions,[^}]*\.directory-modified \{ white-space: nowrap; width: 1%; \}/,
   );
   assert(!pageCss.includes(".directory-table th:last-child"));
+  assertMatch(pageCss, /@container \(max-width: 54rem\)/);
+  assertMatch(
+    pageCss,
+    /\.directory-table \.directory-user \{ display: none; \}/,
+  );
+  assertMatch(pageCss, /@container \(max-width: 46rem\)/);
+  assertMatch(
+    pageCss,
+    /\.directory-table \.directory-permissions \{ display: none; \}/,
+  );
+  assertMatch(pageCss, /@container \(max-width: 34rem\)/);
+  assertMatch(
+    pageCss,
+    /\.directory-table \.directory-modified \{ display: none; \}/,
+  );
+  assertMatch(
+    pageCss,
+    /\.markdown-body \.directory-table, \.directory-table thead, \.directory-table tbody, \.directory-table tr \{ display: block; min-width: 0; width: 100%; \}/,
+  );
+  assertMatch(
+    pageCss,
+    /\.directory-table tr \{ display: grid; grid-template-columns: minmax\(0, 1fr\) 5rem; \}/,
+  );
+  assertMatch(
+    pageCss,
+    /\.directory-table \.directory-name \{ grid-column: 1; grid-row: 1; min-width: 0; width: auto; \}/,
+  );
 });
 
 Deno.test("README selection has case-insensitive deterministic fallback", async () => {

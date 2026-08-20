@@ -25,12 +25,10 @@ export function directoryIndex(
   ).join("");
   return `<div class="directory-scroll"><table class="directory-table"><caption class="sr-only">Files at ${
     escapeHtml(path)
-  }</caption><thead><tr>${header(url, "Permissions", "permissions", order)}${
-    header(url, "Size", "size", order)
-  }${header(url, "User", "user", order)}${
+  }</caption><thead><tr>${header(url, "Name", "name", order)}${
+    header(url, "Permissions", "permissions", order)
+  }${header(url, "Size", "size", order)}${header(url, "User", "user", order)}${
     header(url, "Modified", "modified", order)
-  }${
-    header(url, "Name", "name", order)
   }</tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
@@ -77,7 +75,11 @@ function row(entry: DirectoryEntry, url: URL): string {
     : encodeURIComponent(entry.name) + suffix + (entry.directory ? "?dir" : "");
   const bytes = size(entry);
   const modified = modifiedTime(entry.info);
-  return `<tr><td class="directory-permissions">${
+  return `<tr><td class="directory-name"><a href="${escapeHtml(href)}"${
+    index ? ' data-query-remove="dir"' : ""
+  }>${
+    escapeHtml(entry.name + suffix)
+  }</a></td><td class="directory-permissions">${
     permissions(entry.info) ?? "??????????"
   }</td><td class="directory-size"${
     bytes === undefined ? "" : ` title="${bytes} byte${bytes === 1 ? "" : "s"}"`
@@ -87,9 +89,7 @@ function row(entry: DirectoryEntry, url: URL): string {
     user(entry.info) ?? "—"
   }</td><td class="directory-modified">${
     modified === undefined ? "—" : isoTime(modified)
-  }</td><td class="directory-name"><a href="${escapeHtml(href)}"${
-    index ? ' data-query-remove="dir"' : ""
-  }>${escapeHtml(entry.name + suffix)}</a></td></tr>`;
+  }</td></tr>`;
 }
 
 function permissions(info: Deno.FileInfo | undefined): string | undefined {

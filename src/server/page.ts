@@ -42,7 +42,7 @@ export async function page(
     options.directoryView ? "true" : "false"
   }"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${
     escapeHtml(title)
-  }</title><script>${displayInitialClient}</script><style>${pageCss}</style></head><body><a class="browse" href="#browse">Browse</a><div class="layout"><aside id="browse" class="tree">${await navigationTree(
+  }</title><script>${displayInitialClient}</script><style>${pageCss}</style></head><body><div class="layout"><aside class="tree">${await navigationTree(
     config,
     parts,
     options.directoryView ?? false,

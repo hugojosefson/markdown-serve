@@ -12,8 +12,3 @@ export type Command = { kind: "help" | "version" } | {
   kind: "serve";
   options: CliOptions;
 };
-
-export type CommandRunner = (
-  command: string,
-  args: string[],
-) => Promise<{ success: boolean }>;

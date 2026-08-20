@@ -1,5 +1,10 @@
-import { assertEquals, assertMatch, assertThrows } from "@std/assert";
-import { openBrowser, openerCommand, usableUrl } from "../src/cli/browser.ts";
+import { assert, assertEquals, assertMatch, assertThrows } from "@std/assert";
+import {
+  browserCommandOptions,
+  openBrowser,
+  openerCommand,
+  usableUrl,
+} from "../src/cli/browser.ts";
 import { parseArgs } from "../src/cli/parse-args.ts";
 import { parseCommand } from "../src/cli/parse-command.ts";
 import { usage } from "../src/cli/usage.ts";
@@ -86,12 +91,34 @@ Deno.test("browser opener command and usable URL are platform-safe", () => {
   );
 });
 
+Deno.test("browser opener is detached from the server process", () => {
+  let observedOptions: Deno.CommandOptions | undefined;
+  let unreferenced = false;
+  openBrowser("http://x/", (_command, _args, options) => {
+    observedOptions = options;
+    return {
+      status: Promise.resolve({ success: true }),
+      unref: () => unreferenced = true,
+    };
+  });
+  assertEquals(observedOptions, browserCommandOptions);
+  assert(unreferenced);
+});
+
 Deno.test("browser opener failure is nonfatal", async () => {
   const warnings: string[] = [];
-  await openBrowser(
+  const warned = Promise.withResolvers<void>();
+  openBrowser(
     "http://x/",
-    () => Promise.resolve({ success: false }),
-    (message) => warnings.push(message),
+    () => ({
+      status: Promise.resolve({ success: false }),
+      unref: () => {},
+    }),
+    (message) => {
+      warnings.push(message);
+      warned.resolve();
+    },
   );
+  await warned.promise;
   assertEquals(warnings, ["Could not open browser: xdg-open failed"]);
 });

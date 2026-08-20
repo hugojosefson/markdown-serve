@@ -8,6 +8,15 @@ export const codeToolbarCss = `
 .code-copy-status { height: 1px; margin: -1px; overflow: hidden; position: absolute; width: 1px; clip: rect(0 0 0 0); white-space: nowrap; }
 .code-block > .highlight, .code-block > pre { border: 0; border-radius: 0; margin: 0; }
 .code-block > .highlight pre, .code-block > pre { background: var(--code-bg); color: var(--code-text); }
+.code-block > .highlight pre:has(.source-line), .code-block > pre:has(.source-line) { overflow-x: auto; padding: 0; }
+.source-line { display: grid; grid-template-columns: max-content minmax(max-content, 1fr); min-width: max-content; }
+.source-line:target { background: var(--code-hover); }
+.source-line-number { color: var(--code-muted); padding: 0 12px 0 10px; text-align: right; text-decoration: none; user-select: none; }
+.source-line-number::before { content: attr(data-line); }
+.source-line-number:hover, .source-line-number:focus-visible { background: var(--code-hover); color: var(--focus-color); }
+.source-line-number:focus-visible { outline: 2px solid var(--focus-color); outline-offset: -2px; }
+.source-line-content { min-width: 0; white-space: pre; }
+@media (max-width: 560px) { .source-line-number { padding-left: 7px; padding-right: 8px; } }
 .code-block .token.comment, .code-block .token.prolog, .code-block .token.doctype, .code-block .token.cdata { color: #57606a; }
 .code-block .token.keyword, .code-block .token.atrule { color: #cf222e; }
 .code-block .token.string, .code-block .token.attr-value, .code-block .token.regex { color: #0a3069; }

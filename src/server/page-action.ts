@@ -4,6 +4,14 @@ export type PageAction =
   | { kind: "raw"; href: string; label: "Raw"; title: string }
   | { kind: "download"; href: string; label: "Download"; title: string }
   | { kind: "files"; href: string; label: "Files"; title: string }
+  | { kind: "source"; href: string; label: "Source"; title: string }
+  | {
+    kind: "rendered";
+    href: string;
+    label: "Rendered";
+    title: string;
+    queryRemove: ["source"];
+  }
   | {
     kind: "index";
     href: string;
@@ -18,6 +26,24 @@ export function rawPageAction(contentType: string): PageAction {
     href: "?raw",
     label: "Raw",
     title: `View raw content (${contentType})`,
+  };
+}
+
+export function markdownViewPageAction(url: URL, source: boolean): PageAction {
+  if (source) {
+    return {
+      kind: "rendered",
+      href: queryHref(url.pathname, setQuery(url.search, "source", undefined)),
+      label: "Rendered",
+      queryRemove: ["source"],
+      title: "View rendered Markdown",
+    };
+  }
+  return {
+    kind: "source",
+    href: queryHref(url.pathname, setQuery(url.search, "source", null)),
+    label: "Source",
+    title: "View Markdown source",
   };
 }
 

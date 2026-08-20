@@ -4,10 +4,11 @@ import { directoryTableClient } from "../src/server/directory-table-client.ts";
 Deno.test("directory columns hide until filenames fit without wrapping", () => {
   const widths: Record<string, number> = {
     "": 700,
-    "user": 560,
-    "user permissions": 430,
-    "user permissions modified": 240,
-    "user permissions modified size": 180,
+    "git": 650,
+    "git user": 560,
+    "git user permissions": 430,
+    "git user permissions modified": 240,
+    "git user permissions modified size": 180,
   };
   const table = {
     dataset: { hiddenColumns: "" },
@@ -46,11 +47,11 @@ Deno.test("directory columns hide until filenames fit without wrapping", () => {
     () => ({ display: navigationDisplay }),
     () => {},
   );
-  assertEquals(table.dataset.hiddenColumns, "user permissions modified");
+  assertEquals(table.dataset.hiddenColumns, "git user permissions modified");
 
   container.clientWidth = 500;
   resized();
-  assertEquals(table.dataset.hiddenColumns, "user permissions");
+  assertEquals(table.dataset.hiddenColumns, "git user permissions");
 
   container.clientWidth = 800;
   resized();
@@ -58,12 +59,12 @@ Deno.test("directory columns hide until filenames fit without wrapping", () => {
 
   navigationDisplay = "none";
   resized();
-  assertEquals(table.dataset.hiddenColumns, "user permissions modified");
+  assertEquals(table.dataset.hiddenColumns, "git user permissions modified");
 
   container.clientWidth = 170;
   resized();
   assertEquals(
     table.dataset.hiddenColumns,
-    "user permissions modified size",
+    "git user permissions modified size",
   );
 });

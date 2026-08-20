@@ -4,6 +4,8 @@ import type { IndexState } from "./file-catalog.ts";
 import { canonicalPath, lexical, splitPath } from "./paths.ts";
 import { plain } from "./responses.ts";
 import type { ServerConfig } from "./types.ts";
+import { entryKind } from "./entry-kind.ts";
+import { gitDisplay, gitStatusAt } from "./git/status.ts";
 
 export async function treeResponse(
   config: ServerConfig,
@@ -22,10 +24,12 @@ export async function treeResponse(
     return jsonResponse(null);
   }
   const entries = await config.catalog.entries(path);
-  const json = entries.map((entry) => treeEntry(config, parts, entry)).sort((
-    left,
-    right,
-  ) => lexical(left.name, right.name));
+  const status = await config.git?.status();
+  const json = entries.map((entry) => treeEntry(config, parts, entry, status))
+    .sort((
+      left,
+      right,
+    ) => lexical(left.name, right.name));
   return jsonResponse(JSON.stringify(json));
 }
 
@@ -41,7 +45,8 @@ function jsonResponse(body: string | null): Response {
 function treeEntry(
   config: ServerConfig,
   parts: string[],
-  entry: { name: string; directory: boolean },
+  entry: import("./fs.ts").DirectoryEntry,
+  status: import("./git/status.ts").GitStatus | undefined,
 ): {
   name: string;
   path: string;
@@ -50,9 +55,17 @@ function treeEntry(
   filesHref?: string;
   filesLabel?: string;
   queryRemove?: string[];
+  kind: string;
+  git?: { display: string; kind: string; tooltip: string };
 } {
   const child = [...parts, entry.name];
   const resolved = entryRoute(parts, entry);
+  const git = gitStatusAt(status, child.join("/"), entry.directory);
+  const metadata = git
+    ? {
+      git: { display: gitDisplay(git), kind: git.kind, tooltip: git.tooltip },
+    }
+    : {};
   if (entry.directory) {
     return {
       name: entry.name,
@@ -64,6 +77,8 @@ function treeEntry(
         config.catalog.indexState(join(config.rootPath, ...child)),
       ),
       queryRemove: ["dir"],
+      kind: entryKind(entry),
+      ...metadata,
     };
   }
   const href = canonicalPath(resolved.parts, resolved.trailing);
@@ -77,6 +92,8 @@ function treeEntry(
       ? (parts.at(-1) ?? config.rootLabel)
       : undefined,
     queryRemove: resolved.trailing ? ["dir"] : undefined,
+    kind: entryKind(entry),
+    ...metadata,
   };
 }
 

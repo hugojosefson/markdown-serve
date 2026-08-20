@@ -12,20 +12,25 @@ import { pageScript, pageStylesheet } from "./page-assets.ts";
 import type { PageModel } from "./page-model.ts";
 import { reloadClientScript } from "./reload-client.ts";
 import type { ServerConfig } from "./types.ts";
+import { gitDirtyCount, type GitStatus } from "./git/status.ts";
 
 export async function page(
   config: ServerConfig,
   model: PageModel,
 ): Promise<string> {
+  const status = model.gitStatus ?? await config.git?.status();
   const navigation = await navigationTree(
     config,
     model.parts,
     model.directoryView ?? false,
     model.sourceName,
+    status,
   );
   return `<!doctype html><html lang="en" data-color-mode="auto" data-light-theme="light" data-dark-theme="dark" data-width="narrow" data-directory-view="${
     model.directoryView ? "true" : "false"
-  }">${renderHead(model)}${renderBody(config, model, navigation)}</html>`;
+  }">${renderHead(model)}${
+    renderBody(config, model, navigation, status)
+  }</html>`;
 }
 
 function renderHead(model: PageModel): string {
@@ -38,19 +43,39 @@ function renderBody(
   config: ServerConfig,
   model: PageModel,
   navigation: string,
+  status?: GitStatus,
 ): string {
   const metadataExpanded = model.url.searchParams.getAll("metadata").includes(
     "expand",
   );
   return `<body><div class="layout"><aside class="tree">${navigation}</aside><main class="content markdown-body">${
-    renderContentHeader(config, model, metadataExpanded)
-  }${
+    repoContext(status)
+  }${renderContentHeader(config, model, metadataExpanded)}${
     model.metadata && metadataExpanded
       ? renderFileMetadataDetails(model.metadata, model.url)
       : ""
   }${model.content}</main></div><script src="${pageScript.url}"></script>${
     reloadClient(config)
   }</body>`;
+}
+
+function repoContext(status?: GitStatus): string {
+  if (!status) return "";
+  const details = [
+    status.detached ? "detached HEAD" : status.branch ?? "unknown branch",
+    status.ahead ? `${status.ahead} ahead` : "",
+    status.behind ? `${status.behind} behind` : "",
+    gitDirtyCount(status) ? `${gitDirtyCount(status)} changed` : "clean",
+  ].filter(Boolean).join(", ");
+  return `<div class="repo-context" title="${
+    escapeHtml(details)
+  }" aria-label="Git: ${escapeHtml(details)}">${
+    escapeHtml(status.detached ? "detached" : status.branch ?? "Git")
+  }<span aria-hidden="true"> · </span>${
+    escapeHtml(
+      gitDirtyCount(status) ? `${gitDirtyCount(status)} dirty` : "clean",
+    )
+  }</div>`;
 }
 
 function renderContentHeader(

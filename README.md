@@ -96,3 +96,26 @@ Broader read grants can expose more files.
 | Browser opening  | Enabled by default. Failure produces a warning without stopping the server. |
 | `--redirect=302` | Temporary canonical redirects; useful while testing.                        |
 | `--redirect=301` | Permanent canonical redirects.                                              |
+
+## Future features
+
+- Add repository search opened with `/`, scoped to the viewed directory or the
+  viewed file's directory. Use `rg` with a `search` query parameter, bounded and
+  cancellable subprocesses, and UI controls or syntax for useful options such as
+  fixed strings, smart case, globs, file types, hidden files, ignored files, and
+  context lines.
+- Add go-to-file navigation opened with `g`, scoped below the current directory.
+  Prefer `fd` or `fdfind` when available, with catalog traversal as a portable
+  fallback.
+- Add editing only behind an explicit CLI option and exact write permission.
+  Writes should be atomic. Explore cursor-preserving external updates,
+  pause/focus-based autosave, and explicit conflict handling before attempting
+  collaborative-style live updates.
+- Use tree-sitter to offer predictable symbol anchors as an alternative to line
+  anchors. Generate a symbol anchor only when its function, type, or other
+  identifier is unique on the page.
+- Use tree-sitter to link identifiers to definitions and references within the
+  same file and across indexed files.
+
+Revisit this list after the currently planned work and ask which idea, if any,
+should be pursued next.

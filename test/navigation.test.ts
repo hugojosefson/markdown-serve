@@ -325,13 +325,13 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
         child.href
       ),
       [
-        "/docs/",
-        "/docs/file.txt",
         "/docs/indexed/",
-        "/docs/ordinary",
         "/docs/percent%25zz/",
         "/docs/sub/",
         "/docs/unindexed/",
+        "/docs/",
+        "/docs/file.txt",
+        "/docs/ordinary",
       ],
     );
     assertEquals(

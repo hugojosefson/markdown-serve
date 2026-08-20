@@ -109,12 +109,12 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
     };
     const missing = Deno.build.os === "windows" ? [] : ["y-broken"];
     assertEquals(await names(), [
+      "z-dir/",
       "a-small",
       "b-large",
       "c-medium",
       "d-tie",
       ...missing,
-      "z-dir/",
     ]);
     assertEquals(await names("?order=name-desc"), [
       "z-dir/",
@@ -125,16 +125,16 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
       "a-small",
     ]);
     assertEquals(await names("?order=size"), [
-      ...missing,
       "z-dir/",
+      ...missing,
       "a-small",
       "c-medium",
       "d-tie",
       "b-large",
     ]);
     assertEquals(await names("?order=size-desc"), [
-      ...missing,
       "z-dir/",
+      ...missing,
       "b-large",
       "c-medium",
       "d-tie",
@@ -170,16 +170,16 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
 
     if (Deno.build.os !== "windows") {
       assertEquals(await names("?order=permissions"), [
+        "z-dir/",
         "y-broken",
         "a-small",
         "c-medium",
         "d-tie",
         "b-large",
-        "z-dir/",
       ]);
       assertEquals(await names("?order=permissions-desc"), [
-        "y-broken",
         "z-dir/",
+        "y-broken",
         "b-large",
         "c-medium",
         "d-tie",
@@ -240,8 +240,8 @@ Deno.test("directory metadata columns sort missing values first and render copya
     ]
       .map((match) => match[1]);
   };
-  const ascending = ["a-missing", "b-directory/", "c-low", "d-high", "e-tie"];
-  const descending = ["a-missing", "b-directory/", "d-high", "e-tie", "c-low"];
+  const ascending = ["b-directory/", "a-missing", "c-low", "d-high", "e-tie"];
+  const descending = ["b-directory/", "a-missing", "d-high", "e-tie", "c-low"];
   for (const field of ["permissions", "size", "user", "modified"]) {
     assertEquals(names(field), ascending, `${field} ascending`);
     assertEquals(names(`${field}-desc`), descending, `${field} descending`);

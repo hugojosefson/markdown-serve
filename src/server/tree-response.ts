@@ -1,7 +1,8 @@
 import { join } from "@std/path";
 import { entryRoute } from "./entry-route.ts";
+import { compareDirectoriesFirst } from "./directory-order.ts";
 import type { IndexState } from "./file-catalog.ts";
-import { canonicalPath, lexical, splitPath } from "./paths.ts";
+import { canonicalPath, splitPath } from "./paths.ts";
 import { plain } from "./responses.ts";
 import type { ServerConfig } from "./types.ts";
 import { entryKind } from "./entry-kind.ts";
@@ -26,10 +27,7 @@ export async function treeResponse(
   const entries = await config.catalog.entries(path);
   const status = await config.git?.status();
   const json = entries.map((entry) => treeEntry(config, parts, entry, status))
-    .sort((
-      left,
-      right,
-    ) => lexical(left.name, right.name));
+    .sort(compareDirectoriesFirst);
   return jsonResponse(JSON.stringify(json));
 }
 

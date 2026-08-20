@@ -2,6 +2,7 @@ import { join } from "@std/path";
 import { escapeHtml } from "./html.ts";
 import { classifyEntry, entryRoute } from "./entry-route.ts";
 import { entryKind } from "./entry-kind.ts";
+import { compareDirectoriesFirst } from "./directory-order.ts";
 import type { IndexState } from "./file-catalog.ts";
 import type { DirectoryEntry } from "./fs.ts";
 import { canonicalPath } from "./paths.ts";
@@ -58,19 +59,21 @@ async function treeList(
   const entries = await config.catalog.entries(
     join(config.rootPath, ...parent),
   );
-  const children = await Promise.all(entries.map(async (entry) => {
-    const path = [...parent, entry.name];
-    return await treeItem(
-      config,
-      entry,
-      path,
-      active,
-      directoryView,
-      sourceName,
-      entry.directory && active[parent.length] === entry.name,
-      status,
-    );
-  }));
+  const children = await Promise.all(
+    entries.toSorted(compareDirectoriesFirst).map(async (entry) => {
+      const path = [...parent, entry.name];
+      return await treeItem(
+        config,
+        entry,
+        path,
+        active,
+        directoryView,
+        sourceName,
+        entry.directory && active[parent.length] === entry.name,
+        status,
+      );
+    }),
+  );
   return `<ul>${children.join("")}</ul>`;
 }
 

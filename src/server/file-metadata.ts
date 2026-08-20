@@ -91,9 +91,12 @@ export function renderFileMetadataSummary(
     setQuery(url.search, "metadata", expanded ? undefined : "expand"),
   );
   const action = expanded ? "Collapse metadata" : "Expand metadata";
+  const collapseLabel = expanded
+    ? '<span class="file-metadata-collapse" aria-hidden="true">Collapse ↑</span>'
+    : "";
   return `<a class="file-metadata" href="${
     escapeHtml(href)
-  }" title="${action}" aria-label="${action}" aria-controls="file-metadata-details" aria-expanded="${expanded}">${
+  }" title="${action}" aria-label="${action}" aria-controls="file-metadata-details" aria-expanded="${expanded}">${collapseLabel}${
     [formatSize(metadata.size), relative].map(escapeHtml).join(
       ' <span aria-hidden="true">·</span> ',
     )

@@ -109,6 +109,38 @@ Deno.test("symbol anchors are unique, Unicode-safe, and fragment-correct", async
   );
 });
 
+Deno.test("symbols retain declaration targets and expose attached comment offsets", async () => {
+  const fixtures = [
+    ["typescript", "/** docs */\nfunction documented() {}", 1],
+    [
+      "typescript",
+      "/** docs */\n@sealed\nexport class Documented {}",
+      2,
+    ],
+    [
+      "csharp",
+      "/// <summary>Docs</summary>\n[Obsolete]\nclass Documented {}",
+      2,
+    ],
+    ["rust", "/// Docs\n#[inline]\nfn documented() {}", 2],
+    ["python", "# Docs\n@decorator\ndef documented(): pass", 2],
+    ["go", "/* Docs */\nfunc Documented() {}", 1],
+    ["bash", "# Docs\ndocumented() { :; }", 1],
+    ["java", "/* ordinary */\n@Deprecated\nclass Documented {}", 2],
+    ["c", "/* ordinary */\nint\ndocumented(void) {}", 2],
+    ["javascript", "// first\n// second\nfunction documented() {}", 2],
+  ] as const;
+  for (const [language, source, commentLines] of fixtures) {
+    const analysis = await analyzeSymbols(source, language);
+    assertEquals(analysis?.occurrences[0].commentLines, commentLines, language);
+  }
+  const detached = await analyzeSymbols(
+    "/** not attached */\n\nfunction documented() {}",
+    "javascript",
+  );
+  assertEquals(detached?.occurrences[0].commentLines, undefined);
+});
+
 Deno.test("symbol analysis skips unsupported and files above one MiB", async () => {
   assertEquals(await analyzeSymbols("a {}", "css"), undefined);
   assertEquals(

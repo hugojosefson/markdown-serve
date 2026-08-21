@@ -8,6 +8,7 @@ export function renderSourceLines(
   annotations: ReadonlyMap<number, SourceLineAnnotation> = new Map(),
   declarations: ReadonlySet<number> = new Set(),
   declarationLinks: ReadonlyMap<number, SymbolDeclarationLink> = new Map(),
+  declarationCommentLines: ReadonlyMap<number, number> = new Map(),
 ): string {
   let line = 1;
   const symbolGutter = declarations.size > 0;
@@ -40,6 +41,7 @@ export function renderSourceLines(
       ? `<span class="source-line-deletions" data-deletions="${annotation?.deletions}" aria-hidden="true"></span>`
       : "";
     const declaration = declarationLinks.get(line);
+    const commentLines = declarationCommentLines.get(line);
     const symbol = declaration
       ? `<a class="source-symbol-marker" href="${
         escapeHtml(declaration.href)
@@ -53,8 +55,8 @@ export function renderSourceLines(
       symbolGutter ? " source-symbol-gutter" : ""
     }${declarations.has(line) ? " source-line-symbol" : ""}${
       change ? ` source-line-${change}` : ""
-    }" id="L${line}"${
-      change ? ` data-git-change="${change}"` : ""
+    }" id="L${line}"${change ? ` data-git-change="${change}"` : ""}${
+      commentLines ? ` style="--attached-comment-lines:${commentLines}"` : ""
     }><a class="source-line-number" href="#L${line}" aria-label="${lineLabel}" data-line="${line}">${deletion}</a>${symbol}<span class="source-line-content">`;
   };
   const closeTags = () => activeTags.toReversed().map(closeTag).join("");

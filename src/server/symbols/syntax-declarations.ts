@@ -3,14 +3,13 @@ export type FoundDeclaration = {
   start: number;
   end: number;
   line: number;
+  declarationLine: number;
 };
 
 export function syntaxDeclarations(
   root: SyntaxNode,
-  text: string,
   declarationTypes: readonly string[],
 ): FoundDeclaration[] {
-  const offsets = byteOffsets(text);
   const found: FoundDeclaration[] = [];
   const foundOffsets = new Set<number>();
   visit(root, (node) => {
@@ -22,11 +21,14 @@ export function syntaxDeclarations(
       return;
     }
     foundOffsets.add(name.startIndex);
+    const start = declarationStart(node);
     found.push({
       name: name.text,
-      start: offsets.get(name.startIndex)!,
-      end: offsets.get(name.endIndex)!,
+      // web-tree-sitter exposes JavaScript string offsets, not UTF-8 bytes.
+      start: name.startIndex,
+      end: name.endIndex,
       line: name.startPosition.row + 1,
+      declarationLine: start.startPosition.row + 1,
     });
   });
   return found;
@@ -38,9 +40,29 @@ type SyntaxNode = {
   startIndex: number;
   endIndex: number;
   startPosition: { row: number };
+  endPosition: { row: number };
+  parent: SyntaxNode | null;
+  previousNamedSibling: SyntaxNode | null;
   childForFieldName(name: string): SyntaxNode | null;
   namedChildren: readonly (SyntaxNode | null)[];
 };
+
+function declarationStart(node: SyntaxNode): SyntaxNode {
+  let start = node;
+  while (
+    start.parent &&
+    ["decorated_definition", "export_statement"].includes(start.parent.type)
+  ) {
+    start = start.parent;
+  }
+  while (
+    start.previousNamedSibling?.type === "attribute_item" &&
+    start.previousNamedSibling.endPosition.row + 1 === start.startPosition.row
+  ) {
+    start = start.previousNamedSibling;
+  }
+  return start;
+}
 
 function declarationName(node: SyntaxNode): SyntaxNode | null {
   const direct = node.childForFieldName("name");
@@ -79,17 +101,4 @@ function isIdentifier(value: string): boolean {
 function visit(node: SyntaxNode, action: (node: SyntaxNode) => void): void {
   action(node);
   for (const child of node.namedChildren) if (child) visit(child, action);
-}
-
-function byteOffsets(text: string): Map<number, number> {
-  const offsets = new Map<number, number>([[0, 0]]);
-  let bytes = 0;
-  for (let index = 0; index < text.length;) {
-    const size = text.codePointAt(index)! > 0xffff ? 2 : 1;
-    bytes +=
-      new TextEncoder().encode(text.slice(index, index + size)).byteLength;
-    index += size;
-    offsets.set(bytes, index);
-  }
-  return offsets;
 }

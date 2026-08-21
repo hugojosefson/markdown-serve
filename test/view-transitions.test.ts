@@ -1,5 +1,7 @@
-import { assertMatch } from "@std/assert";
+import { assert, assertEquals, assertMatch } from "@std/assert";
 import { pageStylesheet } from "../src/server/page-assets.ts";
+import { navigationSpeculation } from "../src/server/navigation-speculation.ts";
+import { viewTransitionClient } from "../src/server/view-transition-client.ts";
 
 Deno.test("page CSS opts into cross-document transitions only when motion is allowed", () => {
   assertMatch(
@@ -29,4 +31,45 @@ Deno.test("metadata expansion separates moving content and details", () => {
     pageStylesheet.body,
     /::view-transition-new\(file-metadata-details\):only-child \{ animation: 140ms ease-out both metadata-details-in; transform-origin: top; \}/,
   );
+});
+
+Deno.test("query navigation skips transitions except metadata-only changes", () => {
+  let pageswap: (event: {
+    activation?: { from?: { url: string }; entry?: { url: string } };
+    viewTransition?: { skipTransition: () => void };
+  }) => void = () => {};
+  new Function("addEventListener", viewTransitionClient)(
+    (name: string, listener: typeof pageswap) => {
+      if (name === "pageswap") {
+        pageswap = listener;
+      }
+    },
+  );
+  const skips = (from: string, to: string) => {
+    let count = 0;
+    pageswap({
+      activation: { from: { url: from }, entry: { url: to } },
+      viewTransition: { skipTransition: () => count++ },
+    });
+    return count;
+  };
+  assertEquals(skips("http://x/readme/", "http://x/readme/?source"), 1);
+  assertEquals(skips("http://x/readme/?theme=dark", "http://x/readme/"), 1);
+  assertEquals(
+    skips("http://x/readme/", "http://x/readme/?metadata=expand"),
+    0,
+  );
+  assertEquals(
+    skips(
+      "http://x/readme/?metadata=expand&source",
+      "http://x/readme/",
+    ),
+    1,
+  );
+  assertEquals(skips("http://x/readme/", "http://x/guide/"), 0);
+});
+
+Deno.test("speculative prefetch excludes file view actions", () => {
+  assert(!navigationSpeculation.includes(".file-action"));
+  assert(navigationSpeculation.includes(".file-metadata"));
 });

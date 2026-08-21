@@ -5,6 +5,18 @@ import { displayControlsCss } from "./display-controls-css.ts";
 export const pageCss = `${CSS}
 :root { color-scheme: light dark; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; --kind-directory: #8250df; --kind-symlink: #0969da; --kind-executable: #1a7f37; --kind-archive: #bf8700; --kind-image: #cf222e; --kind-media: #0550ae; --kind-file: var(--code-text); --git-conflict: #cf222e; --git-renamed: #8250df; --git-deleted: #cf222e; --git-modified: #bf8700; --git-added: #1a7f37; --git-untracked: #0969da; --git-ignored: var(--code-muted); }
 html { scrollbar-gutter: stable; }
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  .content-header .file-metadata { view-transition-name: file-metadata; }
+  .content:has(.file-metadata) .page-content { view-transition-name: file-content; }
+  .file-metadata-details { view-transition-name: file-metadata-details; }
+  ::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 120ms; animation-timing-function: ease-out; }
+  ::view-transition-group(file-metadata), ::view-transition-old(file-metadata), ::view-transition-new(file-metadata), ::view-transition-group(file-content), ::view-transition-old(file-content), ::view-transition-new(file-content) { animation-duration: 140ms; animation-timing-function: ease-out; }
+  ::view-transition-new(file-metadata-details):only-child { animation: 140ms ease-out both metadata-details-in; transform-origin: top; }
+  ::view-transition-old(file-metadata-details):only-child { animation: 100ms ease-in both metadata-details-out; transform-origin: top; }
+}
+@keyframes metadata-details-in { from { opacity: 0; transform: scaleY(.96); } }
+@keyframes metadata-details-out { to { opacity: 0; transform: scaleY(.96); } }
 @media (prefers-color-scheme: dark) { :root { --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; --kind-directory: #d2a8ff; --kind-symlink: #58a6ff; --kind-executable: #7ee787; --kind-archive: #e3b341; --kind-image: #ff7b72; --kind-media: #79c0ff; --kind-file: var(--code-text); --git-conflict: #ff7b72; --git-renamed: #d2a8ff; --git-deleted: #ff7b72; --git-modified: #e3b341; --git-added: #7ee787; --git-untracked: #58a6ff; --git-ignored: var(--code-muted); } }
 html[data-color-mode="light"] { color-scheme: light; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; }
 html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; --kind-directory: #d2a8ff; --kind-symlink: #58a6ff; --kind-executable: #7ee787; --kind-archive: #e3b341; --kind-image: #ff7b72; --kind-media: #79c0ff; --kind-file: var(--code-text); --git-conflict: #ff7b72; --git-renamed: #d2a8ff; --git-deleted: #ff7b72; --git-modified: #e3b341; --git-added: #7ee787; --git-untracked: #58a6ff; --git-ignored: var(--code-muted); }

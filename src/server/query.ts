@@ -27,6 +27,15 @@ export function queryHref(pathname: string, search: string): string {
   return query ? `?${query}` : pathname;
 }
 
+export function retainQuery(search: string, keys: readonly string[]): string {
+  const retained = new Set(keys);
+  return canonicalQuery(
+    search.replace(/^\?/, "").split("&").filter(Boolean).filter((item) =>
+      retained.has(decode(item.split("=", 1)[0]))
+    ).join("&"),
+  );
+}
+
 export function setQuery(
   search: string,
   key: string,

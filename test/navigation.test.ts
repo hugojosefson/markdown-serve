@@ -44,16 +44,16 @@ Deno.test("generated pages include responsive navigation and active branches", a
     );
     assertMatch(
       guideBody,
-      /<div class="tree-root-row"><a class="tree-root" href="\/" data-query-remove="dir">.+<\/a><a class="tree-files-link" href="\/\?dir" title="Show files in .+" aria-label="Show files in .+">Files<\/a><\/div>/,
+      /<div class="tree-root-row"><a class="tree-root" href="\/" data-query-remove="dir">.+<\/a><a class="tree-files-link" href="\/\?dir" data-query-scope="directory" title="Show files in .+" aria-label="Show files in .+">Files<\/a><\/div>/,
     );
     assertMatch(
       guideBody,
-      /aria-label="Breadcrumb"><a href="\/\?dir">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">guide\.md<\/span>/,
+      /aria-label="Breadcrumb"><a href="\/\?dir" data-query-scope="directory">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">guide\.md<\/span>/,
     );
     assertMatch(guideBody, /data-path="docs"/);
     assertMatch(
       guideBody,
-      /data-path="docs"><summary><a class="tree-folder-link" data-kind="directory" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"/,
+      /data-path="docs"><summary><a class="tree-folder-link" data-kind="directory" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir" data-query-scope="directory"/,
     );
     assertMatch(
       pageCss,
@@ -72,12 +72,12 @@ Deno.test("generated pages include responsive navigation and active branches", a
     const agentsBody = await (await h(new Request("http://x/AGENTS"))).text();
     assertMatch(
       agentsBody,
-      /aria-label="Breadcrumb"><a href="\/\?dir">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">AGENTS\.md<\/span>/,
+      /aria-label="Breadcrumb"><a href="\/\?dir" data-query-scope="directory">.+<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">AGENTS\.md<\/span>/,
     );
 
     const plainBody = await (await h(new Request("http://x/plain.txt"))).text();
     assert(plainBody.includes(
-      `<header class="content-header"><nav aria-label="Breadcrumb"><a href="/?dir">${
+      `<header class="content-header"><nav aria-label="Breadcrumb"><a href="/?dir" data-query-scope="directory">${
         rootLabel.slice(0, -1)
       }</a><span class="breadcrumb-separator" aria-hidden="true">/</span><span aria-current="page">plain.txt</span></nav>`,
     ));
@@ -117,7 +117,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(docsBody, /data-path="docs\/nested"/);
     assertMatch(
       docsBody,
-      /<a href="\/docs\/\?dir">docs<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">README\.md<\/span>/,
+      /<a href="\/docs\/\?dir" data-query-scope="directory">docs<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">README\.md<\/span>/,
     );
 
     const emptyBody = await (await h(new Request("http://x/empty/"))).text();
@@ -129,7 +129,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(emptyBody, /\.dot/);
     assertMatch(
       emptyBody,
-      /data-path="empty"[^>]*><summary><a class="(?:active )?tree-folder-link" data-kind="directory" href="\/empty\/" data-query-remove="dir">empty\/<\/a><a class="tree-files-link" href="\/empty\/"/,
+      /data-path="empty"[^>]*><summary><a class="(?:active )?tree-folder-link" data-kind="directory" href="\/empty\/" data-query-remove="dir">empty\/<\/a><a class="tree-files-link" href="\/empty\/" data-query-scope="directory"/,
     );
   } finally {
     await f.cleanup();
@@ -241,11 +241,11 @@ Deno.test("directory listings activate only their current tree directory", async
     ).then((response) => response.text());
     assertMatch(
       body,
-      /data-path="docs" data-loaded="true" open><summary><a class="tree-folder-link" data-kind="directory" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"/,
+      /data-path="docs" data-loaded="true" open><summary><a class="tree-folder-link" data-kind="directory" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir" data-query-scope="directory"/,
     );
     assertMatch(
       body,
-      /data-path="docs\/nested" data-loaded="true" open><summary><a class="active tree-folder-link" data-kind="directory" href="\/docs\/nested\/" data-query-remove="dir">nested\/<\/a><a class="tree-files-link" href="\/docs\/nested\/\?dir"/,
+      /data-path="docs\/nested" data-loaded="true" open><summary><a class="active tree-folder-link" data-kind="directory" href="\/docs\/nested\/" data-query-remove="dir">nested\/<\/a><a class="tree-files-link" href="\/docs\/nested\/\?dir" data-query-scope="directory"/,
     );
   } finally {
     await f.cleanup();
@@ -269,7 +269,7 @@ Deno.test("root labels preserve the configured argument and escape HTML", async 
     );
     assert(
       body.includes(
-        `aria-label="Breadcrumb"><a href="/?dir">${
+        `aria-label="Breadcrumb"><a href="/?dir" data-query-scope="directory">${
           label.slice(0, -1)
         }</a><span class="breadcrumb-separator" aria-hidden="true">/</span><span aria-current="page">README.md</span>`,
       ),
@@ -296,7 +296,7 @@ Deno.test("root Files control is available without a renderable index", async ()
       .then((response) => response.text());
     assertMatch(
       body,
-      /<div class="tree-root-row"><a class="tree-root(?: active)?" href="\/" data-query-remove="dir">.+<\/a><a class="tree-files-link" href="\/"/,
+      /<div class="tree-root-row"><a class="tree-root(?: active)?" href="\/" data-query-remove="dir">.+<\/a><a class="tree-files-link" href="\/" data-query-scope="directory"/,
     );
     assert(body.includes('title="Show files in ' + `${f.root}/`));
   } finally {

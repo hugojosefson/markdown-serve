@@ -1,7 +1,7 @@
 import { contentType } from "@std/media-types";
 import { basename } from "@std/path";
 import { escapeHtml } from "./html.ts";
-import { queryHref, setQuery } from "./query.ts";
+import { queryHref, retainQuery, setQuery } from "./query.ts";
 import { renderIsoTimestamp } from "./render-iso-timestamp.ts";
 import { formatRelativeTime } from "./relative-time.ts";
 
@@ -90,7 +90,11 @@ export function renderFileMetadataSummary(
     : "modified time unavailable";
   const href = queryHref(
     url.pathname,
-    setQuery(url.search, "metadata", expanded ? undefined : "expand"),
+    setQuery(
+      retainQuery(url.search, ["source", "theme", "width"]),
+      "metadata",
+      expanded ? undefined : "expand",
+    ),
   );
   const action = expanded ? "Collapse metadata" : "Expand metadata";
   const relativeLabel = metadata.modified
@@ -153,7 +157,7 @@ export function renderFileMetadataDetails(
     ).join("");
   const closeHref = queryHref(
     url.pathname,
-    setQuery(url.search, "metadata", undefined),
+    retainQuery(url.search, ["source", "theme", "width"]),
   );
   return `<section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><div class="file-metadata-details-header"><span>File metadata</span><a class="file-metadata-close" href="${
     escapeHtml(closeHref)

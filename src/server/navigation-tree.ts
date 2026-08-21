@@ -155,7 +155,7 @@ function repoTitle(status: GitStatus): string {
 
 function filesLink(href: string, name: string): string {
   const label = escapeHtml(name);
-  return `<a class="tree-files-link" href="${href}" title="Show files in ${label}" aria-label="Show files in ${label}">Files</a>`;
+  return `<a class="tree-files-link" href="${href}" data-query-scope="directory" title="Show files in ${label}" aria-label="Show files in ${label}">Files</a>`;
 }
 
 function directoryFilesHref(href: string, indexState: IndexState): string {

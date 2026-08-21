@@ -4,6 +4,7 @@ import { relativeTimeClient } from "../src/server/relative-time-client.ts";
 
 Deno.test("lazy tree entries construct Files controls without index discovery", () => {
   assertMatch(pageClient, /const filesLink = \(href, name\)/);
+  assertMatch(pageClient, /filesLink\.dataset\.queryScope = 'directory'/);
   assertMatch(pageClient, /item\.className = 'tree-entry-row'/);
   assertMatch(
     pageClient,

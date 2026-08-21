@@ -1,6 +1,6 @@
 import type { DirectoryEntry } from "./fs.ts";
 import { escapeHtml } from "./html.ts";
-import { queryHref, setQuery } from "./query.ts";
+import { queryHref, retainQuery, setQuery } from "./query.ts";
 import { classifyEntry, entryRoute } from "./entry-route.ts";
 import { entryKind } from "./entry-kind.ts";
 import { compareDirectoryGroups } from "./directory-order.ts";
@@ -103,10 +103,10 @@ function row(
   return `<tr><td class="directory-name"><a href="${
     escapeHtml(href)
   }" data-kind="${entryKind(entry)}"${
-    git?.kind === "ignored" ? ' data-git-ignored="true"' : ""
-  }${index ? ' data-query-remove="dir"' : ""}>${
-    escapeHtml(entry.name + suffix)
-  }</a></td>${
+    entry.directory ? ' data-query-scope="directory"' : ""
+  }${git?.kind === "ignored" ? ' data-git-ignored="true"' : ""}${
+    index ? ' data-query-remove="dir"' : ""
+  }>${escapeHtml(entry.name + suffix)}</a></td>${
     status
       ? `<td class="directory-git"><span data-git-kind="${
         git?.kind ?? ""
@@ -172,13 +172,17 @@ function header(
   const next = current && !descending ? `${field}-desc` : field;
   const href = queryHref(
     url.pathname,
-    setQuery(url.search, "order", next === "name" ? undefined : next),
+    setQuery(
+      retainQuery(url.search, ["dir", "order", "theme", "width"]),
+      "order",
+      next === "name" ? undefined : next,
+    ),
   );
   return `<th class="directory-${field}" scope="col"${
     current ? ` aria-sort="${descending ? "descending" : "ascending"}"` : ""
-  }><a href="${escapeHtml(href)}">${label}${
-    current ? ` ${descending ? "↓" : "↑"}` : ""
-  }</a></th>`;
+  }><a href="${escapeHtml(href)}" data-query-scope="directory"${
+    next === "name" ? ' data-query-remove="order"' : ""
+  }>${label}${current ? ` ${descending ? "↓" : "↑"}` : ""}</a></th>`;
 }
 function lexical(left: string, right: string) {
   return left < right ? -1 : left > right ? 1 : 0;

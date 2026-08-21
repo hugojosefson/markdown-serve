@@ -1,5 +1,10 @@
 import { assertEquals } from "@std/assert";
-import { canonicalQuery, queryHref, setQuery } from "../src/server/query.ts";
+import {
+  canonicalQuery,
+  queryHref,
+  retainQuery,
+  setQuery,
+} from "../src/server/query.ts";
 import { navigationQueryClient } from "../src/server/client-query.ts";
 import {
   markdownViewPageAction,
@@ -16,6 +21,13 @@ Deno.test("canonical queries sort decoded keys and values stably and preserve fl
     "a=1&a=2&raw&theme=dark&z=2",
   );
   assertEquals(setQuery("?raw&theme=dark", "theme", undefined), "raw");
+  assertEquals(
+    retainQuery("?a=1&order=size&theme=dark&width=wide", [
+      "theme",
+      "width",
+    ]),
+    "theme=dark&width=wide",
+  );
 });
 
 Deno.test("browser query source matches canonical query fixtures", () => {
@@ -36,21 +48,31 @@ Deno.test("raw links are always query-relative and clean", () => {
   );
 });
 
-Deno.test("Markdown view actions preserve unrelated query state", () => {
+Deno.test("Markdown view actions preserve same-file query state", () => {
   assertEquals(
-    markdownViewPageAction(new URL("http://x/guide?theme=dark"), false),
+    markdownViewPageAction(
+      new URL(
+        "http://x/guide?metadata=expand&order=size&theme=dark&unknown=value",
+      ),
+      false,
+    ),
     {
       kind: "source",
-      href: "?source&theme=dark",
+      href: "?metadata=expand&source&theme=dark",
       label: "View source",
       title: "View Markdown source",
     },
   );
   assertEquals(
-    markdownViewPageAction(new URL("http://x/guide?source&theme=dark"), true),
+    markdownViewPageAction(
+      new URL(
+        "http://x/guide?metadata=expand&order=size&source&theme=dark&unknown=value",
+      ),
+      true,
+    ),
     {
       kind: "rendered",
-      href: "?theme=dark",
+      href: "?metadata=expand&theme=dark",
       label: "View rendered",
       queryRemove: ["source"],
       title: "View rendered Markdown",

@@ -152,19 +152,24 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
       /<caption class="sr-only">Files at .+\/list\/<\/caption>/,
     );
     assertMatch(body, /<a href="a-small"[^>]*>a-small<\/a>/);
+    assertMatch(
+      body,
+      /<a href="z-dir\/\?dir" data-kind="directory" data-query-scope="directory">z-dir\/<\/a>/,
+    );
+    assertMatch(body, /<a href="a-small" data-kind="file">a-small<\/a>/);
     assertMatch(body, /-rw-------/);
     assertMatch(body, /title="1024 bytes">1 KB<\/td>/);
     assertMatch(
       body,
-      /href="\?a=1&amp;a=2&amp;theme=dark&amp;width=wide">Name/,
+      /href="\?theme=dark&amp;width=wide" data-query-scope="directory" data-query-remove="order">Name/,
     );
     assertMatch(
       body,
-      /href="\?a=1&amp;a=2&amp;order=permissions&amp;theme=dark&amp;width=wide">Permissions/,
+      /href="\?order=permissions&amp;theme=dark&amp;width=wide" data-query-scope="directory">Permissions/,
     );
     assertMatch(
       body,
-      /href="\?a=1&amp;a=2&amp;order=size-desc&amp;theme=dark&amp;width=wide">Size ↑/,
+      /href="\?order=size-desc&amp;theme=dark&amp;width=wide" data-query-scope="directory">Size ↑/,
     );
     assert(!body.includes("<h1>"));
 
@@ -256,8 +261,14 @@ Deno.test("directory metadata columns sort missing values first and render copya
     html,
     /<thead><tr><th class="directory-name"[^>]*>.*Name.*<th class="directory-permissions"[^>]*>.*Permissions.*<th class="directory-size"[^>]*>.*Size.*<th class="directory-user"[^>]*>.*User.*<th class="directory-modified"[^>]*>.*Modified/,
   );
-  assertMatch(html, /href="\?order=user&amp;theme=dark">User/);
-  assertMatch(html, /href="\?order=modified&amp;theme=dark">Modified/);
+  assertMatch(
+    html,
+    /href="\?order=user&amp;theme=dark" data-query-scope="directory">User/,
+  );
+  assertMatch(
+    html,
+    /href="\?order=modified&amp;theme=dark" data-query-scope="directory">Modified/,
+  );
   assertMatch(html, /<td class="directory-user">10<\/td>/);
   assertMatch(html, /<td class="directory-user">—<\/td>/);
   const iso = "2020-01-02T03:04:05.678Z";
@@ -346,15 +357,15 @@ Deno.test("indexed directories can switch between their index and file listing",
     );
     assertMatch(
       index,
-      /href="\?a=1&amp;a=2&amp;dir&amp;order=size&amp;theme=dark&amp;width=wide" title="Browse directory files"[^>]*>Files/,
+      /href="\?dir&amp;theme=dark&amp;width=wide" data-query-scope="directory" title="Browse directory files"[^>]*>Files/,
     );
     assertMatch(
       index,
-      /<a href="\/docs\/\?dir">docs<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">README\.md<\/span>/,
+      /<a href="\/docs\/\?dir" data-query-scope="directory">docs<\/a><span class="breadcrumb-separator" aria-hidden="true">\/<\/span><span aria-current="page">README\.md<\/span>/,
     );
     assertMatch(
       index,
-      /<summary><a class="tree-folder-link" data-kind="directory" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"[^>]*>Files<\/a><\/summary><ul><li class="tree-entry-row"><a class="active" data-kind="file" href="\/docs\/" data-query-remove="dir">README\.md<\/a><a class="tree-files-link" href="\/docs\/\?dir"/,
+      /<summary><a class="tree-folder-link" data-kind="directory" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir" data-query-scope="directory"[^>]*>Files<\/a><\/summary><ul><li class="tree-entry-row"><a class="active" data-kind="file" href="\/docs\/" data-query-remove="dir">README\.md<\/a><a class="tree-files-link" href="\/docs\/\?dir" data-query-scope="directory"/,
     );
     assert(!index.includes('<table class="directory-table">'));
 
@@ -367,22 +378,17 @@ Deno.test("indexed directories can switch between their index and file listing",
     assertMatch(listing, /data-directory-view="true"/);
     assertMatch(
       listing,
-      /<summary><a class="active tree-folder-link" data-kind="directory" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir"[^>]*>Files<\/a><\/summary><ul><li class="tree-entry-row"><a data-kind="file" href="\/docs\/" data-query-remove="dir">README\.md<\/a><a class="tree-files-link" href="\/docs\/\?dir"/,
+      /<summary><a class="active tree-folder-link" data-kind="directory" href="\/docs\/" data-query-remove="dir">docs\/<\/a><a class="tree-files-link" href="\/docs\/\?dir" data-query-scope="directory"[^>]*>Files<\/a><\/summary><ul><li class="tree-entry-row"><a data-kind="file" href="\/docs\/" data-query-remove="dir">README\.md<\/a><a class="tree-files-link" href="\/docs\/\?dir" data-query-scope="directory"/,
     );
     assertMatch(listing, /<a href="note\.txt" data-kind="file">note\.txt<\/a>/);
     assertMatch(
       listing,
-      /<nav aria-label="Breadcrumb">[\s\S]*?<\/nav><a class="page-action" href="\?a=1&amp;a=2&amp;order=size&amp;theme=dark&amp;width=wide" data-query-remove="dir" title="View README\.md"[^>]*>README\.md<\/a>/,
+      /<nav aria-label="Breadcrumb">[\s\S]*?<\/nav><a class="page-action" href="\?theme=dark&amp;width=wide" data-query-remove="dir" title="View README\.md"[^>]*>README\.md<\/a>/,
     );
     assertMatch(
       listing,
-      /href="\?a=1&amp;a=2&amp;dir&amp;order=size-desc&amp;raw&amp;theme=dark&amp;width=wide">Size ↑/,
+      /href="\?dir&amp;order=size-desc&amp;theme=dark&amp;width=wide" data-query-scope="directory">Size ↑/,
     );
-    assertMatch(
-      listing,
-      /href="\?a=1&amp;a=2&amp;dir&amp;order=size&amp;raw&amp;theme=dark&amp;width=wide"/,
-    );
-
     const mixed = await (await h(
       new Request("http://x/mixed/?dir"),
     )).text();
@@ -449,7 +455,7 @@ Deno.test("listing includes dotfiles and Markdown is sanitized", async () => {
     );
     assertMatch(
       listingBody,
-      /<th class="directory-name" scope="col" aria-sort="ascending"><a href="\?order=name-desc">Name ↑<\/a><\/th>/,
+      /<th class="directory-name" scope="col" aria-sort="ascending"><a href="\?order=name-desc" data-query-scope="directory">Name ↑<\/a><\/th>/,
     );
     assertMatch(listingBody, /<a href="\.dot" data-kind="file">\.dot<\/a>/);
     assertMatch(listingBody, /1 KB/);

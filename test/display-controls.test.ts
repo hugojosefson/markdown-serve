@@ -12,11 +12,11 @@ import { fixture, handler } from "./fixture.ts";
 
 Deno.test("display links use segmented direct states and canonical queries", () => {
   const at = (search: string) => new URL(`http://x/guide${search}`);
-  assertEquals(displayState(at("?theme=nope&width=nope")), {
+  assertEquals(displayState(at("?theme=nope&width=wide")), {
     theme: "auto",
     width: "narrow",
   });
-  assertEquals(displayState(at("?width=auto")).width, "narrow");
+  assertEquals(displayState(at("?wide")).width, "wide");
   assertEquals(displayHref(at(""), "theme"), "?theme=dark");
   assertEquals(
     displayHref(at("?theme=invalid"), "theme"),
@@ -24,40 +24,40 @@ Deno.test("display links use segmented direct states and canonical queries", () 
   );
   assertEquals(displayHref(at("?theme=light"), "theme"), "/guide");
   assertEquals(displayHref(at("?theme=dark"), "theme"), "?theme=light");
-  assertEquals(displayHref(at(""), "width"), "?width=wide");
-  assertEquals(displayHref(at("?width=wide"), "width"), "/guide");
+  assertEquals(displayHref(at(""), "width"), "?wide");
+  assertEquals(displayHref(at("?wide"), "width"), "/guide");
   assertEquals(
     displayHref(
       at(
-        "?dir&keep=value&metadata=expand&order=size&raw&source&theme=dark&width=wide",
+        "?dir&keep=value&metadata&order=size&raw&source&theme=dark&wide",
       ),
       "theme",
     ),
-    "?metadata=expand&source&theme=light&width=wide",
+    "?metadata&source&theme=light&wide",
   );
   assertEquals(
     displayHref(
       at(
-        "?dir&keep=value&metadata=expand&order=size&raw&source&theme=dark&width=wide",
+        "?dir&keep=value&metadata&order=size&raw&source&theme=dark&wide",
       ),
       "width",
     ),
-    "?metadata=expand&source&theme=dark",
+    "?metadata&source&theme=dark",
   );
   assertEquals(
     displayHref(
-      at("?dir&metadata=expand&order=size&source&theme=dark"),
+      at("?dir&metadata&order=size&source&theme=dark"),
       "theme",
       true,
     ),
     "?dir&order=size&theme=light",
   );
   assertMatch(
-    displayLinks(at("?theme=dark&width=wide")),
+    displayLinks(at("?theme=dark&wide")),
     /display-group display-theme[\s\S]*title="Switch to light \(t\)" aria-keyshortcuts="t"[\s\S]*Dark selected[\s\S]*aria-current="true"/,
   );
   assertMatch(
-    displayLinks(at("?theme=dark&width=wide")),
+    displayLinks(at("?theme=dark&wide")),
     /display-group display-width[\s\S]*title="Switch to narrow \(w\)" aria-keyshortcuts="w"[\s\S]*Wide selected[\s\S]*<svg/,
   );
   assertMatch(
@@ -70,11 +70,11 @@ Deno.test("pages render display anchors without a menu or selects", async () => 
   const f = await fixture({ "guide.md": "guide" });
   try {
     const body = await (await (await handler(f.root))(
-      new Request("http://x/guide?theme=light&width=wide&keep=yes"),
+      new Request("http://x/guide?theme=light&wide&keep=yes"),
     )).text();
     assertMatch(
       body,
-      /display-group display-theme[\s\S]*href="\?theme=light&amp;width=wide"/,
+      /display-group display-theme[\s\S]*href="\?theme=light&amp;wide"/,
     );
     assertMatch(
       body,
@@ -92,12 +92,12 @@ Deno.test("pages render display anchors without a menu or selects", async () => 
   }
 });
 
-Deno.test("initial display state applies valid query values", () => {
+Deno.test("initial display state applies bare query flags", () => {
   const document = {
     documentElement: { dataset: {} as Record<string, string> },
   };
   new Function("location", "document", displayInitialClient)(
-    { search: "?theme=dark&width=wide" },
+    { search: "?theme=dark&wide" },
     document,
   );
   assertEquals(document.documentElement.dataset, {
@@ -110,10 +110,10 @@ Deno.test("client scopes global and directory query state across navigation", ()
   const listeners = new Map<string, (event: { key?: string }) => void>();
   const location = {
     href:
-      "http://x/guide?dir&download&flag&metadata=expand&order=size&raw&source&unknown=one&unknown=two&theme=dark&width=wide",
+      "http://x/guide?dir&download&flag&metadata&order=size&raw&source&unknown=one&unknown=two&theme=dark&wide",
     origin: "http://x",
     search:
-      "?dir&download&flag&metadata=expand&order=size&raw&source&unknown=one&unknown=two&theme=dark&width=wide",
+      "?dir&download&flag&metadata&order=size&raw&source&unknown=one&unknown=two&theme=dark&wide",
   };
   let ordinaryHref = "docs";
   let overrideHref = "/files?order=name&order=modified&unknown=target";
@@ -214,25 +214,25 @@ Deno.test("client scopes global and directory query state across navigation", ()
   );
   assertEquals(
     ordinaryHref,
-    "docs?theme=dark&width=wide",
+    "docs?theme=dark&wide",
   );
   assertEquals(metadataHref, "?theme=dark");
   assertEquals(
     overrideHref,
-    "/files?order=modified&order=name&theme=dark&unknown=target&width=wide",
+    "/files?order=modified&order=name&theme=dark&unknown=target&wide",
   );
   assertEquals(
     absoluteHref,
-    "http://x/root?dir&theme=dark&width=wide#section",
+    "http://x/root?dir&theme=dark&wide#section",
   );
   assertEquals(optionHref, "?theme=dark");
   assertEquals(
     sourceHref,
-    "?source&theme=dark&width=wide",
+    "?source&theme=dark&wide",
   );
   assertEquals(
     directoryHref,
-    "/folder/?dir&theme=dark&width=wide",
+    "/folder/?dir&theme=dark&wide",
   );
   assertEquals(externalHref, "https://example.test/docs?x=1");
   assertEquals(hashHref, "#browse");

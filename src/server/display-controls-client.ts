@@ -1,7 +1,7 @@
 export const displayInitialClient = `
 const displayState = new URLSearchParams(location.search);
 const displayTheme = ['auto', 'light', 'dark'].includes(displayState.get('theme')) ? displayState.get('theme') : 'auto';
-const displayWidth = ['narrow', 'wide'].includes(displayState.get('width')) ? displayState.get('width') : 'narrow';
+const displayWidth = displayState.has('wide') ? 'wide' : 'narrow';
 document.documentElement.dataset.colorMode = displayTheme;
 document.documentElement.dataset.width = displayWidth;`;
 
@@ -17,7 +17,7 @@ const readDisplay = () => {
   const state = new URLSearchParams(location.search);
   return {
     theme: ['auto', 'light', 'dark'].includes(state.get('theme')) ? state.get('theme') : 'auto',
-    width: ['narrow', 'wide'].includes(state.get('width')) ? state.get('width') : 'narrow',
+    width: state.has('wide') ? 'wide' : 'narrow',
   };
 };
 const initialDisplay = readDisplay();

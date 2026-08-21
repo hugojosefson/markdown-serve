@@ -173,7 +173,7 @@ function header(
   const href = queryHref(
     url.pathname,
     setQuery(
-      retainQuery(url.search, ["dir", "order", "theme", "width"]),
+      retainQuery(url.search, ["dir", "order", "theme", "wide"]),
       "order",
       next === "name" ? undefined : next,
     ),

@@ -91,9 +91,9 @@ export function renderFileMetadataSummary(
   const href = queryHref(
     url.pathname,
     setQuery(
-      retainQuery(url.search, ["source", "theme", "width"]),
+      retainQuery(url.search, ["source", "theme", "wide"]),
       "metadata",
-      expanded ? undefined : "expand",
+      expanded ? undefined : null,
     ),
   );
   const action = expanded ? "Collapse metadata" : "Expand metadata";
@@ -157,7 +157,7 @@ export function renderFileMetadataDetails(
     ).join("");
   const closeHref = queryHref(
     url.pathname,
-    retainQuery(url.search, ["source", "theme", "width"]),
+    retainQuery(url.search, ["source", "theme", "wide"]),
   );
   return `<section class="file-metadata-details" id="file-metadata-details" aria-label="File metadata"><div class="file-metadata-details-header"><span>File metadata</span><a class="file-metadata-close" href="${
     escapeHtml(closeHref)

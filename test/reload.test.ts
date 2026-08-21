@@ -100,7 +100,7 @@ Deno.test("reload client releases navigation connections and reconnects after re
     button: 0,
     target: {
       closest: () => ({
-        href: "http://x/readme/?metadata=expand",
+        href: "http://x/readme/?metadata",
         matches: () => false,
         target: "",
       }),

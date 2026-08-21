@@ -22,11 +22,11 @@ Deno.test("canonical queries sort decoded keys and values stably and preserve fl
   );
   assertEquals(setQuery("?raw&theme=dark", "theme", undefined), "raw");
   assertEquals(
-    retainQuery("?a=1&order=size&theme=dark&width=wide", [
+    retainQuery("?a=1&order=size&theme=dark&wide", [
       "theme",
-      "width",
+      "wide",
     ]),
-    "theme=dark&width=wide",
+    "theme=dark&wide",
   );
 });
 
@@ -52,13 +52,13 @@ Deno.test("Markdown view actions preserve same-file query state", () => {
   assertEquals(
     markdownViewPageAction(
       new URL(
-        "http://x/guide?metadata=expand&order=size&theme=dark&unknown=value",
+        "http://x/guide?metadata&order=size&theme=dark&unknown=value&wide",
       ),
       false,
     ),
     {
       kind: "source",
-      href: "?metadata=expand&source&theme=dark",
+      href: "?metadata&source&theme=dark&wide",
       label: "View source",
       title: "View Markdown source",
     },
@@ -66,13 +66,13 @@ Deno.test("Markdown view actions preserve same-file query state", () => {
   assertEquals(
     markdownViewPageAction(
       new URL(
-        "http://x/guide?metadata=expand&order=size&source&theme=dark&unknown=value",
+        "http://x/guide?metadata&order=size&source&theme=dark&unknown=value&wide",
       ),
       true,
     ),
     {
       kind: "rendered",
-      href: "?metadata=expand&theme=dark",
+      href: "?metadata&theme=dark&wide",
       label: "View rendered",
       queryRemove: ["source"],
       title: "View rendered Markdown",

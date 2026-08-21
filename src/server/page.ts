@@ -46,9 +46,7 @@ function renderBody(
   navigation: string,
   status?: GitStatus,
 ): string {
-  const metadataExpanded = model.url.searchParams.getAll("metadata").includes(
-    "expand",
-  );
+  const metadataExpanded = model.url.searchParams.has("metadata");
   return `<body><div class="layout"><aside class="tree"><details class="tree-disclosure" open><summary>Files</summary>${navigation}</details></aside><main class="content markdown-body">${
     repoContext(status)
   }${renderContentHeader(config, model, metadataExpanded)}${

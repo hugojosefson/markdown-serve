@@ -45,7 +45,7 @@ export function rawPageAction(contentType: string): FileAction {
 }
 
 export function markdownViewPageAction(url: URL, source: boolean): FileAction {
-  const query = retainQuery(url.search, ["metadata", "theme", "width"]);
+  const query = retainQuery(url.search, ["metadata", "theme", "wide"]);
   if (source) {
     return {
       kind: "rendered",
@@ -80,7 +80,7 @@ export function filesPageAction(url: URL): HeaderAction {
     kind: "files",
     href: queryHref(
       url.pathname,
-      setQuery(retainQuery(url.search, ["theme", "width"]), "dir", null),
+      setQuery(retainQuery(url.search, ["theme", "wide"]), "dir", null),
     ),
     label: "Files",
     queryScope: "directory",
@@ -93,7 +93,7 @@ export function indexPageAction(url: URL, index: string): HeaderAction {
     kind: "index",
     href: queryHref(
       url.pathname,
-      retainQuery(url.search, ["theme", "width"]),
+      retainQuery(url.search, ["theme", "wide"]),
     ),
     label: index,
     queryRemove: ["dir"],

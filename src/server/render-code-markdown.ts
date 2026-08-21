@@ -98,6 +98,7 @@ export async function renderSourceCodeBlockWithSymbols(
             annotations,
             symbols?.declarationLines,
             symbols?.declarationLinks,
+            symbols?.declarationCommentLines,
           )
         }${close}`,
     );

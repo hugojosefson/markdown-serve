@@ -5,6 +5,7 @@ import {
   renderSourceCodeBlockWithSymbols,
 } from "../src/server/render-code-markdown.ts";
 import { renderSourceLines } from "../src/server/render-source-lines.ts";
+import { pageCss } from "../src/server/page-css.ts";
 
 Deno.test("source lines add accessible links without adding numbers to code text", () => {
   const rendered = renderSourceLines("one\ntwo\n");
@@ -36,6 +37,34 @@ Deno.test("source symbols preserve escaped and non-ASCII source offsets", async 
     sourceText(rendered),
     'const café = "<tag>";\nfunction greet() { return greet; }',
   );
+});
+
+Deno.test("symbol targets scroll back to attached comments without moving the target", async () => {
+  const rendered = await renderSourceCodeBlockWithSymbols(
+    "/** café docs */\nfunction greet() {}",
+    "typescript",
+  );
+  assertMatch(
+    rendered,
+    /class="symbol-link symbol-declaration" href="#symbol-greet" id="symbol-greet" style="--attached-comment-lines:1">greet<\/a>/,
+  );
+  assertMatch(
+    pageCss,
+    /\.source-line:has\(\.symbol-declaration:target\)[^{]*\{ background: var\(--code-hover\); \}/,
+  );
+  assertEquals(sourceText(rendered), "/** café docs */\nfunction greet() {}");
+});
+
+Deno.test("duplicate symbol line targets retain attached comment offsets", async () => {
+  const rendered = await renderSourceCodeBlockWithSymbols(
+    "// First\nfunction same() {}\n// Second\nfunction same() {}",
+    "javascript",
+  );
+  assertMatch(
+    rendered,
+    /source-line source-symbol-gutter source-line-symbol" id="L2" style="--attached-comment-lines:1"/,
+  );
+  assertMatch(rendered, /symbol-declaration" href="#L2"/);
 });
 
 Deno.test("source lines retain Prism tokens that cross a newline", () => {

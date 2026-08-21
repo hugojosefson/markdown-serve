@@ -19,6 +19,10 @@ export function injectSymbols(
           start.declaration ? " symbol-declaration" : ""
         }" href="${escapeHtml(start.href)}"${
           start.id ? ` id="${escapeHtml(start.id)}"` : ""
+        }${
+          start.commentLines
+            ? ` style="--attached-comment-lines:${start.commentLines}"`
+            : ""
         }>`;
       }
       output += piece;

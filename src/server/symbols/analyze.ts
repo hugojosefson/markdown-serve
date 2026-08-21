@@ -1,5 +1,6 @@
 import { Parser } from "web-tree-sitter";
 import { declarationTypes, symbolGrammar } from "./declaration-rules.ts";
+import { attachedCommentLine } from "./comment-attachment.ts";
 import { loadLanguage } from "./engine.ts";
 import { syntaxDeclarations } from "./syntax-declarations.ts";
 import type {
@@ -48,7 +49,11 @@ export async function analyzeSymbols(
       return;
     }
     try {
-      return analysis(syntaxDeclarations(tree.rootNode, text, types));
+      return analysis(
+        syntaxDeclarations(tree.rootNode, types),
+        text,
+        language,
+      );
     } finally {
       tree.delete();
       parser.delete();
@@ -60,22 +65,38 @@ export async function analyzeSymbols(
 
 function analysis(
   found: ReturnType<typeof syntaxDeclarations>,
+  text: string,
+  language: string,
 ): SymbolAnalysis {
   const counts = new Map<string, number>();
   for (const item of found) {
     counts.set(item.name, (counts.get(item.name) ?? 0) + 1);
   }
-  const occurrences: SymbolOccurrence[] = found.map((item) => ({
-    ...item,
-    declaration: true,
-    href: counts.get(item.name) === 1
-      ? `#symbol-${encodeURIComponent(item.name)}`
-      : `#L${item.line}`,
-    id: counts.get(item.name) === 1 ? `symbol-${item.name}` : undefined,
-  }));
+  const occurrences: SymbolOccurrence[] = found.map((item) => {
+    const commentLine = attachedCommentLine(
+      text,
+      language,
+      item.declarationLine,
+    );
+    const { declarationLine: _, ...occurrence } = item;
+    return {
+      ...occurrence,
+      declaration: true,
+      commentLines: commentLine ? item.line - commentLine : undefined,
+      href: counts.get(item.name) === 1
+        ? `#symbol-${encodeURIComponent(item.name)}`
+        : `#L${item.line}`,
+      id: counts.get(item.name) === 1 ? `symbol-${item.name}` : undefined,
+    };
+  });
   return {
     occurrences,
     declarationLines: new Set(found.map((item) => item.line)),
+    declarationCommentLines: new Map(
+      occurrences.flatMap((item) =>
+        item.commentLines ? [[item.line, item.commentLines] as const] : []
+      ),
+    ),
     declarationLinks: lineLinks(occurrences),
   };
 }

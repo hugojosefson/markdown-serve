@@ -81,8 +81,9 @@ Broader read grants can expose more files.
 Source views recognize page-local declarations in Bash, C, C++, C#, Go, Java,
 JavaScript/JSX, Python, Rust, and TypeScript/TSX. Declaration names link to a
 unique `#symbol-name` anchor when possible; all source lines retain their `#L`
-anchors. Parsing is skipped above 1 MiB or when a grammar fails, without
-affecting source rendering.
+anchors. Links scroll to an attached documentation, block, or contiguous line
+comment while highlighting the declaration line. Parsing is skipped above 1 MiB
+or when a grammar fails, without affecting source rendering.
 
 ### Routing
 

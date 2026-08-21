@@ -9,6 +9,10 @@ Deno.test("fences normalize aliases and render Prism tokens", () => {
     "http://x/",
   );
   assertMatch(html, /class="code-language">typescript/);
+  assertMatch(
+    html,
+    /class="code-toolbar-file-actions" data-file-actions="leading"><\/span><button class="code-copy"/,
+  );
   assertMatch(html, /class="code-copy" type="button" data-copy/);
   assertMatch(html, /highlight-source-typescript/);
   assertMatch(html, /class="token keyword">const/);
@@ -23,6 +27,10 @@ Deno.test("fences normalize aliases and render Prism tokens", () => {
     /\.code-toolbar \.file-action, \.code-copy \{[^}]*height: 22px; justify-content: center;/,
   );
   assertMatch(codeToolbarCss, /\.code-copy \{ min-width: 46px; \}/);
+  assertMatch(
+    codeToolbarCss,
+    /\[data-file-actions="leading"\] \{ margin-left: auto; \}/,
+  );
 });
 
 Deno.test("shell aliases load the Bash grammar", () => {

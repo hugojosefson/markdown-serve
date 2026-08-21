@@ -4,6 +4,7 @@ import { directoryTableClient } from "./directory-table-client.ts";
 import { displayControlsClient } from "./display-controls-client.ts";
 import { pageClient } from "./page-client.ts";
 import { relativeTimeClient } from "./relative-time-client.ts";
+import { viewTransitionClient } from "./view-transition-client.ts";
 import { pageCss } from "./page-css.ts";
 
 type PageAsset = { body: string; contentType: string; url: string };
@@ -28,7 +29,7 @@ export const pageStylesheet = versioned(
 );
 export const pageScript = versioned(
   "client",
-  `${displayControlsClient}${directoryTableClient}${relativeTimeClient}${pageClient}${codeToolbarClient}`,
+  `${viewTransitionClient}${displayControlsClient}${directoryTableClient}${relativeTimeClient}${pageClient}${codeToolbarClient}`,
   "text/javascript; charset=UTF-8",
 );
 

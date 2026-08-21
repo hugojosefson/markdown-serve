@@ -3,6 +3,7 @@ import { displayInitialClient } from "./display-controls-client.ts";
 import { displayLinks } from "./display-links.ts";
 import { escapeHtml } from "./html.ts";
 import { navigationTree } from "./navigation-tree.ts";
+import { navigationSpeculation } from "./navigation-speculation.ts";
 import {
   renderFileMetadataDetails,
   renderFileMetadataSummary,
@@ -36,7 +37,7 @@ export async function page(
 function renderHead(model: PageModel): string {
   return `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${
     escapeHtml(model.title)
-  }</title><script>${displayInitialClient}</script><link rel="stylesheet" href="${pageStylesheet.url}"></head>`;
+  }</title><script>${displayInitialClient}</script>${navigationSpeculation}<link rel="stylesheet" href="${pageStylesheet.url}"></head>`;
 }
 
 function renderBody(

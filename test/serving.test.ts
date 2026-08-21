@@ -309,7 +309,7 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     assert(!image.includes('<section class="file-metadata-details"'));
     assertMatch(
       pageStylesheet.body,
-      /\.content-header \.file-metadata > span\[aria-hidden="true"\], \.content-header\.metadata-expanded \.file-metadata span \{ color: var\(--code-border\); \}/,
+      /\.content-header \.file-metadata > span\[aria-hidden="true"\] \{ color: var\(--code-border\); \}/,
     );
     const details = await (await h(
       new Request("http://x/photo.png?metadata=expand"),

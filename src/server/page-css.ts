@@ -62,7 +62,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .content-header .file-metadata + .display-theme { margin-left: 0; }
 .content-header .file-metadata:hover { background: var(--code-hover); border-color: var(--code-border); color: var(--focus-color); }
 .content-header .file-metadata:focus-visible { border-color: var(--code-border); outline: 2px solid var(--focus-color); outline-offset: 1px; }
-.content-header .file-metadata > span[aria-hidden="true"], .content-header.metadata-expanded .file-metadata span { color: var(--code-border); }
+.content-header .file-metadata > span[aria-hidden="true"] { color: var(--code-border); }
 .content-header.metadata-expanded .file-metadata { background: var(--code-hover); border-color: var(--code-border); border-bottom-color: var(--code-hover); border-radius: 6px 6px 0 0; color: var(--focus-color); position: relative; z-index: 1; }
 .content-header.metadata-expanded .file-metadata::after { background: var(--code-hover); border-left: 1px solid var(--code-border); border-right: 1px solid var(--code-border); box-sizing: border-box; content: ""; height: 16px; left: -1px; position: absolute; right: -1px; top: 100%; }
 .markdown-body .file-metadata-details { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 6px; margin: 14px 0 16px; overflow: hidden; padding: 0; }

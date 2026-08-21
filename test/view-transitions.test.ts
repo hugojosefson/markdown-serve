@@ -56,12 +56,19 @@ Deno.test("query navigation skips transitions except metadata-only changes", () 
   assertEquals(skips("http://x/readme/", "http://x/readme/?source"), 1);
   assertEquals(skips("http://x/readme/?theme=dark", "http://x/readme/"), 1);
   assertEquals(
-    skips("http://x/readme/", "http://x/readme/?metadata=expand"),
+    skips("http://x/readme/", "http://x/readme/?metadata"),
     0,
   );
   assertEquals(
     skips(
-      "http://x/readme/?metadata=expand&source",
+      "http://x/readme/?metadata=one",
+      "http://x/readme/?metadata=two",
+    ),
+    1,
+  );
+  assertEquals(
+    skips(
+      "http://x/readme/?metadata&source",
       "http://x/readme/",
     ),
     1,

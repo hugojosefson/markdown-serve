@@ -1,7 +1,7 @@
 // Browser source intentionally mirrors query.ts; it is tested against shared fixtures.
 export const navigationQueryClient = `
 const navigationHrefs = new WeakMap();
-const globalNavigationQuery = new Set(['theme', 'width']);
+const globalNavigationQuery = new Set(['theme', 'wide']);
 const directoryNavigationQuery = new Set(['dir', 'order']);
 const queryPairs = (search) => search.replace(/^\\?/, '').split('&').filter(Boolean).map((part, index) => {
   const equals = part.indexOf('=');

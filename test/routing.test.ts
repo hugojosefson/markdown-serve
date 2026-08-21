@@ -144,7 +144,7 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
 
     const body = await (await h(
       new Request(
-        "http://x/list/?width=wide&order=size&theme=dark&a=2&a=1",
+        "http://x/list/?wide&order=size&theme=dark&a=2&a=1",
       ),
     )).text();
     assertMatch(
@@ -161,15 +161,15 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
     assertMatch(body, /title="1024 bytes">1 KB<\/td>/);
     assertMatch(
       body,
-      /href="\?theme=dark&amp;width=wide" data-query-scope="directory" data-query-remove="order">Name/,
+      /href="\?theme=dark&amp;wide" data-query-scope="directory" data-query-remove="order">Name/,
     );
     assertMatch(
       body,
-      /href="\?order=permissions&amp;theme=dark&amp;width=wide" data-query-scope="directory">Permissions/,
+      /href="\?order=permissions&amp;theme=dark&amp;wide" data-query-scope="directory">Permissions/,
     );
     assertMatch(
       body,
-      /href="\?order=size-desc&amp;theme=dark&amp;width=wide" data-query-scope="directory">Size ↑/,
+      /href="\?order=size-desc&amp;theme=dark&amp;wide" data-query-scope="directory">Size ↑/,
     );
     assert(!body.includes("<h1>"));
 
@@ -349,7 +349,7 @@ Deno.test("indexed directories can switch between their index and file listing",
   try {
     const h = await handler(f.root);
     const index = await (await h(
-      new Request("http://x/docs/?width=wide&order=size&theme=dark&a=2&a=1"),
+      new Request("http://x/docs/?wide&order=size&theme=dark&a=2&a=1"),
     )).text();
     assertMatch(
       index,
@@ -357,7 +357,7 @@ Deno.test("indexed directories can switch between their index and file listing",
     );
     assertMatch(
       index,
-      /href="\?dir&amp;theme=dark&amp;width=wide" data-query-scope="directory" title="Browse directory files"[^>]*>Files/,
+      /href="\?dir&amp;theme=dark&amp;wide" data-query-scope="directory" title="Browse directory files"[^>]*>Files/,
     );
     assertMatch(
       index,
@@ -371,7 +371,7 @@ Deno.test("indexed directories can switch between their index and file listing",
 
     const listing = await (await h(
       new Request(
-        "http://x/docs/?width=wide&order=size&dir&raw&theme=dark&a=2&a=1",
+        "http://x/docs/?wide&order=size&dir&raw&theme=dark&a=2&a=1",
       ),
     )).text();
     assertMatch(listing, /<table class="directory-table">/);
@@ -383,11 +383,11 @@ Deno.test("indexed directories can switch between their index and file listing",
     assertMatch(listing, /<a href="note\.txt" data-kind="file">note\.txt<\/a>/);
     assertMatch(
       listing,
-      /<nav aria-label="Breadcrumb">[\s\S]*?<\/nav><a class="page-action" href="\?theme=dark&amp;width=wide" data-query-remove="dir" title="View README\.md"[^>]*>README\.md<\/a>/,
+      /<nav aria-label="Breadcrumb">[\s\S]*?<\/nav><a class="page-action" href="\?theme=dark&amp;wide" data-query-remove="dir" title="View README\.md"[^>]*>README\.md<\/a>/,
     );
     assertMatch(
       listing,
-      /href="\?dir&amp;order=size-desc&amp;theme=dark&amp;width=wide" data-query-scope="directory">Size ↑/,
+      /href="\?dir&amp;order=size-desc&amp;theme=dark&amp;wide" data-query-scope="directory">Size ↑/,
     );
     const mixed = await (await h(
       new Request("http://x/mixed/?dir"),

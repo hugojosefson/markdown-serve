@@ -11,6 +11,6 @@ addEventListener('pageswap', (event) => {
   const targetWithoutMetadata = new URL(target);
   currentWithoutMetadata.searchParams.delete('metadata');
   targetWithoutMetadata.searchParams.delete('metadata');
-  const metadataChanged = JSON.stringify(current.searchParams.getAll('metadata')) !== JSON.stringify(target.searchParams.getAll('metadata'));
+  const metadataChanged = current.searchParams.has('metadata') !== target.searchParams.has('metadata');
   if (!metadataChanged || currentWithoutMetadata.href !== targetWithoutMetadata.href) { transition.skipTransition(); }
 });`;

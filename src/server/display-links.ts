@@ -11,7 +11,7 @@ const widths: Width[] = ["narrow", "wide"];
 export function displayState(url: URL): { theme: Theme; width: Width } {
   return {
     theme: valid(url.searchParams.get("theme"), themes, "auto"),
-    width: valid(url.searchParams.get("width"), widths, "narrow"),
+    width: url.searchParams.has("wide") ? "wide" : "narrow",
   };
 }
 
@@ -89,11 +89,11 @@ function displayOptionHref(
       retainQuery(
         url.search,
         directory
-          ? ["dir", "order", "theme", "width"]
-          : ["metadata", "source", "theme", "width"],
+          ? ["dir", "order", "theme", "wide"]
+          : ["metadata", "source", "theme", "wide"],
       ),
-      option,
-      value === defaultValue ? undefined : value,
+      option === "width" ? "wide" : option,
+      value === defaultValue ? undefined : option === "width" ? null : value,
     ),
   );
 }

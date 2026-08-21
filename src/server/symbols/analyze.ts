@@ -3,6 +3,7 @@ import { declarationTypes, symbolGrammar } from "./declaration-rules.ts";
 import { attachedCommentLine } from "./comment-attachment.ts";
 import { loadLanguage } from "./engine.ts";
 import { syntaxDeclarations } from "./syntax-declarations.ts";
+import { markdownHeadings } from "./markdown-headings.ts";
 import type {
   SymbolAnalysis,
   SymbolDeclarationLink,
@@ -23,6 +24,14 @@ export async function analyzeSymbols(
   text: string,
   language: string,
 ): Promise<SymbolAnalysis | undefined> {
+  if (language === "markdown") {
+    if (new TextEncoder().encode(text).byteLength > maxBytes) return;
+    try {
+      return markdownHeadings(text);
+    } catch {
+      return;
+    }
+  }
   const grammarName = symbolGrammar(language);
   const types = declarationTypes(language);
   if (

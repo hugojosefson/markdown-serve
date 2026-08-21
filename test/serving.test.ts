@@ -117,6 +117,7 @@ Deno.test("file actions have stable placements and preserve raw/download priorit
       new Request("http://x/guide?source&theme=dark"),
     )).text();
     assertMatch(source, /id="L1"/);
+    assertMatch(source, /href="#guide" id="guide">Guide<\/a>/);
     assertMatch(
       source,
       /View rendered<\/a><\/span><button class="code-copy"[^>]*>Copy<\/button><span class="code-toolbar-file-actions" data-file-actions="trailing"><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a>/,

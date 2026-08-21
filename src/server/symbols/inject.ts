@@ -12,11 +12,21 @@ export function injectSymbols(
   return highlighted.split(/(<[^>]+>)/).map((part) => {
     if (part.startsWith("<")) return part;
     let output = "";
-    for (const piece of part.match(/&(?:amp|lt|gt|quot|#39);|[\s\S]/g) ?? []) {
+    for (
+      const piece of part.match(
+        /&(?:#x[\da-f]+|#\d+|amp|lt|gt|quot|apos);|[\s\S]/gi,
+      ) ?? []
+    ) {
       const start = starts.get(offset);
       if (start) {
-        output += `<a class="symbol-link${
-          start.declaration ? " symbol-declaration" : ""
+        output += `<a class="${
+          start.kind === "heading" ? "source-heading-link" : "symbol-link"
+        }${
+          start.declaration
+            ? start.kind === "heading"
+              ? " source-heading-declaration"
+              : " symbol-declaration"
+            : ""
         }" href="${escapeHtml(start.href)}"${
           start.id ? ` id="${escapeHtml(start.id)}"` : ""
         }${
@@ -34,11 +44,18 @@ export function injectSymbols(
 }
 
 function decode(value: string): string {
+  const hexadecimal = value.match(/^&#x([\da-f]+);$/i)?.[1];
+  if (hexadecimal) {
+    return String.fromCodePoint(Number.parseInt(hexadecimal, 16));
+  }
+  const decimal = value.match(/^&#(\d+);$/)?.[1];
+  if (decimal) return String.fromCodePoint(Number.parseInt(decimal, 10));
   return ({
     "&amp;": "&",
     "&lt;": "<",
     "&gt;": ">",
     "&quot;": '"',
+    "&apos;": "'",
     "&#39;": "'",
   } as Record<string, string>)[value] ?? value;
 }

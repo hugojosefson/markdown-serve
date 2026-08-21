@@ -20,7 +20,7 @@ Deno.test("fences normalize aliases and render Prism tokens", () => {
   assertNotMatch(html, /onclick/);
   assertMatch(
     codeToolbarCss,
-    /\.code-toolbar \{[^}]*min-height: 30px;[^}]*overflow-x: auto;/,
+    /\.code-toolbar \{[^}]*min-height: 29px;[^}]*overflow-x: auto;/,
   );
   assertMatch(
     codeToolbarCss,
@@ -30,6 +30,11 @@ Deno.test("fences normalize aliases and render Prism tokens", () => {
   assertMatch(
     codeToolbarCss,
     /\[data-file-actions="leading"\] \{ margin-left: auto; \}/,
+  );
+  assertMatch(codeToolbarCss, /padding: 3px 3px 3px 8px;/);
+  assertMatch(
+    codeToolbarCss,
+    /\[data-file-actions="trailing"\]:empty \{ margin-left: 0; \}/,
   );
 });
 

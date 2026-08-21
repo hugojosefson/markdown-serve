@@ -150,4 +150,8 @@ Deno.test("symbol analysis skips unsupported and files above one MiB", async () 
     ),
     undefined,
   );
+  assertEquals(
+    await analyzeSymbols(`${" ".repeat(1024 * 1024)}# Too large`, "markdown"),
+    undefined,
+  );
 });

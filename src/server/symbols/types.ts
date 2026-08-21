@@ -6,10 +6,16 @@ export type SymbolOccurrence = {
   commentLines?: number;
   href: string;
   id?: string;
+  kind?: "heading";
   declaration: boolean;
 };
 
-export type SymbolDeclarationLink = { href: string; name: string };
+export type SymbolDeclarationLink = {
+  href: string;
+  name: string;
+  id?: string;
+  kind?: "heading";
+};
 
 export type SymbolAnalysis = {
   occurrences: SymbolOccurrence[];

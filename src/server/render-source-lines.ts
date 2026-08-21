@@ -42,12 +42,15 @@ export function renderSourceLines(
       : "";
     const declaration = declarationLinks.get(line);
     const commentLines = declarationCommentLines.get(line);
+    const targetLabel = declaration?.kind === "heading"
+      ? `heading ${declaration.name}`
+      : `${declaration?.name} declaration`;
     const symbol = declaration
       ? `<a class="source-symbol-marker" href="${
         escapeHtml(declaration.href)
-      }" aria-label="Go to ${
-        escapeHtml(declaration.name)
-      } declaration on line ${line}"></a>`
+      }"${
+        declaration.id ? ` id="${escapeHtml(declaration.id)}"` : ""
+      } aria-label="Go to ${escapeHtml(targetLabel)} on line ${line}"></a>`
       : symbolGutter
       ? '<span class="source-symbol-marker" aria-hidden="true"></span>'
       : "";

@@ -50,7 +50,7 @@ Deno.test("symbol targets scroll back to attached comments without moving the ta
   );
   assertMatch(
     pageCss,
-    /\.source-line:has\(\.symbol-declaration:target\)[^{]*\{ background: var\(--code-hover\); \}/,
+    /\.source-line:has\([^)]*\.symbol-declaration:target[^)]*\)[^{]*\{ background: var\(--code-hover\); \}/,
   );
   assertEquals(sourceText(rendered), "/** café docs */\nfunction greet() {}");
 });
@@ -92,6 +92,74 @@ Deno.test("normal Markdown fenced code keeps its existing non-anchor markup", ()
   assertEquals(rendered.includes("symbol-declaration"), false);
 });
 
+Deno.test("Markdown source headings use the rendered GFM fragments", async () => {
+  const markdown = [
+    "# Hello, *world*!",
+    "Café 中文 🔥",
+    "---",
+    "> - ### [linked](path) `code`",
+    "# Hello, *world*!",
+    "# Ship :rocket:",
+    "```md",
+    "# not a heading",
+    "```",
+  ].join("\n");
+  const source = await renderSourceCodeBlockWithSymbols(markdown, "markdown");
+  const rendered = renderCodeMarkdown(markdown, "http://x/");
+  const ids = [...rendered.matchAll(/<h[1-6] id="([^"]+)"/g)].map((match) =>
+    match[1]
+  );
+  assertEquals(ids, [
+    "hello-world",
+    "café-中文-",
+    "linkedpath-code",
+    "hello-world-1",
+    "ship-",
+  ]);
+  for (const id of ids) {
+    assertMatch(source, new RegExp(`href="#${id}"`));
+    assertMatch(source, new RegExp(`id="${id}"`));
+  }
+  assertEquals(source.includes("not-a-heading"), false);
+  assertEquals(sourceText(source), markdown);
+});
+
+Deno.test("Markdown source headings ignore raw HTML and map multiline Setext starts", async () => {
+  const markdown = [
+    '<h2 id="raw-heading"><a class="anchor">Raw</a></h2>',
+    "",
+    "first",
+    "second",
+    "---",
+    "# Real heading",
+  ].join("\n");
+  const source = await renderSourceCodeBlockWithSymbols(markdown, "markdown");
+  assertEquals(source.includes('id="raw-heading"'), false);
+  assertMatch(
+    source,
+    /id="L3"[^>]*>.*id="firstsecond"[^>]*>first<\/a>/s,
+  );
+  assertMatch(source, /id="real-heading"/);
+  assertEquals(sourceText(source), markdown);
+});
+
+Deno.test("non-Markdown source formats do not create heading fragments", async () => {
+  for (const language of ["css", "markup", "json", "yaml", "toml", "ini"]) {
+    const source = await renderSourceCodeBlockWithSymbols(
+      "# Heading\n---",
+      language,
+    );
+    assertEquals(source.includes("source-heading"), false, language);
+    assertEquals(source.includes('href="#heading"'), false, language);
+  }
+});
+
+Deno.test("Markdown heading analysis failures preserve source rendering", async () => {
+  const markdown = "Text[^1]\n\n[^1]:\n    # Footnote heading\n";
+  const source = await renderSourceCodeBlockWithSymbols(markdown, "markdown");
+  assertEquals(sourceText(source), markdown);
+});
+
 Deno.test("source lines expose Git markers and deletion labels without changing source text", () => {
   const rendered = renderSourceCodeBlock(
     "one\ntwo",
@@ -114,8 +182,12 @@ Deno.test("source lines expose Git markers and deletion labels without changing 
 });
 
 function sourceText(rendered: string): string | undefined {
-  return rendered.match(/<pre[^>]*>([\s\S]*?)<\/pre>/)?.[1]
+  const text = rendered.match(/<pre[^>]*>([\s\S]*?)<\/pre>/)?.[1]
     .replaceAll(/<[^>]+>/g, "")
     .replaceAll("&lt;", "<")
     .replaceAll("&gt;", ">");
+  return text?.replaceAll(
+    /&#x([0-9a-f]+);/gi,
+    (_, value) => String.fromCodePoint(Number.parseInt(value, 16)),
+  );
 }

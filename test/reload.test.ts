@@ -8,24 +8,117 @@ import {
 } from "../src/server/reload.ts";
 import { fixture, handler } from "./fixture.ts";
 
-Deno.test("source changes defer browser reload until the server reconnects", () => {
+Deno.test("source changes close reload events before reloading the page", () => {
   const listeners = new Map<string, () => void>();
   let reloads = 0;
+  let closes = 0;
   class EventSource {
     constructor(_url: string) {}
     addEventListener(name: string, listener: () => void): void {
       listeners.set(name, listener);
     }
+    close(): void {
+      closes++;
+    }
   }
-  new Function("EventSource", "location", reloadClientScript)(EventSource, {
-    reload: () => reloads++,
-  });
+  const globalThis = {
+    addEventListener: () => {},
+    navigation: { addEventListener: () => {} },
+  };
+  const document = { addEventListener: () => {} };
+  new Function(
+    "EventSource",
+    "location",
+    "document",
+    "globalThis",
+    reloadClientScript,
+  )(
+    EventSource,
+    { href: "http://x/", reload: () => reloads++ },
+    document,
+    globalThis,
+  );
   listeners.get("open")?.();
   assertEquals(reloads, 0);
   listeners.get("open")?.();
-  assertEquals(reloads, 1);
+  assertEquals([reloads, closes], [1, 1]);
   listeners.get("reload")?.();
-  assertEquals(reloads, 2);
+  assertEquals([reloads, closes], [2, 2]);
+});
+
+Deno.test("reload client releases navigation connections and reconnects after restoration", () => {
+  type Listener = (event: Record<string, unknown>) => void;
+  const pageListeners = new Map<string, Listener>();
+  const documentListeners = new Map<string, Listener>();
+  const navigationListeners = new Map<string, Listener>();
+  const sources: Array<{
+    closed: boolean;
+    listeners: Map<string, () => void>;
+  }> = [];
+  let reloads = 0;
+  class EventSource {
+    readonly state = {
+      closed: false,
+      listeners: new Map<string, () => void>(),
+    };
+    constructor(_url: string) {
+      sources.push(this.state);
+    }
+    addEventListener(name: string, listener: () => void): void {
+      this.state.listeners.set(name, listener);
+    }
+    close(): void {
+      this.state.closed = true;
+    }
+  }
+  const globalThis = {
+    addEventListener: (name: string, listener: Listener) =>
+      pageListeners.set(name, listener),
+    navigation: {
+      addEventListener: (name: string, listener: Listener) =>
+        navigationListeners.set(name, listener),
+    },
+  };
+  const document = {
+    addEventListener: (name: string, listener: Listener) =>
+      documentListeners.set(name, listener),
+  };
+  new Function(
+    "EventSource",
+    "location",
+    "document",
+    "globalThis",
+    reloadClientScript,
+  )(
+    EventSource,
+    { href: "http://x/readme/", reload: () => reloads++ },
+    document,
+    globalThis,
+  );
+
+  documentListeners.get("click")?.({
+    button: 0,
+    target: {
+      closest: () => ({
+        href: "http://x/readme/?metadata=expand",
+        matches: () => false,
+        target: "",
+      }),
+    },
+  });
+  assertEquals(sources[0].closed, true);
+
+  pageListeners.get("pageshow")?.({ persisted: false });
+  assertEquals(sources.length, 1);
+  pageListeners.get("pageshow")?.({ persisted: true });
+  assertEquals(sources.length, 2);
+  sources[1].listeners.get("open")?.();
+  assertEquals(reloads, 0);
+  navigationListeners.get("navigate")?.({
+    hashChange: false,
+    downloadRequest: null,
+  });
+  assertEquals(sources[1].closed, true);
 });
 
 Deno.test("source paths do not race content reload notifications", () => {

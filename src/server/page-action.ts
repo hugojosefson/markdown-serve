@@ -1,7 +1,13 @@
-import { queryHref, setQuery } from "./query.ts";
+import { queryHref, retainQuery, setQuery } from "./query.ts";
 
 export type HeaderAction =
-  | { kind: "files"; href: string; label: "Files"; title: string }
+  | {
+    kind: "files";
+    href: string;
+    label: "Files";
+    queryScope: "directory";
+    title: string;
+  }
   | {
     kind: "index";
     href: string;
@@ -39,10 +45,11 @@ export function rawPageAction(contentType: string): FileAction {
 }
 
 export function markdownViewPageAction(url: URL, source: boolean): FileAction {
+  const query = retainQuery(url.search, ["metadata", "theme", "width"]);
   if (source) {
     return {
       kind: "rendered",
-      href: queryHref(url.pathname, setQuery(url.search, "source", undefined)),
+      href: queryHref(url.pathname, query),
       label: "View rendered",
       queryRemove: ["source"],
       title: "View rendered Markdown",
@@ -50,7 +57,7 @@ export function markdownViewPageAction(url: URL, source: boolean): FileAction {
   }
   return {
     kind: "source",
-    href: queryHref(url.pathname, setQuery(url.search, "source", null)),
+    href: queryHref(url.pathname, setQuery(query, "source", null)),
     label: "View source",
     title: "View Markdown source",
   };
@@ -73,9 +80,10 @@ export function filesPageAction(url: URL): HeaderAction {
     kind: "files",
     href: queryHref(
       url.pathname,
-      setQuery(setQuery(url.search, "raw", undefined), "dir", null),
+      setQuery(retainQuery(url.search, ["theme", "width"]), "dir", null),
     ),
     label: "Files",
+    queryScope: "directory",
     title: "Browse directory files",
   };
 }
@@ -85,7 +93,7 @@ export function indexPageAction(url: URL, index: string): HeaderAction {
     kind: "index",
     href: queryHref(
       url.pathname,
-      setQuery(setQuery(url.search, "dir", undefined), "raw", undefined),
+      retainQuery(url.search, ["theme", "width"]),
     ),
     label: index,
     queryRemove: ["dir"],

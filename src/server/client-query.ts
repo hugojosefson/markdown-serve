@@ -1,7 +1,8 @@
 // Browser source intentionally mirrors query.ts; it is tested against shared fixtures.
 export const navigationQueryClient = `
 const navigationHrefs = new WeakMap();
-const nonStickyNavigationQuery = new Set(['source']);
+const globalNavigationQuery = new Set(['theme', 'width']);
+const directoryNavigationQuery = new Set(['dir', 'order']);
 const queryPairs = (search) => search.replace(/^\\?/, '').split('&').filter(Boolean).map((part, index) => {
   const equals = part.indexOf('=');
   const decode = (value) => { try { return decodeURIComponent(value.replaceAll('+', ' ')); } catch { return value; } };
@@ -22,7 +23,9 @@ const syncNavigationLinks = (links = document.querySelectorAll('a')) => {
     const removed = new Set((link.getAttribute('data-query-remove') ?? '').split(/\\s+/).filter(Boolean));
     const target = queryPairs(url.search).filter(({ key }) => !removed.has(key));
     const targetKeys = new Set(target.map(({ key }) => key));
-    const pairs = queryPairs(location.search).filter(({ key }) => !nonStickyNavigationQuery.has(key) && !targetKeys.has(key) && !removed.has(key)).concat(target);
+    const directory = document.documentElement.dataset.directoryView === 'true' && link.getAttribute('data-query-scope') === 'directory';
+    const sticky = (key) => globalNavigationQuery.has(key) || directory && directoryNavigationQuery.has(key);
+    const pairs = queryPairs(location.search).filter(({ key }) => sticky(key) && !targetKeys.has(key) && !removed.has(key)).concat(target);
     const query = canonicalNavigationQuery(pairs);
     const hash = href.includes('#') ? '#' + href.split('#').slice(1).join('#') : '';
     const path = href.split(/[?#]/, 1)[0];

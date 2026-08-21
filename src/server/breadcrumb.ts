@@ -20,10 +20,12 @@ export function breadcrumbs(
       ? `<span aria-current="page">${escapeHtml(part)}${
         directory && !sourceName ? "/" : ""
       }</span>`
-      : `<a href="${href}">${escapeHtml(part)}</a>`;
+      : `<a href="${href}" data-query-scope="directory">${
+        escapeHtml(part)
+      }</a>`;
   });
   const rootCrumb = crumbs.length
-    ? `<a href="/?dir">${escapeHtml(root)}</a>`
+    ? `<a href="/?dir" data-query-scope="directory">${escapeHtml(root)}</a>`
     : `<span aria-current="page">${escapeHtml(root)}</span>`;
   return `<nav aria-label="Breadcrumb">${rootCrumb}${
     links.map((link, index) =>

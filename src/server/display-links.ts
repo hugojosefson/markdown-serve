@@ -1,5 +1,5 @@
 import { escapeHtml } from "./html.ts";
-import { queryHref, setQuery } from "./query.ts";
+import { queryHref, retainQuery, setQuery } from "./query.ts";
 
 type DisplayOption = "theme" | "width";
 type Theme = "auto" | "light" | "dark";
@@ -15,15 +15,20 @@ export function displayState(url: URL): { theme: Theme; width: Width } {
   };
 }
 
-export function displayHref(url: URL, option: DisplayOption): string {
+export function displayHref(
+  url: URL,
+  option: DisplayOption,
+  directory = false,
+): string {
   return displayOptionHref(
     url,
     option,
     nextDisplay(displayState(url)[option], option),
+    directory,
   );
 }
 
-export function displayLinks(url: URL): string {
+export function displayLinks(url: URL, directory = false): string {
   const { theme, width } = displayState(url);
   const nextTheme = nextDisplay(theme, "theme");
   const nextWidth = nextDisplay(width, "width");
@@ -35,6 +40,7 @@ export function displayLinks(url: URL): string {
         theme,
         value === nextTheme ? "t" : undefined,
         url,
+        directory,
       )
     ).join("")
   }</div><div class="display-group display-width" role="group" aria-label="Content width">${
@@ -45,6 +51,7 @@ export function displayLinks(url: URL): string {
         width,
         value === nextWidth ? "w" : undefined,
         url,
+        directory,
       )
     ).join("")
   }</div>`;
@@ -56,11 +63,12 @@ function displayLink(
   selected: Theme | Width,
   shortcut: "t" | "w" | undefined,
   url: URL,
+  directory: boolean,
 ): string {
   const active = value === selected;
   const label = active ? `${capitalize(value)} selected` : `Switch to ${value}`;
   return `<a class="display-link${active ? " is-selected" : ""}" href="${
-    escapeHtml(displayOptionHref(url, option, value))
+    escapeHtml(displayOptionHref(url, option, value, directory))
   }" aria-label="${label}" title="${label}${shortcut ? ` (${shortcut})` : ""}"${
     active ? ' aria-current="true"' : ""
   }${shortcut ? ` aria-keyshortcuts="${shortcut}"` : ""}>${
@@ -72,11 +80,21 @@ function displayOptionHref(
   url: URL,
   option: DisplayOption,
   value: Theme | Width,
+  directory: boolean,
 ): string {
   const defaultValue = option === "theme" ? "auto" : "narrow";
   return queryHref(
     url.pathname,
-    setQuery(url.search, option, value === defaultValue ? undefined : value),
+    setQuery(
+      retainQuery(
+        url.search,
+        directory
+          ? ["dir", "order", "theme", "width"]
+          : ["metadata", "source", "theme", "width"],
+      ),
+      option,
+      value === defaultValue ? undefined : value,
+    ),
   );
 }
 

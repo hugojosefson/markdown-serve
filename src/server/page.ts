@@ -101,7 +101,7 @@ function renderContentHeader(
     model.metadata
       ? renderFileMetadataSummary(model.metadata, model.url, metadataExpanded)
       : ""
-  }${displayLinks(model.url)}</header>`;
+  }${displayLinks(model.url, model.directoryView ?? false)}</header>`;
 }
 
 function renderPageContent(model: PageModel): string {
@@ -156,6 +156,7 @@ function renderPageAction(
   className = "page-action",
 ): string {
   const queryRemove = "queryRemove" in action ? action.queryRemove : undefined;
+  const queryScope = "queryScope" in action ? action.queryScope : undefined;
   const title = action.title;
   const target = "target" in action
     ? ` target="${action.target}" rel="noopener"`
@@ -164,7 +165,7 @@ function renderPageAction(
     queryRemove?.length
       ? ` data-query-remove="${escapeHtml(queryRemove.join(" "))}"`
       : ""
-  } title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${
-    escapeHtml(action.label)
-  }</a>`;
+  }${queryScope ? ` data-query-scope="${queryScope}"` : ""} title="${
+    escapeHtml(title)
+  }" aria-label="${escapeHtml(title)}">${escapeHtml(action.label)}</a>`;
 }

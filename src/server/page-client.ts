@@ -11,6 +11,7 @@ const filesLink = (href, name) => {
   const filesLink = document.createElement('a');
   filesLink.className = 'tree-files-link';
   filesLink.href = href;
+  filesLink.dataset.queryScope = 'directory';
   filesLink.title = filesLink.ariaLabel = 'Show files in ' + name;
   filesLink.textContent = 'Files';
   return filesLink;

@@ -21,6 +21,7 @@ export function renderCodeMarkdown(markdown: string, baseUrl: string): string {
       ],
       span: [
         "code-language",
+        "code-toolbar-file-actions",
         "code-copy-status",
         "token",
         "keyword",
@@ -53,7 +54,7 @@ export function renderCodeMarkdown(markdown: string, baseUrl: string): string {
     },
     allowedAttributes: {
       button: ["type", "data-copy", "aria-label"],
-      span: ["aria-live"],
+      span: ["aria-live", "data-file-actions"],
     },
   });
 }

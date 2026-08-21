@@ -1,5 +1,6 @@
 import { assert, assertEquals, assertMatch, assertNotMatch } from "@std/assert";
 import { pageScript, pageStylesheet } from "../src/server/page-assets.ts";
+import { navigationSpeculation } from "../src/server/navigation-speculation.ts";
 import { fixture, handler } from "./fixture.ts";
 
 Deno.test("static MIME types, HEAD, 404, and 405 responses", async () => {
@@ -45,6 +46,7 @@ Deno.test("versioned page assets are immutable and external to compact HTML", as
     const page = await (await h(new Request("http://x/guide"))).text();
     assertMatch(page, new RegExp(`href="${pageStylesheet.url}"`));
     assertMatch(page, new RegExp(`src="${pageScript.url}"`));
+    assert(page.includes(navigationSpeculation));
     assertEquals(page.includes("<style>"), false);
     assertEquals(page.includes(pageStylesheet.body), false);
     assertEquals(page.includes(pageScript.body), false);

@@ -88,18 +88,20 @@ Deno.test("initial display state applies valid query values", () => {
   });
 });
 
-Deno.test("client carries all current query state across internal navigation", () => {
+Deno.test("client carries sticky query state and drops source across navigation", () => {
   const listeners = new Map<string, (event: { key?: string }) => void>();
   const location = {
     href:
-      "http://x/guide?order=size&unknown=one&unknown=two&flag&theme=dark&width=wide",
+      "http://x/guide?order=size&source&unknown=one&unknown=two&flag&theme=dark&width=wide",
     origin: "http://x",
-    search: "?order=size&unknown=one&unknown=two&flag&theme=dark&width=wide",
+    search:
+      "?order=size&source&unknown=one&unknown=two&flag&theme=dark&width=wide",
   };
   let ordinaryHref = "docs";
   let overrideHref = "/files?order=name&order=modified&unknown=target";
   let absoluteHref = "http://x/root?dir#section";
   let optionHref = "?theme=dark";
+  let sourceHref = "?source";
   let externalHref = "https://example.test/docs?x=1";
   let hashHref = "#browse";
   let rawHref = "?raw";
@@ -132,6 +134,7 @@ Deno.test("client carries all current query state across internal navigation", (
   });
   const override = link(() => overrideHref, (value) => overrideHref = value);
   const absolute = link(() => absoluteHref, (value) => absoluteHref = value);
+  const source = link(() => sourceHref, (value) => sourceHref = value);
   const external = link(() => externalHref, (value) => externalHref = value);
   const hash = link(() => hashHref, (value) => hashHref = value);
   const raw = {
@@ -158,6 +161,7 @@ Deno.test("client carries all current query state across internal navigation", (
       ordinary,
       override,
       absolute,
+      source,
       option,
       external,
       hash,
@@ -191,6 +195,10 @@ Deno.test("client carries all current query state across internal navigation", (
     "http://x/root?dir&flag&order=size&theme=dark&unknown=one&unknown=two&width=wide#section",
   );
   assertEquals(optionHref, "?theme=dark");
+  assertEquals(
+    sourceHref,
+    "?flag&order=size&source&theme=dark&unknown=one&unknown=two&width=wide",
+  );
   assertEquals(externalHref, "https://example.test/docs?x=1");
   assertEquals(hashHref, "#browse");
   assertEquals(rawHref, "?raw");

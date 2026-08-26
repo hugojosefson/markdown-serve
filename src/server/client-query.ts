@@ -15,7 +15,7 @@ const canonicalNavigationQuery = (pairs) => {
 const syncNavigationLinks = (links = document.querySelectorAll('a')) => {
   links.forEach((link) => {
     const href = navigationHrefs.get(link) ?? link.getAttribute('href');
-    if (href === null || link.matches('.display-link, .raw-link, .download-link, .file-metadata, .file-metadata-close, .markdown-source-tab, .markdown-source-close') || href.startsWith('#')) { return; }
+    if (href === null || link.matches('.display-link, .raw-link, .download-link, .file-metadata, .file-metadata-close, .markdown-view-toggle a') || href.startsWith('#')) { return; }
     let url;
     try { url = new URL(href, location.href); } catch { return; }
     if (url.origin !== location.origin) { return; }

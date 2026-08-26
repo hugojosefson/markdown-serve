@@ -9,14 +9,17 @@ type Heading = {
 export function renderMarkdownToc(html: string): string {
   const headings = headingsFromHtml(html);
   if (!headings.length) return html;
-  const initiallyOpen = headings.length > initialHeadingCount(html, headings);
-  return `<details class="markdown-toc"${
+  const initialCount = initialHeadingCount(html, headings);
+  const initiallyOpen = headings.length > initialCount;
+  const toc = `<details class="markdown-toc"${
     initiallyOpen ? " open" : ""
   }><summary>Contents</summary><nav aria-label="Table of contents"><ol>${
     headings.map((heading) =>
       `<li class="markdown-toc-level-${heading.level}"><a href="#${heading.idHtml}">${heading.labelHtml}</a></li>`
     ).join("")
-  }</ol></nav></details>${html}`;
+  }</ol></nav></details>`;
+  const position = initialCount ? headings[initialCount - 1].end : 0;
+  return html.slice(0, position) + toc + html.slice(position);
 }
 
 function headingsFromHtml(html: string): Heading[] {

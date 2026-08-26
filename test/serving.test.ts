@@ -101,23 +101,16 @@ Deno.test("file actions have stable placements and preserve raw/download priorit
     const rendered = await (await h(new Request("http://x/guide"))).text();
     assertMatch(
       rendered,
-      /<header class="content-header">[\s\S]*<a class="markdown-source-tab" href="\?source"[^>]*>View source<\/a>[\s\S]*<\/header><div class="page-content page-content-heading"><div class="file-actions file-actions-heading"><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a><\/div><details class="markdown-toc" open><summary>Contents<\/summary><nav aria-label="Table of contents">/,
+      /<header class="content-header">[\s\S]*<nav class="markdown-view-toggle" aria-label="Markdown view"><a class="is-selected" href="\/guide" aria-current="true">Rendered<\/a><a class="" href="\?source">Source<\/a><\/nav><div class="file-actions"><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a><\/div>[\s\S]*<\/header>/,
     );
     assertEquals(
       rendered.match(/<header class="content-header[^>]*>[\s\S]*?<\/header>/)
         ?.[0].includes("Raw") ||
         rendered.match(/<header class="content-header[^>]*>[\s\S]*?<\/header>/)
           ?.[0].includes("Download"),
-      false,
+      true,
     );
-    assertMatch(
-      rendered,
-      /class="markdown-source-tab"[^>]*aria-expanded="false"/,
-    );
-    assertNotMatch(
-      rendered.match(/<a class="markdown-source-tab"[^>]*>/)?.[0] ?? "",
-      /aria-controls/,
-    );
+    assertMatch(rendered, /<details class="markdown-toc" open>/);
     assertMatch(
       pageStylesheet.body,
       /\.markdown-body \.file-action \{[^}]*color: var\(--code-muted\)/,
@@ -131,11 +124,14 @@ Deno.test("file actions have stable placements and preserve raw/download priorit
     assertNotMatch(source, /<h1 id="guide"|markdown-toc/);
     assertMatch(
       source,
-      /class="markdown-source-tab"[^>]*aria-controls="markdown-source-panel" aria-expanded="true"/,
+      /<header class="content-header">[\s\S]*<nav class="markdown-view-toggle" aria-label="Markdown view"><a class="" href="\?theme=dark">Rendered<\/a><a class="is-selected" href="\?source&amp;theme=dark" aria-current="true">Source<\/a><\/nav><div class="file-actions"><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a><\/div>[\s\S]*<\/header><section class="markdown-source-panel" aria-label="Markdown source"><div class="code-block">/,
     );
+    const sourceWithMetadata = await (await h(
+      new Request("http://x/guide?metadata&source"),
+    )).text();
     assertMatch(
-      source,
-      /<header class="content-header source-expanded">[\s\S]*<a class="markdown-source-tab" href="\?theme=dark"[^>]*>View rendered<\/a><div class="file-actions file-actions-source"><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a><\/div>[\s\S]*<\/header><section class="markdown-source-panel" id="markdown-source-panel" aria-label="Markdown source"><div class="markdown-source-panel-header"><span>Markdown source<\/span><a class="markdown-source-close" href="\?theme=dark"[^>]*>[\s\S]*?<\/a><\/div><div class="code-block">/,
+      sourceWithMetadata,
+      /<\/header><section class="file-metadata-details"[\s\S]*?<\/section><section class="markdown-source-panel" aria-label="Markdown source">/,
     );
     assertMatch(
       await (await h(new Request("http://x/guide?source&raw"))).text(),
@@ -181,7 +177,7 @@ Deno.test("file actions have stable placements and preserve raw/download priorit
         indexed.match(/<header class="content-header[^>]*>[\s\S]*?<\/header>/)
           ?.[0] ?? "";
       assertMatch(header, /Files/);
-      assertNotMatch(header, /Raw|Download/);
+      assertMatch(header, /Raw.*Download/);
       const listing =
         await (await directoryHandler(new Request("http://x/docs/\?dir")))
           .text();
@@ -339,7 +335,7 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     );
     assertMatch(
       pageStylesheet.body,
-      /\.content-header\.metadata-expanded \.file-metadata \{[^}]*border-bottom-color: var\(--code-hover\); border-radius: 6px 6px 0 0;[^}]*position: relative; z-index: 1; \}.*\.content-header\.metadata-expanded \.file-metadata::after \{[^}]*height: 16px; left: -1px;[^}]*right: -1px; top: 100%; \}.*\.markdown-body \.file-metadata-details \{[^}]*margin: 14px 0 16px;[^}]*overflow: hidden; padding: 0;/s,
+      /\.content-header\.metadata-expanded \.file-metadata \{ background: var\(--code-hover\); border-color: var\(--code-border\); color: var\(--focus-color\); \}.*\.markdown-body \.file-metadata-details \{[^}]*margin: 14px 0 16px;[^}]*overflow: hidden; padding: 0;/s,
     );
     const themedDetails = await (await h(
       new Request("http://x/photo.png?theme=dark&metadata&wide"),

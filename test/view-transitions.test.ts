@@ -33,19 +33,17 @@ Deno.test("metadata expansion separates moving content and details", () => {
   );
 });
 
-Deno.test("source expansion connects its tab and source panel", () => {
+Deno.test("source view uses standalone segmented controls and panel", () => {
   assertMatch(
     pageStylesheet.body,
-    /\.content-header\.source-expanded \.markdown-source-tab \{[^}]*border-radius: 6px 6px 0 0;/,
+    /\.content-header \.markdown-view-toggle \{ view-transition-name: markdown-view-toggle; \}/,
   );
   assertMatch(
     pageStylesheet.body,
-    /\.content-header\.source-expanded \.markdown-source-tab::after \{[^}]*height: 16px;/,
+    /\.markdown-source-panel \{ background: var\(--code-bg\); border: 1px solid var\(--code-border\); border-radius: 6px;/,
   );
-  assertMatch(
-    pageStylesheet.body,
-    /\.markdown-source-panel > \.code-block \{ border: 0; border-radius: 0; margin: 0; \}/,
-  );
+  assert(!pageStylesheet.body.includes("markdown-view-toggle::after"));
+  assert(!pageStylesheet.body.includes("file-metadata::after"));
   assertMatch(
     pageStylesheet.body,
     /\.markdown-source-panel \{ view-transition-name: markdown-source-panel; \}/,
@@ -105,5 +103,5 @@ Deno.test("query navigation allows source- or metadata-only fold transitions", (
 Deno.test("speculative prefetch excludes file view actions", () => {
   assert(!navigationSpeculation.includes(".file-action"));
   assert(navigationSpeculation.includes(".file-metadata"));
-  assert(navigationSpeculation.includes(".markdown-source-tab"));
+  assert(navigationSpeculation.includes(".markdown-view-toggle a"));
 });

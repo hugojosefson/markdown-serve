@@ -99,46 +99,45 @@ function renderContentHeader(
     .join("");
   return `<header class="content-header${
     model.metadata && metadataExpanded ? " metadata-expanded" : ""
-  }${sourceExpanded ? " source-expanded" : ""}">${breadcrumb}${actions}${
+  }">${breadcrumb}${actions}<div class="content-controls">${
     model.sourceExpanded === undefined
       ? ""
-      : renderSourceTab(model.url, sourceExpanded)
+      : renderMarkdownViewToggle(model.url, sourceExpanded)
   }${
-    sourceExpanded
-      ? `<div class="file-actions file-actions-source">${
+    model.sourceExpanded === undefined
+      ? ""
+      : `<div class="file-actions">${
         renderFileActions(
           model.fileActions?.filter((action) =>
             action.kind === "raw" || action.kind === "download"
           ) ?? [],
         )
       }</div>`
-      : ""
   }${
     model.metadata
       ? renderFileMetadataSummary(model.metadata, model.url, metadataExpanded)
       : ""
-  }${displayLinks(model.url, model.directoryView ?? false)}</header>`;
+  }${displayLinks(model.url, model.directoryView ?? false)}</div></header>`;
 }
 
-function renderSourceTab(url: URL, expanded: boolean): string {
-  const action = expanded ? "View rendered Markdown" : "View Markdown source";
-  return `<a class="markdown-source-tab" href="${
-    escapeHtml(markdownSourceHref(url, expanded))
-  }" title="${action}" aria-label="${action}"${
-    expanded ? ' aria-controls="markdown-source-panel"' : ""
-  } aria-expanded="${expanded}">${
-    expanded ? "View rendered" : "View source"
-  }</a>`;
+function renderMarkdownViewToggle(url: URL, source: boolean): string {
+  return `<nav class="markdown-view-toggle" aria-label="Markdown view"><a class="${
+    source ? "" : "is-selected"
+  }" href="${escapeHtml(markdownSourceHref(url, true))}"${
+    source ? "" : ' aria-current="true"'
+  }>Rendered</a><a class="${source ? "is-selected" : ""}" href="${
+    escapeHtml(markdownSourceHref(url, false))
+  }"${source ? ' aria-current="true"' : ""}>Source</a></nav>`;
 }
 
 function renderSourcePanel(model: PageModel): string {
-  const href = markdownSourceHref(model.url, true);
-  return `<section class="markdown-source-panel" id="markdown-source-panel" aria-label="Markdown source"><div class="markdown-source-panel-header"><span>Markdown source</span><a class="markdown-source-close" href="${
-    escapeHtml(href)
-  }" title="View rendered Markdown" aria-label="View rendered Markdown">${'<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 4l8 8M12 4l-8 8"/></svg>'}</a></div>${model.content}</section>`;
+  return `<section class="markdown-source-panel" aria-label="Markdown source">${model.content}</section>`;
 }
 
 function renderPageContent(model: PageModel): string {
+  if (model.sourceExpanded !== undefined) {
+    return `<div class="page-content page-content-markdown">${model.content}</div>`;
+  }
   if (!model.fileActions?.length) {
     return model.content;
   }

@@ -1,6 +1,6 @@
 import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
-import { filePageActions, markdownViewPageAction } from "./page-action.ts";
+import { filePageActions } from "./page-action.ts";
 import type { HeaderAction } from "./page-action.ts";
 import {
   renderCodeMarkdown,
@@ -11,6 +11,7 @@ import { sourceAnnotations } from "./git/source.ts";
 import { downloadFile, rawFile } from "./responses.ts";
 import { metadataForFile } from "./file-metadata.ts";
 import type { ServerConfig } from "./types.ts";
+import { renderMarkdownToc } from "./markdown-toc.ts";
 
 export async function renderMarkdown(
   config: ServerConfig,
@@ -43,7 +44,7 @@ export async function renderMarkdown(
       codeLanguageForPath(file, text),
       await sourceAnnotations(config, file, text),
     )
-    : renderCodeMarkdown(text, base.href);
+    : renderMarkdownToc(renderCodeMarkdown(text, base.href));
   return htmlResponse(
     request,
     await page(config, {
@@ -53,17 +54,10 @@ export async function renderMarkdown(
       content,
       url,
       headerActions: options.headerActions,
-      fileActions: source
-        ? [
-          markdownViewPageAction(url, true),
-          ...filePageActions("text/plain; charset=UTF-8", metadata.mime),
-        ]
-        : [
-          markdownViewPageAction(url, false),
-          ...filePageActions("text/plain; charset=UTF-8", metadata.mime),
-        ],
-      fileActionPlacement: source ? "toolbar" : "heading",
+      fileActions: filePageActions("text/plain; charset=UTF-8", metadata.mime),
+      fileActionPlacement: "heading",
       metadata,
+      sourceExpanded: source,
       directoryView: options.directoryView,
       sourceName: options.sourceName,
     }),

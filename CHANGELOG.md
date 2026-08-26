@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file. See
 [fork-version](https://github.com/eglavin/fork-version) for commit guidelines.
 
+## [0.1.5](https://github.com/hugojosefson/markdown-serve/compare/0.1.4...0.1.5) (2026-08-26)
+
+### Features
+
+- add global install task
+  ([958918f](https://github.com/hugojosefson/markdown-serve/commit/958918f191b086605692dd87cf8a4b4b6c426858))
+
 ## [0.1.4](https://github.com/hugojosefson/markdown-serve/compare/0.1.3...0.1.4) (2026-08-26)
 
 ### Bug Fixes

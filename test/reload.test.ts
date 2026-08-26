@@ -190,7 +190,7 @@ Deno.test("reload client and SSE are limited to generated pages", async () => {
     assert(textResponse.headers.get("content-type")?.includes("html"));
     assertMatch(await textResponse.text(), /EventSource/);
     const response = await h(
-      new Request("http://x/__markdown_server__/events"),
+      new Request("http://x/__markdown_serve__/events"),
     );
     const reader = response.body!.getReader();
     state.listener();
@@ -206,7 +206,7 @@ Deno.test("reload client and SSE are limited to generated pages", async () => {
       },
     });
     const head = await headHandler(
-      new Request("http://x/__markdown_server__/events", { method: "HEAD" }),
+      new Request("http://x/__markdown_serve__/events", { method: "HEAD" }),
     );
     assertEquals(
       [head.status, state.subscriptions, await head.text()],
@@ -230,14 +230,16 @@ Deno.test("custom reload sources unsubscribe SSE clients on cancellation and clo
   try {
     const h = await handler(f.root, { reloadSource: source });
     const cancelled = await h(
-      new Request("http://x/__markdown_server__/events"),
+      new Request("http://x/__markdown_serve__/events"),
     );
     const cancelledReader = cancelled.body!.getReader();
     assertEquals(subscribers.size, 2);
     await cancelledReader.cancel();
     assertEquals(subscribers.size, 1);
 
-    const closed = await h(new Request("http://x/__markdown_server__/events"));
+    const closed = await h(
+      new Request("http://x/__markdown_serve__/events"),
+    );
     const closedReader = closed.body!.getReader();
     assertEquals(subscribers.size, 2);
     for (const subscriber of [...subscribers]) {
@@ -262,7 +264,7 @@ Deno.test("SSE unsubscribes when a reload source closes during subscribe", async
   try {
     const h = await handler(f.root, { reloadSource: source });
     const response = await h(
-      new Request("http://x/__markdown_server__/events"),
+      new Request("http://x/__markdown_serve__/events"),
     );
     assertEquals((await response.body!.getReader().read()).done, true);
     assertEquals(unsubscribes, 2);
@@ -301,7 +303,7 @@ Deno.test("watched reload warms the catalog before notifying SSE clients", async
   try {
     const address = server.addr as Deno.NetAddr;
     const response = await fetch(
-      `http://${address.hostname}:${address.port}/__markdown_server__/events`,
+      `http://${address.hostname}:${address.port}/__markdown_serve__/events`,
     );
     const reader = response.body!.getReader();
     assertEquals(
@@ -349,7 +351,7 @@ Deno.test("watched reload closes SSE on abort", async () => {
   try {
     const address = server.addr as Deno.NetAddr;
     const response = await fetch(
-      `http://${address.hostname}:${address.port}/__markdown_server__/events`,
+      `http://${address.hostname}:${address.port}/__markdown_serve__/events`,
     );
     const reader = response.body!.getReader();
     abort.abort();

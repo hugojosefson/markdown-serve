@@ -63,14 +63,14 @@ export function formatRuntimeFeatureStatus(
 
 export const browserEnvDescriptor = {
   name: "env",
-  variable: "MARKDOWN_SERVER_BROWSER_OPENED",
+  variable: "MARKDOWN_SERVE_BROWSER_OPENED",
 } as const;
 export const gitDescriptor = { name: "run", command: "git" } as const;
 export const gitGrantHint = "--allow-run=git";
 
 export function browserGrantHint(): string {
   const [opener] = openerCommand("http://localhost/");
-  return `--allow-run=${opener} --allow-env=MARKDOWN_SERVER_BROWSER_OPENED`;
+  return `--allow-run=${opener} --allow-env=MARKDOWN_SERVE_BROWSER_OPENED`;
 }
 
 function granted(

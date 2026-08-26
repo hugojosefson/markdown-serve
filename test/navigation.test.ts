@@ -65,7 +65,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     );
     assertMatch(guideBody, /href="\/" data-query-remove="dir">README\.md<\/a>/);
     assert(!guideBody.includes('href="//"'));
-    assertMatch(pageScript.body, /__markdown_server__\/tree\?path=/);
+    assertMatch(pageScript.body, /__markdown_serve__\/tree\?path=/);
     assertMatch(guideBody, /class="active"/);
     assert(!guideBody.includes('data-path="docs/nested"'));
 
@@ -315,12 +315,12 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
     "docs/unindexed/file.txt": "unindexed",
     "docs/sub/file.txt": "sub",
     "docs/percent%zz/file.txt": "percent",
-    "__markdown_server__/tree": "collision",
+    "__markdown_serve__/tree": "collision",
   });
   try {
     const h = await handler(f.root);
     const treeResponse = await h(
-      new Request("http://x/__markdown_server__/tree?path=docs"),
+      new Request("http://x/__markdown_serve__/tree?path=docs"),
     );
     assertEquals(
       treeResponse.headers.get("content-type"),
@@ -380,23 +380,23 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
       "/docs/unindexed/?dir",
     );
     const rootChildren = await (
-      await h(new Request("http://x/__markdown_server__/tree"))
+      await h(new Request("http://x/__markdown_serve__/tree"))
     ).json() as Array<{ name: string; filesHref?: string }>;
     assertEquals(
       rootChildren.find((child) => child.name === "docs")?.filesHref,
       "/docs/?dir",
     );
     assertEquals(
-      rootChildren.find((child) => child.name === "__markdown_server__")
+      rootChildren.find((child) => child.name === "__markdown_serve__")
         ?.filesHref,
-      "/__markdown_server__/",
+      "/__markdown_serve__/",
     );
-    assert(!pageClient.includes("/__markdown_server__/index"));
+    assert(!pageClient.includes("/__markdown_serve__/index"));
     assert(!pageClient.includes("indexPending"));
 
     const percentResponse = await h(
       new Request(
-        "http://x/__markdown_server__/tree?path=docs%2Fpercent%25zz",
+        "http://x/__markdown_serve__/tree?path=docs%2Fpercent%25zz",
       ),
     );
     assertEquals(
@@ -405,23 +405,23 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
     );
 
     const postResponse = await h(
-      new Request("http://x/__markdown_server__/tree", { method: "POST" }),
+      new Request("http://x/__markdown_serve__/tree", { method: "POST" }),
     );
     assertEquals([postResponse.status, postResponse.headers.get("allow")], [
       405,
       "GET, HEAD",
     ]);
     const traversalResponse = await h(
-      new Request("http://x/__markdown_server__/tree?path=%2e%2e%2f"),
+      new Request("http://x/__markdown_serve__/tree?path=%2e%2e%2f"),
     );
     assertEquals(traversalResponse.status, 400);
     assertEquals(
-      (await h(new Request("http://x/__markdown_server__/index?path=docs")))
+      (await h(new Request("http://x/__markdown_serve__/index?path=docs")))
         .status,
       404,
     );
     const rootResponse = await h(
-      new Request("http://x/__markdown_server__/tree"),
+      new Request("http://x/__markdown_serve__/tree"),
     );
     assertEquals(
       rootResponse.headers.get("content-type"),

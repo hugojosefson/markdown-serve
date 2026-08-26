@@ -2,7 +2,7 @@ import { decodePath, filePath } from "./paths.ts";
 import { plain, rawFile, redirect } from "./responses.ts";
 import type { ServerConfig } from "./types.ts";
 
-const sitePrefix = "/__markdown_server__/site/";
+const sitePrefix = "/__markdown_serve__/site/";
 const htmlPreviewCsp =
   "sandbox allow-scripts; default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'none'; form-action 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'";
 

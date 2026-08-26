@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Serve the current directory, starting at http://localhost:8000.
-markdown-server
+markdown-serve
 
 # Choose a root, host, and port; do not open a browser.
-markdown-server ./docs --host 127.0.0.1 --port 8080 --no-open
+markdown-serve ./docs --host 127.0.0.1 --port 8080 --no-open
 
 # Use temporary redirects while testing, or permanent redirects when desired.
-markdown-server --redirect=302
-markdown-server --redirect=301
+markdown-serve --redirect=302
+markdown-serve --redirect=301

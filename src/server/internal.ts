@@ -16,7 +16,7 @@ export async function internalResponse(
     });
   }
   const url = new URL(request.url);
-  if (url.pathname.startsWith("/__markdown_server__/site/")) {
+  if (url.pathname.startsWith("/__markdown_serve__/site/")) {
     return await siteResponse(config, request, url);
   }
   const asset = pageAsset(url.pathname);
@@ -28,10 +28,10 @@ export async function internalResponse(
       },
     });
   }
-  if (url.pathname === "/__markdown_server__/tree") {
+  if (url.pathname === "/__markdown_serve__/tree") {
     return await treeResponse(config, request, url.searchParams.get("path"));
   }
-  if (url.pathname === "/__markdown_server__/events" && config.reloadSource) {
+  if (url.pathname === "/__markdown_serve__/events" && config.reloadSource) {
     return request.method === "HEAD"
       ? new Response(null, {
         headers: {

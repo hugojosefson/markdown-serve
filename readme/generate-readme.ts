@@ -78,12 +78,12 @@ function processLineForImport(
       if (step2 === "mod.ts") {
         return line.replace(
           /\sfrom\s+"(\..*)"/,
-          ` from "@hugojosefson/markdown-server"`,
+          ` from "@hugojosefson/markdown-serve"`,
         );
       }
       return line.replace(
         /\sfrom\s+"(\..*)"/,
-        ` from "@hugojosefson/markdown-server/${step2}"`,
+        ` from "@hugojosefson/markdown-serve/${step2}"`,
       );
     }
     return line;

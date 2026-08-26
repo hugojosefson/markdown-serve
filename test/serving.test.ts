@@ -156,7 +156,7 @@ Deno.test("file actions have stable placements and preserve raw/download priorit
     const html = await (await h(new Request("http://x/page.html"))).text();
     assertMatch(
       html,
-      /<span class="code-toolbar-file-actions" data-file-actions="leading"><a class="file-action" href="\/__markdown_server__\/site\/page\.html" target="_blank" rel="noopener"[^>]*>View page<\/a><\/span><button class="code-copy"/,
+      /<span class="code-toolbar-file-actions" data-file-actions="leading"><a class="file-action" href="\/__markdown_serve__\/site\/page\.html" target="_blank" rel="noopener"[^>]*>View page<\/a><\/span><button class="code-copy"/,
     );
     assertNotMatch(
       html.match(/<header class="content-header[^>]*>[\s\S]*?<\/header>/)
@@ -204,11 +204,11 @@ Deno.test("site previews serve scoped assets and safely resolve directories", as
   });
   try {
     const h = await handler(f.root);
-    const base = "http://x/__markdown_server__/site/site";
+    const base = "http://x/__markdown_serve__/site/site";
     const redirect = await h(new Request(base));
     assertEquals([redirect.status, redirect.headers.get("location")], [
       302,
-      "/__markdown_server__/site/site/",
+      "/__markdown_serve__/site/site/",
     ]);
     const page = await h(new Request(`${base}/`));
     assertEquals(page.headers.get("content-type"), "text/html; charset=UTF-8");
@@ -236,14 +236,14 @@ Deno.test("site previews serve scoped assets and safely resolve directories", as
     assertEquals(await head.text(), "");
     assertEquals((await h(new Request(`${base}/missing`))).status, 404);
     assertEquals(
-      (await h(new Request("http://x/__markdown_server__/site/%2e%2e%2fsafe")))
+      (await h(new Request("http://x/__markdown_serve__/site/%2e%2e%2fsafe")))
         .status,
       400,
     );
     const post = await h(new Request(`${base}/`, { method: "POST" }));
     assertEquals([post.status, post.headers.get("allow")], [405, "GET, HEAD"]);
     assertEquals(
-      (await h(new Request("http://x/__markdown_server__/site/"))).status,
+      (await h(new Request("http://x/__markdown_serve__/site/"))).status,
       404,
     );
   } finally {

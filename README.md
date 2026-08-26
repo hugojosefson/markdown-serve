@@ -1,8 +1,8 @@
-# markdown-server
+# markdown-serve
 
-[![JSR Version](https://jsr.io/badges/@hugojosefson/markdown-server)](https://jsr.io/@hugojosefson/markdown-server)
-[![JSR Score](https://jsr.io/badges/@hugojosefson/markdown-server/score)](https://jsr.io/@hugojosefson/markdown-server)
-[![CI](https://github.com/hugojosefson/markdown-server/actions/workflows/release.yaml/badge.svg)](https://github.com/hugojosefson/markdown-server/actions/workflows/release.yaml)
+[![JSR Version](https://jsr.io/badges/@hugojosefson/markdown-serve)](https://jsr.io/@hugojosefson/markdown-serve)
+[![JSR Score](https://jsr.io/badges/@hugojosefson/markdown-serve/score)](https://jsr.io/@hugojosefson/markdown-serve)
+[![CI](https://github.com/hugojosefson/markdown-serve/actions/workflows/release.yaml/badge.svg)](https://github.com/hugojosefson/markdown-serve/actions/workflows/release.yaml)
 
 Local Deno 2 web server that renders Markdown using https://jsr.io/@deno/gfm,
 with GitHub-like GFM output.
@@ -21,25 +21,25 @@ case "$(uname -s)" in
   MINGW* | MSYS* | CYGWIN*) browser_opener=cmd ;;
   *) browser_opener=xdg-open ;;
 esac
-deno install --global --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM "--allow-run=${browser_opener}" jsr:@hugojosefson/markdown-server
+deno install --global --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM "--allow-run=${browser_opener}" jsr:@hugojosefson/markdown-serve
 ```
 
 ## Usage
 
-The command is `markdown-server [root] [options]`.
+The command is `markdown-serve [root] [options]`.
 
 ### Examples
 
 ```sh
 # Serve the current directory, starting at http://localhost:8000.
-markdown-server
+markdown-serve
 
 # Choose a root, host, and port; do not open a browser.
-markdown-server ./docs --host 127.0.0.1 --port 8080 --no-open
+markdown-serve ./docs --host 127.0.0.1 --port 8080 --no-open
 
 # Use temporary redirects while testing, or permanent redirects when desired.
-markdown-server --redirect=302
-markdown-server --redirect=301
+markdown-serve --redirect=302
+markdown-serve --redirect=301
 ```
 
 ### Options
@@ -97,9 +97,9 @@ a grammar fails, without affecting source rendering.
 | Both `guide.md` and `guide/`         | `/guide` renders the file; `/guide/` opens the directory.              |
 | Exact path to another text file      | Shows highlighted source with file actions.                            |
 | `View page` on an HTML source page   | Opens a sandboxed website preview in a new tab.                        |
-| `/__markdown_server__/site/...`      | Serves preview files and relative assets with their normal MIME types. |
+| `/__markdown_serve__/site/...`       | Serves preview files and relative assets with their normal MIME types. |
 | Symlink                              | Follows its target within Deno's read-permission boundary.             |
-| `/__markdown_server__/`              | Reserves this namespace for internal server endpoints.                 |
+| `/__markdown_serve__/`               | Reserves this namespace for internal server endpoints.                 |
 
 Directory listings and navigation trees group directories before files. Selected
 table ordering applies within each group.
@@ -114,23 +114,3 @@ with progressively longer delays for older timestamps.
 | Browser opening  | Enabled by default. Failure produces a warning without stopping the server. |
 | `--redirect=302` | Temporary canonical redirects; useful while testing.                        |
 | `--redirect=301` | Permanent canonical redirects.                                              |
-
-## Future features
-
-- Link source identifiers to page-local and indexed definitions and references
-  when resolution is unambiguous.
-- Add repository search opened with `/`, scoped to the viewed directory or the
-  viewed file's directory. Use `rg` with a `search` query parameter, bounded and
-  cancellable subprocesses, and UI controls or syntax for useful options such as
-  fixed strings, smart case, globs, file types, hidden files, ignored files, and
-  context lines.
-- Add go-to-file navigation opened with `g`, scoped below the current directory.
-  Prefer `fd` or `fdfind` when available, with catalog traversal as a portable
-  fallback.
-- Add editing only behind an explicit CLI option and exact write permission.
-  Writes should be atomic. Explore cursor-preserving external updates,
-  pause/focus-based autosave, and explicit conflict handling before attempting
-  collaborative-style live updates.
-
-Revisit this list after the currently planned work and ask which idea, if any,
-should be pursued next.

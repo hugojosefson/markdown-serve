@@ -76,7 +76,7 @@ async function respond(
   request: Request,
 ): Promise<Response> {
   try {
-    return new URL(request.url).pathname.startsWith("/__markdown_server__/")
+    return new URL(request.url).pathname.startsWith("/__markdown_serve__/")
       ? await internalResponse(config, request)
       : await route(config, request);
   } catch (error) {

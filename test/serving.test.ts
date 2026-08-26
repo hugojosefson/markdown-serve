@@ -91,7 +91,7 @@ Deno.test("HEAD generated pages return headers without bodies", async () => {
 
 Deno.test("file actions have stable placements and preserve raw/download priority", async () => {
   const f = await fixture({
-    "guide.md": "# Guide\n\n```ts\nconst x = 1;\n```\n",
+    "guide.md": "# Guide\n\nIntro\n\n## Details\n\n```ts\nconst x = 1;\n```\n",
     "code.ts": "function sourceSymbol() { return 1; }",
     "page.html": "<h1>Page</h1>",
     "photo.png": "",
@@ -101,7 +101,7 @@ Deno.test("file actions have stable placements and preserve raw/download priorit
     const rendered = await (await h(new Request("http://x/guide"))).text();
     assertMatch(
       rendered,
-      /<div class="page-content page-content-heading"><div class="file-actions file-actions-heading"><a class="file-action" href="\?source"[^>]*>View source<\/a><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a><\/div><h1[^>]*>/,
+      /<header class="content-header">[\s\S]*<a class="markdown-source-tab" href="\?source"[^>]*>View source<\/a>[\s\S]*<\/header><div class="page-content page-content-heading"><div class="file-actions file-actions-heading"><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a><\/div><details class="markdown-toc" open><summary>Contents<\/summary><nav aria-label="Table of contents">/,
     );
     assertEquals(
       rendered.match(/<header class="content-header[^>]*>[\s\S]*?<\/header>/)
@@ -109,6 +109,14 @@ Deno.test("file actions have stable placements and preserve raw/download priorit
         rendered.match(/<header class="content-header[^>]*>[\s\S]*?<\/header>/)
           ?.[0].includes("Download"),
       false,
+    );
+    assertMatch(
+      rendered,
+      /class="markdown-source-tab"[^>]*aria-expanded="false"/,
+    );
+    assertNotMatch(
+      rendered.match(/<a class="markdown-source-tab"[^>]*>/)?.[0] ?? "",
+      /aria-controls/,
     );
     assertMatch(
       pageStylesheet.body,
@@ -120,9 +128,14 @@ Deno.test("file actions have stable placements and preserve raw/download priorit
     )).text();
     assertMatch(source, /id="L1"/);
     assertMatch(source, /href="#guide" id="guide">Guide<\/a>/);
+    assertNotMatch(source, /<h1 id="guide"|markdown-toc/);
     assertMatch(
       source,
-      /View rendered<\/a><\/span><button class="code-copy"[^>]*>Copy<\/button><span class="code-toolbar-file-actions" data-file-actions="trailing"><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a>/,
+      /class="markdown-source-tab"[^>]*aria-controls="markdown-source-panel" aria-expanded="true"/,
+    );
+    assertMatch(
+      source,
+      /<header class="content-header source-expanded">[\s\S]*<a class="markdown-source-tab" href="\?theme=dark"[^>]*>View rendered<\/a><div class="file-actions file-actions-source"><a class="file-action raw-link" href="\?raw"[^>]*>Raw<\/a><a class="file-action download-link" href="\?download"[^>]*>Download<\/a><\/div>[\s\S]*<\/header><section class="markdown-source-panel" id="markdown-source-panel" aria-label="Markdown source"><div class="markdown-source-panel-header"><span>Markdown source<\/span><a class="markdown-source-close" href="\?theme=dark"[^>]*>[\s\S]*?<\/a><\/div><div class="code-block">/,
     );
     assertMatch(
       await (await h(new Request("http://x/guide?source&raw"))).text(),

@@ -14,6 +14,7 @@ import type { PageModel } from "./page-model.ts";
 import { reloadClientScript } from "./reload-client.ts";
 import type { ServerConfig } from "./types.ts";
 import { gitDirtyCount, type GitStatus } from "./git/status.ts";
+import { markdownSourceHref } from "./page-action.ts";
 
 export async function page(
   config: ServerConfig,
@@ -47,14 +48,15 @@ function renderBody(
   status?: GitStatus,
 ): string {
   const metadataExpanded = model.url.searchParams.has("metadata");
+  const sourceExpanded = model.sourceExpanded ?? false;
   return `<body><div class="layout"><aside class="tree"><details class="tree-disclosure" open><summary>Files</summary>${navigation}</details></aside><main class="content markdown-body">${
     repoContext(status)
-  }${renderContentHeader(config, model, metadataExpanded)}${
+  }${renderContentHeader(config, model, metadataExpanded, sourceExpanded)}${
     model.metadata && metadataExpanded
       ? renderFileMetadataDetails(model.metadata, model.url)
       : ""
   }${
-    renderPageContent(model)
+    sourceExpanded ? renderSourcePanel(model) : renderPageContent(model)
   }</main></div><script src="${pageScript.url}"></script>${
     reloadClient(config)
   }</body>`;
@@ -83,6 +85,7 @@ function renderContentHeader(
   config: ServerConfig,
   model: PageModel,
   metadataExpanded: boolean,
+  sourceExpanded: boolean,
 ): string {
   const breadcrumb = breadcrumbs(
     config.rootLabel,
@@ -96,11 +99,43 @@ function renderContentHeader(
     .join("");
   return `<header class="content-header${
     model.metadata && metadataExpanded ? " metadata-expanded" : ""
-  }">${breadcrumb}${actions}${
+  }${sourceExpanded ? " source-expanded" : ""}">${breadcrumb}${actions}${
+    model.sourceExpanded === undefined
+      ? ""
+      : renderSourceTab(model.url, sourceExpanded)
+  }${
+    sourceExpanded
+      ? `<div class="file-actions file-actions-source">${
+        renderFileActions(
+          model.fileActions?.filter((action) =>
+            action.kind === "raw" || action.kind === "download"
+          ) ?? [],
+        )
+      }</div>`
+      : ""
+  }${
     model.metadata
       ? renderFileMetadataSummary(model.metadata, model.url, metadataExpanded)
       : ""
   }${displayLinks(model.url, model.directoryView ?? false)}</header>`;
+}
+
+function renderSourceTab(url: URL, expanded: boolean): string {
+  const action = expanded ? "View rendered Markdown" : "View Markdown source";
+  return `<a class="markdown-source-tab" href="${
+    escapeHtml(markdownSourceHref(url, expanded))
+  }" title="${action}" aria-label="${action}"${
+    expanded ? ' aria-controls="markdown-source-panel"' : ""
+  } aria-expanded="${expanded}">${
+    expanded ? "View rendered" : "View source"
+  }</a>`;
+}
+
+function renderSourcePanel(model: PageModel): string {
+  const href = markdownSourceHref(model.url, true);
+  return `<section class="markdown-source-panel" id="markdown-source-panel" aria-label="Markdown source"><div class="markdown-source-panel-header"><span>Markdown source</span><a class="markdown-source-close" href="${
+    escapeHtml(href)
+  }" title="View rendered Markdown" aria-label="View rendered Markdown">${'<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 4l8 8M12 4l-8 8"/></svg>'}</a></div>${model.content}</section>`;
 }
 
 function renderPageContent(model: PageModel): string {
@@ -109,7 +144,6 @@ function renderPageContent(model: PageModel): string {
   }
   if (model.fileActionPlacement === "toolbar") {
     const conditional = model.fileActions.filter((action) =>
-      action.kind === "source" || action.kind === "rendered" ||
       action.kind === "page"
     );
     const common = model.fileActions.filter((action) =>

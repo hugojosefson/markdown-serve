@@ -33,7 +33,26 @@ Deno.test("metadata expansion separates moving content and details", () => {
   );
 });
 
-Deno.test("query navigation skips transitions except metadata-only changes", () => {
+Deno.test("source expansion connects its tab and source panel", () => {
+  assertMatch(
+    pageStylesheet.body,
+    /\.content-header\.source-expanded \.markdown-source-tab \{[^}]*border-radius: 6px 6px 0 0;/,
+  );
+  assertMatch(
+    pageStylesheet.body,
+    /\.content-header\.source-expanded \.markdown-source-tab::after \{[^}]*height: 16px;/,
+  );
+  assertMatch(
+    pageStylesheet.body,
+    /\.markdown-source-panel > \.code-block \{ border: 0; border-radius: 0; margin: 0; \}/,
+  );
+  assertMatch(
+    pageStylesheet.body,
+    /\.markdown-source-panel \{ view-transition-name: markdown-source-panel; \}/,
+  );
+});
+
+Deno.test("query navigation allows source- or metadata-only fold transitions", () => {
   let pageswap: (event: {
     activation?: { from?: { url: string }; entry?: { url: string } };
     viewTransition?: { skipTransition: () => void };
@@ -53,7 +72,14 @@ Deno.test("query navigation skips transitions except metadata-only changes", () 
     });
     return count;
   };
-  assertEquals(skips("http://x/readme/", "http://x/readme/?source"), 1);
+  assertEquals(skips("http://x/readme/", "http://x/readme/?source"), 0);
+  assertEquals(
+    skips(
+      "http://x/readme/?source&theme=dark&wide",
+      "http://x/readme/?wide&theme=dark",
+    ),
+    0,
+  );
   assertEquals(skips("http://x/readme/?theme=dark", "http://x/readme/"), 1);
   assertEquals(
     skips("http://x/readme/", "http://x/readme/?metadata"),
@@ -79,4 +105,5 @@ Deno.test("query navigation skips transitions except metadata-only changes", () 
 Deno.test("speculative prefetch excludes file view actions", () => {
   assert(!navigationSpeculation.includes(".file-action"));
   assert(navigationSpeculation.includes(".file-metadata"));
+  assert(navigationSpeculation.includes(".markdown-source-tab"));
 });

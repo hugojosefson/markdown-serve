@@ -19,14 +19,6 @@ export type HeaderAction =
 export type FileAction =
   | { kind: "raw"; href: string; label: "Raw"; title: string }
   | { kind: "download"; href: string; label: "Download"; title: string }
-  | { kind: "source"; href: string; label: "View source"; title: string }
-  | {
-    kind: "rendered";
-    href: string;
-    label: "View rendered";
-    title: string;
-    queryRemove: ["source"];
-  }
   | {
     kind: "page";
     href: string;
@@ -44,23 +36,12 @@ export function rawPageAction(contentType: string): FileAction {
   };
 }
 
-export function markdownViewPageAction(url: URL, source: boolean): FileAction {
+export function markdownSourceHref(url: URL, source: boolean): string {
   const query = retainQuery(url.search, ["metadata", "theme", "wide"]);
-  if (source) {
-    return {
-      kind: "rendered",
-      href: queryHref(url.pathname, query),
-      label: "View rendered",
-      queryRemove: ["source"],
-      title: "View rendered Markdown",
-    };
-  }
-  return {
-    kind: "source",
-    href: queryHref(url.pathname, setQuery(query, "source", null)),
-    label: "View source",
-    title: "View Markdown source",
-  };
+  return queryHref(
+    url.pathname,
+    source ? query : setQuery(query, "source", null),
+  );
 }
 
 export function filePageActions(

@@ -1,6 +1,7 @@
 import { CSS } from "@deno/gfm";
 import { codeToolbarCss } from "./code-toolbar-css.ts";
 import { displayControlsCss } from "./display-controls-css.ts";
+import { foldCss } from "./fold-css.ts";
 
 export const pageCss = `${CSS}
 :root { color-scheme: light dark; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; --kind-directory: #8250df; --kind-symlink: #0969da; --kind-executable: #1a7f37; --kind-archive: #bf8700; --kind-image: #cf222e; --kind-media: #0550ae; --kind-file: var(--code-text); --git-conflict: #cf222e; --git-renamed: #8250df; --git-deleted: #cf222e; --git-modified: #bf8700; --git-added: #1a7f37; --git-untracked: #0969da; --git-ignored: var(--code-muted); }
@@ -10,10 +11,14 @@ html { scrollbar-gutter: stable; }
   .content-header .file-metadata { view-transition-name: file-metadata; }
   .content:has(.file-metadata) .page-content { view-transition-name: file-content; }
   .file-metadata-details { view-transition-name: file-metadata-details; }
+  .content-header .markdown-source-tab { view-transition-name: markdown-source-tab; }
+  .markdown-source-panel { view-transition-name: markdown-source-panel; }
   ::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 120ms; animation-timing-function: ease-out; }
   ::view-transition-group(file-metadata), ::view-transition-old(file-metadata), ::view-transition-new(file-metadata), ::view-transition-group(file-content), ::view-transition-old(file-content), ::view-transition-new(file-content) { animation-duration: 140ms; animation-timing-function: ease-out; }
   ::view-transition-new(file-metadata-details):only-child { animation: 140ms ease-out both metadata-details-in; transform-origin: top; }
   ::view-transition-old(file-metadata-details):only-child { animation: 100ms ease-in both metadata-details-out; transform-origin: top; }
+  ::view-transition-new(markdown-source-panel):only-child { animation: 140ms ease-out both metadata-details-in; transform-origin: top; }
+  ::view-transition-old(markdown-source-panel):only-child { animation: 100ms ease-in both metadata-details-out; transform-origin: top; }
 }
 @keyframes metadata-details-in { from { opacity: 0; transform: scaleY(.96); } }
 @keyframes metadata-details-out { to { opacity: 0; transform: scaleY(.96); } }
@@ -55,8 +60,8 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .tree-root { font-weight: 600; }
 .content { min-width: 0; padding: 8px 16px 32px; }
 .page-content { position: relative; }
-.page-content > :nth-child(2) { margin-top: 0 !important; }
-.page-content-heading > :nth-child(2) { min-height: 27px; padding-right: 12rem; }
+.page-content > :nth-child(2):not(.markdown-toc), .page-content > .markdown-toc + * { margin-top: 0 !important; }
+.page-content-heading > :nth-child(2):not(.markdown-toc), .page-content-heading > .markdown-toc + * { min-height: 27px; padding-right: 12rem; }
 .page-content-top { padding-top: 30px; }
 .file-actions { align-items: center; display: flex; gap: 4px; }
 .file-actions-heading, .file-actions-top { justify-content: flex-end; position: absolute; right: 0; top: 0; z-index: 1; }
@@ -115,6 +120,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .directory-scroll { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 6px; max-width: 100%; overflow-x: auto; width: 100%; }
 ${codeToolbarCss}
 ${displayControlsCss}
+${foldCss}
 .source-line { position: relative; scroll-margin-block-start: calc(var(--attached-comment-lines, 0) * 1lh); }
 .source-line-number { border-left: 3px solid transparent; box-sizing: border-box; position: relative; width: 9ch; }
 .source-line-staged .source-line-number { border-left-color: var(--git-added); }

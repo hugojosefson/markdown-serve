@@ -14,5 +14,6 @@ export type PageModel = {
   directoryView?: boolean;
   sourceName?: string;
   metadata?: FileMetadata;
+  sourceExpanded?: boolean;
   gitStatus?: GitStatus;
 };

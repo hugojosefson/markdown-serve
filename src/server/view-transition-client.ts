@@ -7,10 +7,16 @@ addEventListener('pageswap', (event) => {
   const current = new URL(from);
   const target = new URL(to);
   if (current.pathname !== target.pathname) { return; }
-  const currentWithoutMetadata = new URL(current);
-  const targetWithoutMetadata = new URL(target);
-  currentWithoutMetadata.searchParams.delete('metadata');
-  targetWithoutMetadata.searchParams.delete('metadata');
-  const metadataChanged = current.searchParams.has('metadata') !== target.searchParams.has('metadata');
-  if (!metadataChanged || currentWithoutMetadata.href !== targetWithoutMetadata.href) { transition.skipTransition(); }
+  const withoutFlag = (url, flag) => {
+    const copy = new URL(url);
+    copy.searchParams.delete(flag);
+    const entries = [...copy.searchParams].sort(([leftKey, leftValue], [rightKey, rightValue]) =>
+      leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : leftValue < rightValue ? -1 : leftValue > rightValue ? 1 : 0);
+    copy.search = new URLSearchParams(entries).toString();
+    return copy.href;
+  };
+  const onlyFlagChanged = (flag) => {
+    return current.searchParams.has(flag) !== target.searchParams.has(flag) && withoutFlag(current, flag) === withoutFlag(target, flag);
+  };
+  if (!onlyFlagChanged('metadata') && !onlyFlagChanged('source')) { transition.skipTransition(); }
 });`;

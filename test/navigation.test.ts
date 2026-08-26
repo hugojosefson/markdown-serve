@@ -98,7 +98,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
       pageCss,
       /\.content-header \.page-action \{[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap;/,
     );
-    assert(!pageCss.includes("float: right"));
+    assert(!pageCss.includes(".tree { float: right"));
     assert(!pageCss.includes(".tree:target"));
     assert(!pageScript.body.includes("browse?.addEventListener"));
     assertMatch(pageCss, /@media \(max-width: 560px\)/);

@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file. See
 [fork-version](https://github.com/eglavin/fork-version) for commit guidelines.
 
+## [0.1.4](https://github.com/hugojosefson/markdown-serve/compare/0.1.3...0.1.4) (2026-08-26)
+
+### Bug Fixes
+
+- run CLI directly from JSR
+  ([dcce3c2](https://github.com/hugojosefson/markdown-serve/commit/dcce3c21960f14cab81a10b936a48f8ea9e8c51c))
+
 ## [0.1.3](https://github.com/hugojosefson/markdown-serve/compare/0.1.2...0.1.3) (2026-08-26)
 
 ### Bug Fixes

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { codeToolbarClient } from "./code-toolbar-client.ts";
 import { directoryTableClient } from "./directory-table-client.ts";
 import { displayControlsClient } from "./display-controls-client.ts";
+import { markdownTocClient } from "./markdown-toc-client.ts";
 import { pageClient } from "./page-client.ts";
 import { relativeTimeClient } from "./relative-time-client.ts";
 import { viewTransitionClient } from "./view-transition-client.ts";
@@ -29,7 +30,7 @@ export const pageStylesheet = versioned(
 );
 export const pageScript = versioned(
   "client",
-  `${viewTransitionClient}${displayControlsClient}${directoryTableClient}${relativeTimeClient}${pageClient}${codeToolbarClient}`,
+  `${viewTransitionClient}${displayControlsClient}${directoryTableClient}${relativeTimeClient}${pageClient}${markdownTocClient}${codeToolbarClient}`,
   "text/javascript; charset=UTF-8",
 );
 

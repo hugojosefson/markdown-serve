@@ -28,6 +28,20 @@ Deno.test("Markdown ToC opens after the initial heading block only", () => {
   assertEquals(toc("text"), renderCodeMarkdown("text", "http://x/"));
 });
 
+Deno.test("Markdown ToC follows the initial contiguous heading block", () => {
+  const rendered = renderMarkdownToc(
+    renderCodeMarkdown("# Title\n## Summary\n\nText\n\n### Later", "http://x/"),
+  );
+  assertMatch(
+    rendered,
+    /<h1 id="title">[\s\S]*?<\/h1>\s*<h2 id="summary">[\s\S]*?<\/h2><details class="markdown-toc" open>/,
+  );
+  const withoutInitialBlock = renderMarkdownToc(
+    renderCodeMarkdown("Text\n\n## Heading", "http://x/"),
+  );
+  assertMatch(withoutInitialBlock, /^<details class="markdown-toc" open>/);
+});
+
 Deno.test("Markdown ToC preserves sanitized heading entities", () => {
   const rendered = renderMarkdownToc(
     '<h2 id="fire"><a class="anchor" href="#fire"></a>&#x1F525; &copy; <img alt="icon &amp; label"></h2>',
@@ -38,10 +52,10 @@ Deno.test("Markdown ToC preserves sanitized heading entities", () => {
 Deno.test("Markdown ToC floats on larger screens and stacks on small screens", () => {
   assertMatch(
     pageStylesheet.body,
-    /\.markdown-toc \{[^}]*float: right;[^}]*margin: 30px 0 1rem 1\.5rem;[^}]*max-width: min\(20rem, 45%\)/,
+    /\.markdown-toc \{[^}]*float: right;[^}]*margin: 0 0 1rem 1\.5rem;[^}]*max-width: min\(20rem, 45%\)/,
   );
   assertMatch(
     pageStylesheet.body,
-    /@media \(max-width: 560px\) \{ \.markdown-toc \{ float: none; margin: 30px 0 1rem; max-width: none; \} \.page-content-heading > \.markdown-toc \+ \* \{ padding-right: 0; \} \}/,
+    /@media \(max-width: 800px\) \{ \.markdown-toc \{ float: none; margin: 0 0 1rem; max-width: none; \} \}/,
   );
 });

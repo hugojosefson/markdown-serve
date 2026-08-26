@@ -1,5 +1,5 @@
 import { serve } from "../server.ts";
-import { fromFileUrl, join } from "@std/path";
+import { packageSourcePaths } from "./package-source-paths.ts";
 import type { CliOptions } from "./types.ts";
 
 export async function startServer(
@@ -23,7 +23,7 @@ async function serveAt(
       port,
       redirectStatus: options.redirectStatus,
       liveReload: options.reload,
-      liveReloadIgnorePaths: packageSourcePaths,
+      liveReloadIgnorePaths: ignoredPackageSourcePaths,
       git,
       signal,
       onListen: () => {},
@@ -36,12 +36,7 @@ async function serveAt(
   }
 }
 
-const packageRoot = fromFileUrl(new URL("../../", import.meta.url));
-const packageSourcePaths = [
-  fromFileUrl(new URL("../", import.meta.url)),
-  join(packageRoot, "deno.json"),
-  join(packageRoot, "deno.lock"),
-];
+const ignoredPackageSourcePaths = packageSourcePaths(import.meta.url);
 
 function isAddressInUse(error: unknown): boolean {
   return error instanceof Deno.errors.AddrInUse ||

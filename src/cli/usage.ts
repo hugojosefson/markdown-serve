@@ -1,4 +1,4 @@
-export const usage = `Usage: markdown-server [root] [options]
+export const usage = `Usage: markdown-serve [root] [options]
 
 Options:
   --host <host>          Host to bind (default: localhost)

@@ -18,7 +18,7 @@ Deno.test("capabilities query exact browser and Git descriptors", () => {
   };
   assertEquals(runtimeCapabilities(query), { browser: true, git: false });
   assertEquals(descriptors, [
-    { name: "env", variable: "MARKDOWN_SERVER_BROWSER_OPENED" },
+    { name: "env", variable: "MARKDOWN_SERVE_BROWSER_OPENED" },
     {
       name: "run",
       command: Deno.build.os === "darwin"
@@ -65,6 +65,6 @@ Deno.test("unsupported help includes exact grant hints", () => {
         : Deno.build.os === "windows"
         ? "cmd"
         : "xdg-open"
-    } --allow-env=MARKDOWN_SERVER_BROWSER_OPENED\n  Git: unsupported; grant --allow-run=git`,
+    } --allow-env=MARKDOWN_SERVE_BROWSER_OPENED\n  Git: unsupported; grant --allow-run=git`,
   );
 });

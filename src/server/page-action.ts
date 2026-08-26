@@ -85,9 +85,7 @@ export function indexPageAction(url: URL, index: string): HeaderAction {
 export function htmlPageAction(parts: string[]): FileAction {
   return {
     kind: "page",
-    href: `/__markdown_server__/site/${
-      parts.map(encodeURIComponent).join("/")
-    }`,
+    href: `/__markdown_serve__/site/${parts.map(encodeURIComponent).join("/")}`,
     label: "View page",
     title: "Open HTML page preview",
     target: "_blank",

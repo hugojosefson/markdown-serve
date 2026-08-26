@@ -73,7 +73,7 @@ tree?.addEventListener('toggle', async (event) => {
     !details.open || details.dataset.loaded === 'true' || details.dataset.loading === 'true') { return; }
   details.dataset.loading = 'true';
   try {
-    const response = await fetch('/__markdown_server__/tree?path=' +
+    const response = await fetch('/__markdown_serve__/tree?path=' +
       encodeURIComponent(details.dataset.path));
     if (!response.ok || details.dataset.loaded === 'true') { return; }
     addEntries(details.querySelector('ul'), await response.json());

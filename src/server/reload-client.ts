@@ -5,7 +5,7 @@ const disconnectReload = () => reloadEvents?.close();
 const reloadPage = () => { disconnectReload(); location.reload(); };
 const connectReload = () => {
   reloadConnected = false;
-  reloadEvents = new EventSource('/__markdown_server__/events');
+  reloadEvents = new EventSource('/__markdown_serve__/events');
   reloadEvents.addEventListener('open', () => {
     if (reloadConnected) { reloadPage(); return; }
     reloadConnected = true;

@@ -1,4 +1,4 @@
-name: deno
+name: markdown-serve checks
 
 on:
   pull_request:
@@ -28,3 +28,5 @@ jobs:
       - run: deno fmt --check
       - run: deno lint
       - run: deno check
+      - run: deno task readme && git diff --exit-code -- README.md
+      - run: deno publish --dry-run

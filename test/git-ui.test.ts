@@ -55,7 +55,7 @@ Deno.test("Git context and statuses match SSR and lazy navigation", async () => 
 
     const response = await treeResponse(
       config,
-      new Request("http://x/__markdown_server__/tree?path=docs"),
+      new Request("http://x/__markdown_serve__/tree?path=docs"),
       "docs",
     );
     const children = await response.json() as Array<{

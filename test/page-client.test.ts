@@ -10,7 +10,7 @@ Deno.test("lazy tree entries construct Files controls without index discovery", 
     pageClient,
     /const files = filesLink\(entry\.filesHref, entry\.filesLabel \?\? entry\.name\)/,
   );
-  assert(!pageClient.includes("/__markdown_server__/index"));
+  assert(!pageClient.includes("/__markdown_serve__/index"));
   assert(!pageClient.includes("indexPending"));
   assertMatch(pageClient, /details\.dataset\.loading === 'true'/);
   assertMatch(pageClient, /delete details\.dataset\.loading/);

@@ -1,4 +1,4 @@
-name: bump-deps
+name: markdown-serve bump dependencies
 
 on:
   workflow_dispatch:

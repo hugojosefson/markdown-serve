@@ -10,7 +10,7 @@ import { pageCss } from "./page-css.ts";
 
 type PageAsset = { body: string; contentType: string; url: string };
 
-const assetPath = "/__markdown_server__/assets/";
+const assetPath = "/__markdown_serve__/assets/";
 const versioned = (
   name: string,
   body: string,

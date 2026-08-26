@@ -7,4 +7,5 @@ Deno.test("direct CLI runs restart cleanly when source modules change", async ()
   assertMatch(source, /DENO_RUN_ARGS="--watch /);
   assert(!source.includes("--watch-hmr"));
   assertMatch(source, /MARKDOWN_SERVE_BROWSER_OPENED/);
+  assertMatch(source, /--allow-run=\$\{browser_opener\},git/);
 });

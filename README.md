@@ -21,7 +21,7 @@ case "$(uname -s)" in
   MINGW* | MSYS* | CYGWIN*) browser_opener=cmd ;;
   *) browser_opener=xdg-open ;;
 esac
-deno install --global --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM "--allow-run=${browser_opener}" jsr:@hugojosefson/markdown-serve
+deno install --global --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED "--allow-run=${browser_opener},git" jsr:@hugojosefson/markdown-serve
 ```
 
 ## Usage
@@ -65,12 +65,12 @@ occupied explicitly selected `--port` fails instead.
 The [suggested installation](#installation) uses narrowly scoped runtime
 permissions:
 
-| Permission                               | Purpose                                                                          |
-| ---------------------------------------- | -------------------------------------------------------------------------------- |
-| `--allow-read=.`                         | Read the current directory tree without granting access to the whole filesystem. |
-| `--allow-net`                            | Serve HTTP and listen for browser connections.                                   |
-| `--allow-env=CI,FORCE_COLOR,TERM`        | Read the listed terminal and CI settings.                                        |
-| `--allow-run=xdg-open`, `open`, or `cmd` | Open the browser using the platform's standard command.                          |
+| Permission                                                      | Purpose                                                                          |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `--allow-read=.`                                                | Read the current directory tree without granting access to the whole filesystem. |
+| `--allow-net`                                                   | Serve HTTP and listen for browser connections.                                   |
+| `--allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED` | Read terminal and CI settings and retain browser state across watched restarts.  |
+| `--allow-run=xdg-open,git`, `open,git`, or `cmd,git`            | Open the browser and read Git status using only the required commands.           |
 
 Broader read grants can expose more files.
 

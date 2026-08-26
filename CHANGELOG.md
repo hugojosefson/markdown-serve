@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file. See
 [fork-version](https://github.com/eglavin/fork-version) for commit guidelines.
 
+## [0.1.2](https://github.com/hugojosefson/markdown-serve/compare/0.1.1...0.1.2) (2026-08-26)
+
+### Bug Fixes
+
+- publish releases as scope member
+  ([f483fc7](https://github.com/hugojosefson/markdown-serve/commit/f483fc7f7d1aced8ce58366a7eef2f1d614df9c0))
+
 ## [0.1.1](https://github.com/hugojosefson/markdown-serve/compare/0.1.0...0.1.1) (2026-08-26)
 
 ### Features

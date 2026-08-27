@@ -65,13 +65,16 @@ Broader read grants can expose more files.
 
 ### Source symbols
 
-Source views recognize page-local declarations in Bash, C, C++, C#, Go, Java,
-JavaScript/JSX, Python, Rust, and TypeScript/TSX. Declaration names link to a
-unique `#symbol-name` anchor when possible; all source lines retain their `#L`
-anchors. Markdown source headings use the same fragments as rendered headings.
-Links scroll to an attached documentation, block, or contiguous line comment
-while highlighting the declaration line. Parsing is skipped above 1 MiB or when
-a grammar fails, without affecting source rendering.
+Source views recognize declarations and link matching identifiers in Bash, C,
+C++, C#, Go, Java, JavaScript/JSX, Python, Rust, and TypeScript/TSX. A unique
+page-local declaration takes precedence; otherwise a declaration unique in the
+served tree is linked to its source page. Ambiguous names stay unlinked.
+Declaration names link to a unique `#symbol-name` anchor when possible; all
+source lines retain their `#L` anchors. Markdown source headings use the same
+fragments as rendered headings. Links scroll to an attached documentation,
+block, or contiguous line comment while highlighting the declaration line.
+Parsing is skipped above 1 MiB or when a grammar fails, without affecting source
+rendering.
 
 ### Routing
 

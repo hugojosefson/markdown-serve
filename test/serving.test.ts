@@ -24,6 +24,30 @@ Deno.test("handlers reject missing and non-directory roots", async () => {
   }
 });
 
+Deno.test("source references use unique declarations from the served tree", async () => {
+  const f = await fixture({
+    "nested/shared.ts": "export function shared() {}\n",
+    "nested/consumer.ts": "import { shared } from './shared.ts';\nshared();\n",
+    "duplicate-a.ts": "export function duplicate() {}\n",
+    "duplicate-b.ts": "export function duplicate() {}\n",
+    "ambiguous.ts": "duplicate();\n",
+  });
+  try {
+    const h = await handler(f.root);
+    const consumer = await (await h(new Request("http://x/nested/consumer.ts")))
+      .text();
+    assertMatch(
+      consumer,
+      /href="\/nested\/shared\.ts#symbol-shared">shared<\/a>/,
+    );
+    const ambiguous = await (await h(new Request("http://x/ambiguous.ts")))
+      .text();
+    assertEquals(ambiguous.includes("symbol-duplicate"), false);
+  } finally {
+    await f.cleanup();
+  }
+});
+
 Deno.test("static MIME types, HEAD, 404, and 405 responses", async () => {
   const f = await fixture({
     "file.css": "body{}",

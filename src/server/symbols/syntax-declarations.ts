@@ -34,6 +34,29 @@ export function syntaxDeclarations(
   return found;
 }
 
+/** Identifier ranges use JavaScript string offsets, as does web-tree-sitter. */
+export function syntaxIdentifiers(root: SyntaxNode): FoundIdentifier[] {
+  const found: FoundIdentifier[] = [];
+  visit(root, (node) => {
+    if (isReferenceIdentifier(node) && isIdentifier(node.text)) {
+      found.push({
+        name: node.text,
+        start: node.startIndex,
+        end: node.endIndex,
+        line: node.startPosition.row + 1,
+      });
+    }
+  });
+  return found;
+}
+
+export type FoundIdentifier = {
+  name: string;
+  start: number;
+  end: number;
+  line: number;
+};
+
 type SyntaxNode = {
   type: string;
   text: string;
@@ -92,6 +115,11 @@ function isNameNode(node: SyntaxNode): boolean {
   return node.type === "identifier" || node.type === "type_identifier" ||
     node.type === "field_identifier" || node.type === "namespace_identifier" ||
     node.type === "property_identifier" || node.type === "word";
+}
+
+function isReferenceIdentifier(node: SyntaxNode): boolean {
+  return node.type === "identifier" || node.type === "type_identifier" ||
+    node.type === "namespace_identifier" || node.type === "word";
 }
 
 function isIdentifier(value: string): boolean {

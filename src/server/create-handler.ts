@@ -6,6 +6,7 @@ import { plain } from "./responses.ts";
 import type { HandlerOptions, RequestHandler } from "./server-options.ts";
 import type { ServerConfig } from "./types.ts";
 import { createGitState } from "./git/state.ts";
+import { SymbolCatalog } from "./symbols/catalog.ts";
 
 export async function createRequestHandler(
   options: HandlerOptions,
@@ -23,12 +24,14 @@ export async function createRequestHandler(
     );
   }
   const catalog = new FileCatalog();
+  const symbols = new SymbolCatalog(rootPath);
   let warmRevision = 0;
   let warmQueue = Promise.resolve();
   const scheduleWarm = (clear: boolean): Promise<void> => {
     warmRevision++;
     if (clear) {
       catalog.clear();
+      symbols.clear();
     }
     warmQueue = warmQueue.catch(() => {}).then(() =>
       catalog.warmRoot(rootPath)
@@ -60,6 +63,7 @@ export async function createRequestHandler(
     onError: options.onError,
     reloadSource: options.reloadSource,
     catalog,
+    symbols,
     git: options.git === false
       ? undefined
       : await createGitState(rootPath, options.reloadSource),

@@ -2,12 +2,16 @@ import { Parser } from "web-tree-sitter";
 import { declarationTypes, symbolGrammar } from "./declaration-rules.ts";
 import { attachedCommentLine } from "./comment-attachment.ts";
 import { loadLanguage } from "./engine.ts";
-import { syntaxDeclarations } from "./syntax-declarations.ts";
+import {
+  syntaxDeclarations,
+  syntaxIdentifiers,
+} from "./syntax-declarations.ts";
 import { markdownHeadings } from "./markdown-headings.ts";
 import type {
   SymbolAnalysis,
   SymbolDeclarationLink,
   SymbolOccurrence,
+  SymbolTargets,
 } from "./types.ts";
 import * as wasms from "./wasms.js";
 
@@ -23,6 +27,7 @@ const cache = new Map<
 export async function analyzeSymbols(
   text: string,
   language: string,
+  targets: SymbolTargets = new Map(),
 ): Promise<SymbolAnalysis | undefined> {
   if (language === "markdown") {
     if (new TextEncoder().encode(text).byteLength > maxBytes) return;
@@ -60,8 +65,10 @@ export async function analyzeSymbols(
     try {
       return analysis(
         syntaxDeclarations(tree.rootNode, types),
+        syntaxIdentifiers(tree.rootNode),
         text,
         language,
+        targets,
       );
     } finally {
       tree.delete();
@@ -74,14 +81,23 @@ export async function analyzeSymbols(
 
 function analysis(
   found: ReturnType<typeof syntaxDeclarations>,
+  identifiers: ReturnType<typeof syntaxIdentifiers>,
   text: string,
   language: string,
+  indexedTargets: SymbolTargets,
 ): SymbolAnalysis {
   const counts = new Map<string, number>();
   for (const item of found) {
     counts.set(item.name, (counts.get(item.name) ?? 0) + 1);
   }
-  const occurrences: SymbolOccurrence[] = found.map((item) => {
+  const localTargets = new Map(
+    [...counts].flatMap(([name, count]) =>
+      count === 1
+        ? [[name, `#symbol-${encodeURIComponent(name)}`] as const]
+        : []
+    ),
+  );
+  const declarations = found.map((item): SymbolOccurrence => {
     const commentLine = attachedCommentLine(
       text,
       language,
@@ -92,12 +108,26 @@ function analysis(
       ...occurrence,
       declaration: true,
       commentLines: commentLine ? item.line - commentLine : undefined,
-      href: counts.get(item.name) === 1
-        ? `#symbol-${encodeURIComponent(item.name)}`
-        : `#L${item.line}`,
-      id: counts.get(item.name) === 1 ? `symbol-${item.name}` : undefined,
+      href: localTargets.get(item.name) ?? `#L${item.line}`,
+      id: localTargets.has(item.name) ? `symbol-${item.name}` : undefined,
     };
   });
+  const declarationOffsets = new Set(found.map((item) => item.start));
+  const referenceOffsets = new Set<number>();
+  const references = identifiers.flatMap((item): SymbolOccurrence[] => {
+    const href = localTargets.get(item.name) ?? indexedTargets.get(item.name);
+    if (
+      !href || declarationOffsets.has(item.start) ||
+      referenceOffsets.has(item.start)
+    ) {
+      return [];
+    }
+    referenceOffsets.add(item.start);
+    return [{ ...item, declaration: false, href }];
+  });
+  const occurrences = [...declarations, ...references].toSorted((left, right) =>
+    left.start - right.start
+  );
   return {
     occurrences,
     declarationLines: new Set(found.map((item) => item.line)),

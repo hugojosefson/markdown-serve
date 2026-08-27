@@ -23,6 +23,7 @@ export async function renderText(
     text,
     codeLanguageForPath(file, text),
     await sourceAnnotations(config, file, text),
+    await config.symbols?.targets(),
   );
   return htmlResponse(
     request,

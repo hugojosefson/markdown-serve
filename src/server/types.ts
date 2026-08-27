@@ -2,6 +2,7 @@ import type { ReloadSource } from "./reload-source.ts";
 import type { FileCatalog } from "./file-catalog.ts";
 import type { ErrorHandler } from "./server-options.ts";
 import type { GitState } from "./git/state.ts";
+import type { SymbolCatalog } from "./symbols/catalog.ts";
 
 export type ServerConfig = {
   rootPath: string;
@@ -11,4 +12,5 @@ export type ServerConfig = {
   reloadSource?: ReloadSource;
   catalog: FileCatalog;
   git?: GitState;
+  symbols?: SymbolCatalog;
 };

@@ -1,6 +1,6 @@
 {
   "name": "@hugojosefson/markdown-serve",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "license": "MIT",
   "exports": "./src/cli.ts",
   "tasks": {

@@ -3,6 +3,35 @@
 All notable changes to this project will be documented in this file. See
 [fork-version](https://github.com/eglavin/fork-version) for commit guidelines.
 
+## [0.1.6](https://github.com/hugojosefson/markdown-serve/compare/0.1.5...0.1.6) (2026-08-27)
+
+### Features
+
+- add opt-in atomic editing
+  ([0c52750](https://github.com/hugojosefson/markdown-serve/commit/0c52750e022a88321c3b9f22613c72f1654f2017))
+- add scoped file navigation
+  ([776270f](https://github.com/hugojosefson/markdown-serve/commit/776270f61c6d73a87c08e7077bcd98a7a1639dba))
+- add scoped repository search
+  ([ce62cd1](https://github.com/hugojosefson/markdown-serve/commit/ce62cd1613b9c78cbc4c65ef58f69dca8cf55335))
+- link source references
+  ([595668f](https://github.com/hugojosefson/markdown-serve/commit/595668f5282bc455e4ed47fec1e439cac5994e3f))
+
+### Bug Fixes
+
+- bound repository operations
+  ([bf84dfe](https://github.com/hugojosefson/markdown-serve/commit/bf84dfe043dd209ab2fed79ee6693401a99f0dfe))
+- recheck files before atomic writes
+  ([8eaf4ae](https://github.com/hugojosefson/markdown-serve/commit/8eaf4ae7936cd7f9a1f18d9dfb90d89099fa65b1))
+
+### Other Changes
+
+- cover server error paths
+  ([0c642bf](https://github.com/hugojosefson/markdown-serve/commit/0c642bf422db16b555da2e3b424a6613e4551d8c))
+- exercise real Git integration
+  ([aecb0e1](https://github.com/hugojosefson/markdown-serve/commit/aecb0e15a5d01092eeae8ef33d4c70be25a76e9c))
+- stabilize reload watcher coverage
+  ([379c9f6](https://github.com/hugojosefson/markdown-serve/commit/379c9f63649f58f28ac3bcc4a3268c26db296f74))
+
 ## [0.1.5](https://github.com/hugojosefson/markdown-serve/compare/0.1.4...0.1.5) (2026-08-26)
 
 ### Features

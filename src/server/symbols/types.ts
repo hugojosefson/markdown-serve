@@ -23,3 +23,5 @@ export type SymbolAnalysis = {
   declarationCommentLines: ReadonlyMap<number, number>;
   declarationLinks: ReadonlyMap<number, SymbolDeclarationLink>;
 };
+
+export type SymbolTargets = ReadonlyMap<string, string>;

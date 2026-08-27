@@ -80,7 +80,9 @@ Deno.test("structural symbols cover every meaningful highlighted language", asyn
   for (const [language, fixture] of Object.entries(fixtures)) {
     const analysis = await analyzeSymbols(fixture.source, language);
     assertEquals(
-      analysis?.occurrences.map(({ name }) => name),
+      analysis?.occurrences.filter(({ declaration }) => declaration).map((
+        { name },
+      ) => name),
       fixture.names,
       language,
     );
@@ -106,6 +108,66 @@ Deno.test("symbol anchors are unique, Unicode-safe, and fragment-correct", async
   assertEquals(
     duplicates?.occurrences.map(({ id, href }) => ({ id, href })),
     [{ id: undefined, href: "#L1" }, { id: undefined, href: "#L2" }],
+  );
+});
+
+Deno.test("source identifiers link only to unambiguous local or indexed declarations", async () => {
+  const local = await analyzeSymbols(
+    "function café() {}\ncafé();\n",
+    "javascript",
+    new Map([["café", "/elsewhere.ts#symbol-caf%C3%A9"]]),
+  );
+  assertEquals(
+    local?.occurrences.map(({ name, declaration, href }) => ({
+      name,
+      declaration,
+      href,
+    })),
+    [
+      { name: "café", declaration: true, href: "#symbol-caf%C3%A9" },
+      { name: "café", declaration: false, href: "#symbol-caf%C3%A9" },
+    ],
+  );
+  const indexed = await analyzeSymbols(
+    "import { shared } from './shared.ts';\nshared();\nmissing();\n",
+    "typescript",
+    new Map([["shared", "/shared.ts#symbol-shared"]]),
+  );
+  assertEquals(
+    indexed?.occurrences.map(({ name, href, declaration }) => ({
+      name,
+      href,
+      declaration,
+    })),
+    [
+      { name: "shared", href: "/shared.ts#symbol-shared", declaration: false },
+      { name: "shared", href: "/shared.ts#symbol-shared", declaration: false },
+    ],
+  );
+  const duplicate = await analyzeSymbols(
+    "function same() {}\nfunction same() {}\nsame();\n",
+    "javascript",
+  );
+  assertEquals(
+    duplicate?.occurrences.filter(({ declaration }) => !declaration),
+    [],
+  );
+});
+
+Deno.test("property and field names do not infer declaration references", async () => {
+  const analysis = await analyzeSymbols(
+    "function shared() {}\nobject.shared();\nshared();\n",
+    "javascript",
+  );
+  assertEquals(
+    analysis?.occurrences.map(({ name, declaration }) => ({
+      name,
+      declaration,
+    })),
+    [
+      { name: "shared", declaration: true },
+      { name: "shared", declaration: false },
+    ],
   );
 });
 

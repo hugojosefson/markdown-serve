@@ -43,6 +43,7 @@ export async function renderMarkdown(
       text,
       codeLanguageForPath(file, text),
       await sourceAnnotations(config, file, text),
+      await config.symbols?.targets(),
     )
     : renderMarkdownToc(renderCodeMarkdown(text, base.href));
   return htmlResponse(

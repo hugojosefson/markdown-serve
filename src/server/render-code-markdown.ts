@@ -5,6 +5,7 @@ import { renderSourceLines } from "./render-source-lines.ts";
 import type { SourceLineAnnotation } from "./git/diff.ts";
 import { analyzeSymbols } from "./symbols/analyze.ts";
 import { injectSymbols } from "./symbols/inject.ts";
+import type { SymbolTargets } from "./symbols/types.ts";
 
 export function renderCodeMarkdown(markdown: string, baseUrl: string): string {
   return render(markdown, {
@@ -84,9 +85,10 @@ export async function renderSourceCodeBlockWithSymbols(
   text: string,
   language: string,
   annotations?: ReadonlyMap<number, SourceLineAnnotation>,
+  targets?: SymbolTargets,
 ): Promise<string> {
   const rendered = renderCodeBlock(text, language);
-  const symbols = await analyzeSymbols(text, language);
+  const symbols = await analyzeSymbols(text, language, targets);
   const replace = (tag: "code" | "pre") =>
     rendered.replace(
       new RegExp(`(<${tag}(?:\\s[^>]*)?>)([\\s\\S]*?)(<\\/${tag}>)`),

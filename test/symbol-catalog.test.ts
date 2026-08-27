@@ -48,3 +48,40 @@ Deno.test("symbol catalog recognizes extensionless shebang sources", async () =>
     await f.cleanup();
   }
 });
+
+Deno.test("symbol catalog excludes VCS metadata directories", async () => {
+  const f = await fixture({
+    "one.ts": "export function visible() {}\n",
+    ".git/hidden.ts": "export function hidden() {}\n",
+    ".hg/hidden.ts": "export function hgHidden() {}\n",
+    ".svn/hidden.ts": "export function svnHidden() {}\n",
+  });
+  try {
+    assertEquals(
+      await new SymbolCatalog(f.root).targets(),
+      new Map([["visible", "/one.ts#symbol-visible"]]),
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
+for (
+  const [name, limits] of [
+    ["traversal entries", { maxTraversalEntries: 0 }],
+    ["supported files", { maxSupportedFiles: 0 }],
+    ["total bytes", { maxTotalBytes: 0 }],
+  ] as const
+) {
+  Deno.test(`symbol catalog fails closed at ${name} budget`, async () => {
+    const f = await fixture({ "one.ts": "export function unique() {}\n" });
+    try {
+      assertEquals(
+        await new SymbolCatalog(f.root, limits).targets(),
+        new Map(),
+      );
+    } finally {
+      await f.cleanup();
+    }
+  });
+}

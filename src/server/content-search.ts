@@ -2,6 +2,7 @@ import { isAbsolute, join, relative } from "@std/path";
 import { readCapped } from "./capped-stream.ts";
 import { entryRoute } from "./entry-route.ts";
 import { canonicalPath } from "./paths.ts";
+import { childTerminator } from "./terminate-child.ts";
 
 const maximumResults = 100;
 const maximumContext = 8;
@@ -150,15 +151,14 @@ export function createRgRunner(
     } catch {
       throw new SearchUnavailable("rg unavailable");
     }
+    const terminator = childTerminator(child);
     let failure: Error | undefined;
     const outputAbort = new AbortController();
     const stop = (error: Error) => {
       if (failure) return;
       failure = error;
       outputAbort.abort();
-      try {
-        child.kill("SIGTERM");
-      } catch { /* exited */ }
+      terminator.stop();
     };
     const timer = setTimeout(
       () => stop(new SearchUnavailable("search timed out")),
@@ -181,20 +181,22 @@ export function createRgRunner(
             stop(new SearchUnavailable("search error output exceeded limit")),
           outputAbort.signal,
         ),
-        child.status,
+        terminator.status,
       ]);
       if (failure) throw failure;
-      if (status.code === 1) return [];
-      if (!status.success) throw new SearchUnavailable("rg failed");
+      if (status?.code === 1) return [];
+      if (!status?.success) throw new SearchUnavailable("rg failed");
       return parseRgOutput(new TextEncoder().encode(stdout));
     } catch (error) {
-      throw error instanceof SearchUnavailable
+      if (failure) throw failure;
+      const unavailable = error instanceof SearchUnavailable
         ? error
         : new SearchUnavailable("rg unavailable");
+      stop(unavailable);
+      throw unavailable;
     } finally {
       clearTimeout(timer);
       signal?.removeEventListener("abort", abort);
-      await child.status.catch(() => {});
     }
   };
 }

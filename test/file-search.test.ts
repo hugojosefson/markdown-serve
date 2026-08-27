@@ -1,5 +1,8 @@
-import { assertEquals, assertMatch } from "@std/assert";
-import { parseFinderOutput } from "../src/server/file-search.ts";
+import { assertEquals, assertMatch, assertRejects } from "@std/assert";
+import {
+  createFinderRunner,
+  parseFinderOutput,
+} from "../src/server/file-search.ts";
 import { fixture, handler } from "./fixture.ts";
 
 Deno.test("scoped file search includes dotfiles and uses canonical file routes", async () => {
@@ -144,4 +147,48 @@ Deno.test("finder output normalizes Windows paths and finder failure falls back"
   } finally {
     await f.cleanup();
   }
+});
+
+Deno.test("finder caps streamed output and times out without a binary", async () => {
+  const stream = (text: string, open = false) =>
+    new ReadableStream<Uint8Array>({
+      start(controller) {
+        if (text) controller.enqueue(new TextEncoder().encode(text));
+        if (!open) controller.close();
+      },
+    });
+  const child = (stdout: ReadableStream<Uint8Array>) => {
+    let settle!: () => void;
+    const signals: Deno.Signal[] = [];
+    return {
+      stdout,
+      status: new Promise<Deno.CommandStatus>((resolve) => {
+        settle = () =>
+          resolve({ success: false, code: 137, signal: "SIGKILL" });
+      }),
+      kill(signal: Deno.Signal = "SIGTERM") {
+        signals.push(signal);
+        if (signal === "SIGKILL") settle();
+      },
+      signals,
+    };
+  };
+  const excessive = child(stream("x".repeat(21)));
+  await assertRejects(
+    () =>
+      createFinderRunner(() => excessive, {
+        timeoutMilliseconds: 100,
+        outputBytes: 20,
+      })("fd", "."),
+  );
+  assertEquals(excessive.signals, ["SIGTERM", "SIGKILL"]);
+  const timeout = child(stream("", true));
+  await assertRejects(
+    () =>
+      createFinderRunner(() => timeout, {
+        timeoutMilliseconds: 1,
+        outputBytes: 20,
+      })("fd", "."),
+  );
+  assertEquals(timeout.signals, ["SIGTERM", "SIGKILL"]);
 });

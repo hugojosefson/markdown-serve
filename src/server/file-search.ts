@@ -1,6 +1,8 @@
 import { isAbsolute, join, relative } from "@std/path";
 import { entryRoute } from "./entry-route.ts";
 import { canonicalPath, lexical } from "./paths.ts";
+import { readCapped } from "./capped-stream.ts";
+import { childTerminator } from "./terminate-child.ts";
 import type { ServerConfig } from "./types.ts";
 
 const maximumResults = 200;
@@ -14,6 +16,15 @@ export type FinderRunner = (
   scope: string,
   signal?: AbortSignal,
 ) => Promise<string[]>;
+export type FinderChild = {
+  stdout: ReadableStream<Uint8Array>;
+  status: Promise<Deno.CommandStatus>;
+  kill(signal?: Deno.Signal): void;
+};
+export type FinderSpawner = (
+  finder: "fd" | "fdfind",
+  scope: string,
+) => FinderChild;
 
 export async function searchFiles(
   config: ServerConfig,
@@ -67,13 +78,8 @@ async function searchedByFinder(
   throw error;
 }
 
-async function runFinder(
-  finder: "fd" | "fdfind",
-  scope: string,
-  signal?: AbortSignal,
-): Promise<string[]> {
-  if (signal?.aborted) throw new Error("finder cancelled");
-  const child = new Deno.Command(finder, {
+const runFinder = createFinderRunner((finder, scope) =>
+  new Deno.Command(finder, {
     args: [
       "--type",
       "file",
@@ -87,34 +93,62 @@ async function runFinder(
     stdin: "null",
     stdout: "piped",
     stderr: "null",
-  }).spawn();
-  let timedOut = false;
-  const stop = () => {
+  }).spawn()
+);
+
+export function createFinderRunner(
+  spawn: FinderSpawner,
+  limits = {
+    timeoutMilliseconds: finderTimeoutMilliseconds,
+    outputBytes: maximumOutputBytes,
+  },
+): (
+  finder: "fd" | "fdfind",
+  scope: string,
+  signal?: AbortSignal,
+) => Promise<string[]> {
+  return async (finder, scope, signal) => {
+    if (signal?.aborted) throw new Error("finder cancelled");
+    const child = spawn(finder, scope);
+    const terminator = childTerminator(child);
+    let failure: Error | undefined;
+    const outputAbort = new AbortController();
+    const stop = (error: Error) => {
+      if (failure) return;
+      failure = error;
+      outputAbort.abort();
+      terminator.stop();
+    };
+    const timeout = setTimeout(
+      () => stop(new Error("finder unavailable")),
+      limits.timeoutMilliseconds,
+    );
+    const abort = () => stop(new Error("finder unavailable"));
+    signal?.addEventListener("abort", abort, { once: true });
     try {
-      child.kill("SIGTERM");
-    } catch {
-      // The process may have exited between the timeout and kill.
+      const [output, status] = await Promise.all([
+        readCapped(
+          child.stdout,
+          limits.outputBytes,
+          () => stop(new Error("finder unavailable")),
+          outputAbort.signal,
+        ),
+        terminator.status,
+      ]);
+      if (failure || !status?.success || signal?.aborted) {
+        throw failure ?? new Error("finder unavailable");
+      }
+      return parseFinderOutput(new TextEncoder().encode(output));
+    } catch (error) {
+      if (!failure) {
+        stop(error instanceof Error ? error : new Error("finder unavailable"));
+      }
+      throw failure;
+    } finally {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", abort);
     }
   };
-  const timeout = setTimeout(() => {
-    timedOut = true;
-    stop();
-  }, finderTimeoutMilliseconds);
-  const abort = () => stop();
-  signal?.addEventListener("abort", abort, { once: true });
-  try {
-    const output = await child.output();
-    if (
-      !output.success || signal?.aborted || timedOut ||
-      output.stdout.byteLength > maximumOutputBytes
-    ) {
-      throw new Error("finder unavailable");
-    }
-    return parseFinderOutput(output.stdout);
-  } finally {
-    clearTimeout(timeout);
-    signal?.removeEventListener("abort", abort);
-  }
 }
 
 export function parseFinderOutput(output: Uint8Array): string[] {

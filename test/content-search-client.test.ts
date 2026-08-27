@@ -30,7 +30,8 @@ Deno.test("repository search client safely loads and navigates results", async (
     dialog.open,
     input.focused,
     dialog.querySelector("legend")?.textContent,
-  ], [true, true, "Search options"]);
+    input.attributes.get("aria-label"),
+  ], [true, true, "Search options", "Search repository"]);
   await wait(190);
   assertEquals(calls.length, 0);
   input.value = "needle";

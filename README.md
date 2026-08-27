@@ -101,7 +101,8 @@ source lines retain their `#L` anchors. Markdown source headings use the same
 fragments as rendered headings. Links scroll to an attached documentation,
 block, or contiguous line comment while highlighting the declaration line.
 Parsing is skipped above 1 MiB or when a grammar fails, without affecting source
-rendering.
+rendering. The cross-file symbol index is bounded and fails closed when
+traversal or indexing is truncated.
 
 ### Routing
 

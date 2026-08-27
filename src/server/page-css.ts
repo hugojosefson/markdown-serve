@@ -2,6 +2,7 @@ import { CSS } from "@deno/gfm";
 import { codeToolbarCss } from "./code-toolbar-css.ts";
 import { displayControlsCss } from "./display-controls-css.ts";
 import { fileSearchCss } from "./file-search-css.ts";
+import { contentSearchCss } from "./content-search-css.ts";
 import { foldCss } from "./fold-css.ts";
 
 export const pageCss = `${CSS}
@@ -130,6 +131,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .directory-table .timestamp-t, .directory-table .timestamp-zone, .file-metadata-details .timestamp-t, .file-metadata-details .timestamp-zone { opacity: .2; }
 .directory-scroll { background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 6px; max-width: 100%; overflow-x: auto; width: 100%; }
 ${fileSearchCss}
+${contentSearchCss}
 ${codeToolbarCss}
 ${displayControlsCss}
 ${foldCss}

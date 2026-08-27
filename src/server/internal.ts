@@ -4,6 +4,7 @@ import { sseResponse } from "./sse-response.ts";
 import { treeResponse } from "./tree-response.ts";
 import { siteResponse } from "./site-response.ts";
 import { fileSearchResponse } from "./file-search-response.ts";
+import { contentSearchResponse } from "./content-search-response.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function internalResponse(
@@ -38,6 +39,9 @@ export async function internalResponse(
       request,
       url.searchParams.get("path"),
     );
+  }
+  if (url.pathname === "/__markdown_serve__/search") {
+    return await contentSearchResponse(config, request, url);
   }
   if (url.pathname === "/__markdown_serve__/events" && config.reloadSource) {
     return request.method === "HEAD"

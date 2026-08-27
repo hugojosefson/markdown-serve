@@ -1,4 +1,4 @@
-const decoder = new TextDecoder();
+import { readCapped } from "../capped-stream.ts";
 
 export type GitCommandResult = {
   success: boolean;
@@ -61,40 +61,4 @@ export async function runGit(
       await child.status.catch(() => {});
     }
   }
-}
-
-async function readCapped(
-  stream: ReadableStream<Uint8Array>,
-  maxBytes: number,
-  onLimit: () => void,
-): Promise<string> {
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        return decoder.decode(joinChunks(chunks, length));
-      }
-      if (length + value.length > maxBytes) {
-        onLimit();
-        return decoder.decode(joinChunks(chunks, length));
-      }
-      chunks.push(value);
-      length += value.length;
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
-
-function joinChunks(chunks: Uint8Array[], length: number): Uint8Array {
-  const output = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    output.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return output;
 }

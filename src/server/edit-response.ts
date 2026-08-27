@@ -23,6 +23,8 @@ export type EditFileSystem =
     syncDirectory?(path: string): Promise<void>;
   };
 
+export class EditConflict extends Error {}
+
 /** Per-handler state; do not retain paths after their queued work finishes. */
 export class EditCoordinator {
   #writes = new Map<string, Promise<void>>();
@@ -110,7 +112,15 @@ export async function editResponse(
       result = new Response("Precondition Failed", { status: 412 });
       return;
     }
-    await atomicReplace(path, body, coordinator.fs);
+    try {
+      await atomicReplace(path, body, coordinator.fs, tag(current));
+    } catch (error) {
+      if (error instanceof EditConflict) {
+        result = new Response("Precondition Failed", { status: 412 });
+        return;
+      }
+      throw error;
+    }
     config.catalog.clear();
     config.symbols?.clear();
     result = new Response(null, {
@@ -193,6 +203,7 @@ export async function atomicReplace(
   path: string,
   body: Uint8Array,
   fs: EditFileSystem = Deno,
+  expectedTag?: string,
 ): Promise<void> {
   const info = await fs.stat(path);
   const mode = info.mode ?? undefined;
@@ -215,6 +226,15 @@ export async function atomicReplace(
       file.close();
     }
     if (mode !== undefined) await fs.chmod(temp, mode);
+    if (expectedTag !== undefined) {
+      const current = await fs.lstat(path);
+      if (
+        !current.isFile || current.isSymlink ||
+        tag(await fs.readFile(path)) !== expectedTag
+      ) {
+        throw new EditConflict("file changed during save");
+      }
+    }
     await fs.rename(temp, path);
     try {
       if (fs.syncDirectory) {

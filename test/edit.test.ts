@@ -3,6 +3,7 @@ import { parseArgs } from "../src/cli/parse-args.ts";
 import { assertServePermissions } from "../src/cli/capabilities.ts";
 import {
   atomicReplace,
+  EditConflict,
   type EditFileSystem,
   editLimit,
 } from "../src/server/edit-response.ts";
@@ -307,6 +308,23 @@ Deno.test("atomic replacement handles partial writes, modes, cleanup, and direct
     atomicReplace("/root/note.txt", new Uint8Array([1]), failed)
   );
   assertEquals(calls.includes("remove"), true);
+
+  const changed = {
+    ...fs,
+    lstat: () =>
+      Promise.resolve({ isFile: true, isSymlink: false } as Deno.FileInfo),
+    readFile: () => Promise.resolve(new TextEncoder().encode("changed")),
+  };
+  await assertRejects(
+    () =>
+      atomicReplace(
+        "/root/note.txt",
+        new Uint8Array([1]),
+        changed,
+        '"stale"',
+      ),
+    EditConflict,
+  );
 });
 
 Deno.test("edit endpoint is disabled by default and atomically saves versioned text", async () => {

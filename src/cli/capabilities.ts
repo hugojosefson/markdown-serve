@@ -1,7 +1,11 @@
 import { resolve } from "@std/path";
 import { openerCommand } from "./browser.ts";
 
-export type RuntimeCapabilities = { browser: boolean; git: boolean };
+export type RuntimeCapabilities = {
+  browser: boolean;
+  git: boolean;
+  finders: ("fd" | "fdfind")[];
+};
 export type PermissionQuery = (
   descriptor: Deno.PermissionDescriptor,
 ) => Pick<Deno.PermissionStatus, "state">;
@@ -15,6 +19,9 @@ export function runtimeCapabilities(
     browser: granted(query, browserEnvDescriptor) &&
       granted(query, { name: "run", command: opener }),
     git: granted(query, gitDescriptor),
+    finders: ["fd", "fdfind"].filter((command): command is "fd" | "fdfind" =>
+      granted(query, { name: "run", command })
+    ),
   };
 }
 
@@ -58,6 +65,8 @@ export function formatRuntimeFeatureStatus(
       : `unsupported; grant ${browserGrantHint()}`
   }\n  Git: ${
     capabilities.git ? "supported" : `unsupported; grant ${gitGrantHint}`
+  }\n  Fast file search: ${
+    capabilities.finders.join(" or ") || "fallback scan"
   }`;
 }
 

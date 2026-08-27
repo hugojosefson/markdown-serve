@@ -49,7 +49,10 @@ function renderBody(
 ): string {
   const metadataExpanded = model.url.searchParams.has("metadata");
   const sourceExpanded = model.sourceExpanded ?? false;
-  return `<body><div class="layout"><aside class="tree"><details class="tree-disclosure" open><summary>Files</summary>${navigation}</details></aside><main class="content markdown-body">${
+  const scope = model.directory ? model.parts : model.parts.slice(0, -1);
+  return `<body data-go-to-file-scope="${
+    escapeHtml(scope.join("/"))
+  }"><div class="layout"><aside class="tree"><details class="tree-disclosure" open><summary>Files</summary>${navigation}</details></aside><main class="content markdown-body">${
     repoContext(status)
   }${renderContentHeader(config, model, metadataExpanded, sourceExpanded)}${
     model.metadata && metadataExpanded

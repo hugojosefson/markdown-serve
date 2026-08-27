@@ -6,8 +6,9 @@ export async function startServer(
   options: CliOptions,
   signal?: AbortSignal,
   git = false,
+  finders: ("fd" | "fdfind")[] = [],
 ): Promise<Deno.HttpServer> {
-  return await serveAt(options, options.port, signal, git);
+  return await serveAt(options, options.port, signal, git, finders);
 }
 
 async function serveAt(
@@ -15,6 +16,7 @@ async function serveAt(
   port: number,
   signal?: AbortSignal,
   git = false,
+  finders: ("fd" | "fdfind")[] = [],
 ): Promise<Deno.HttpServer> {
   try {
     return await serve({
@@ -25,6 +27,7 @@ async function serveAt(
       liveReload: options.reload,
       liveReloadIgnorePaths: ignoredPackageSourcePaths,
       git,
+      finders,
       signal,
       onListen: () => {},
     });
@@ -32,7 +35,7 @@ async function serveAt(
     if (options.explicitPort || !isAddressInUse(error) || port === 65535) {
       throw error;
     }
-    return await serveAt(options, port + 1, signal, git);
+    return await serveAt(options, port + 1, signal, git, finders);
   }
 }
 

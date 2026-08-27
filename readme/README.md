@@ -52,12 +52,12 @@ occupied explicitly selected `--port` fails instead.
 The [suggested installation](#installation) uses narrowly scoped runtime
 permissions:
 
-| Permission                                                      | Purpose                                                                          |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `--allow-read=.`                                                | Read the current directory tree without granting access to the whole filesystem. |
-| `--allow-net`                                                   | Serve HTTP and listen for browser connections.                                   |
-| `--allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED` | Read terminal and CI settings and retain browser state across watched restarts.  |
-| `--allow-run=xdg-open,git`, `open,git`, or `cmd,git`            | Open the browser and read Git status using only the required commands.           |
+| Permission                                                                         | Purpose                                                                          |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `--allow-read=.`                                                                   | Read the current directory tree without granting access to the whole filesystem. |
+| `--allow-net`                                                                      | Serve HTTP and listen for browser connections.                                   |
+| `--allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED`                    | Read terminal and CI settings and retain browser state across watched restarts.  |
+| `--allow-run=xdg-open,git,fd,fdfind`, `open,git,fd,fdfind`, or `cmd,git,fd,fdfind` | Open the browser, read Git status, and use optional fast file search.            |
 
 Broader read grants can expose more files.
 
@@ -93,6 +93,14 @@ rendering.
 
 Directory listings and navigation trees group directories before files. Selected
 table ordering applies within each group.
+
+### Go to file
+
+Press `g` to open a scoped file picker. It searches only below the viewed
+directory (or a viewed file's directory), includes dotfiles, and uses canonical
+routes, including clean Markdown URLs. Type to filter; use up/down and Enter to
+open a match, or Escape to close. `fd` or `fdfind` is used when permitted and
+available; otherwise the server uses a bounded filesystem scan.
 
 ### Browser and redirects
 

@@ -3,6 +3,7 @@ import type { FileCatalog } from "./file-catalog.ts";
 import type { ErrorHandler } from "./server-options.ts";
 import type { GitState } from "./git/state.ts";
 import type { SymbolCatalog } from "./symbols/catalog.ts";
+import type { FinderRunner } from "./file-search.ts";
 
 export type ServerConfig = {
   rootPath: string;
@@ -13,4 +14,6 @@ export type ServerConfig = {
   catalog: FileCatalog;
   git?: GitState;
   symbols?: SymbolCatalog;
+  finders?: ("fd" | "fdfind")[];
+  finderRunner?: FinderRunner;
 };

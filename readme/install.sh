@@ -4,4 +4,4 @@ case "$(uname -s)" in
   MINGW* | MSYS* | CYGWIN*) browser_opener=cmd ;;
   *) browser_opener=xdg-open ;;
 esac
-deno install --global --force --minimum-dependency-age=0 --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED "--allow-run=${browser_opener},git" jsr:@hugojosefson/markdown-serve
+deno install --global --force --minimum-dependency-age=0 --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED "--allow-run=${browser_opener},git,fd,fdfind" jsr:@hugojosefson/markdown-serve

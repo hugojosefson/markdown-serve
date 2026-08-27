@@ -67,6 +67,8 @@ export async function createRequestHandler(
     git: options.git === false
       ? undefined
       : await createGitState(rootPath, options.reloadSource),
+    finders: options.finders,
+    finderRunner: options.finderRunner,
   };
   return async (request) => await respond(config, request);
 }

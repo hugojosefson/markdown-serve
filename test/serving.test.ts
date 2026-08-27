@@ -1,7 +1,28 @@
-import { assert, assertEquals, assertMatch, assertNotMatch } from "@std/assert";
+import {
+  assert,
+  assertEquals,
+  assertMatch,
+  assertNotMatch,
+  assertRejects,
+} from "@std/assert";
 import { pageScript, pageStylesheet } from "../src/server/page-assets.ts";
 import { navigationSpeculation } from "../src/server/navigation-speculation.ts";
 import { fixture, handler } from "./fixture.ts";
+
+Deno.test("handlers reject missing and non-directory roots", async () => {
+  const f = await fixture({ "file.txt": "content" });
+  try {
+    for (const root of [`${f.root}/missing`, `${f.root}/file.txt`]) {
+      await assertRejects(
+        () => handler(root),
+        Error,
+        `cannot access root ${root}:`,
+      );
+    }
+  } finally {
+    await f.cleanup();
+  }
+});
 
 Deno.test("static MIME types, HEAD, 404, and 405 responses", async () => {
   const f = await fixture({

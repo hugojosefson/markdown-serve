@@ -135,7 +135,7 @@ async function fileBody(
   return await fileStream(file, start, length);
 }
 
-async function fileStream(
+export async function fileStream(
   file: Deno.FsFile,
   start: number,
   length: number,

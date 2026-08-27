@@ -15,7 +15,7 @@ export function createReloadWatcher(
   return new ReloadHub(Deno.watchFs(resolve(root)), signal, ignorePaths);
 }
 
-class ReloadHub implements WatchedReloadSource {
+export class ReloadHub implements WatchedReloadSource {
   #closed = false;
   #subscribers = new Set<ReloadSubscriber>();
   #timer?: ReturnType<typeof setTimeout>;

@@ -5,6 +5,7 @@ import { reloadClientScript } from "../src/server/reload-client.ts";
 import {
   createReloadWatcher,
   reloadEventRelevant,
+  ReloadHub,
 } from "../src/server/reload.ts";
 import { fixture, handler } from "./fixture.ts";
 
@@ -140,6 +141,28 @@ Deno.test("source paths do not race content reload notifications", () => {
     ),
     false,
   );
+});
+
+Deno.test("watcher iteration failures close subscribers and the watcher once", async () => {
+  const closed = Promise.withResolvers<void>();
+  let closes = 0;
+  const watcher = {
+    close: () => {
+      closes++;
+      closed.resolve();
+    },
+    [Symbol.asyncIterator](): AsyncIterator<Deno.FsEvent> {
+      return { next: () => Promise.reject(new Error("watch failed")) };
+    },
+  } as unknown as Deno.FsWatcher;
+  const hub = new ReloadHub(watcher);
+  let subscriberCloses = 0;
+  hub.subscribe(() => {}, () => subscriberCloses++);
+
+  await closed.promise;
+  hub.close();
+
+  assertEquals([closes, subscriberCloses], [1, 1]);
 });
 
 Deno.test("an ignored source event cancels a pending content reload", async () => {

@@ -16,7 +16,11 @@ Deno.test("capabilities query exact browser and Git descriptors", () => {
         : "granted",
     };
   };
-  assertEquals(runtimeCapabilities(query), { browser: true, git: false });
+  assertEquals(runtimeCapabilities(query), {
+    browser: true,
+    git: false,
+    finders: ["fd", "fdfind"],
+  });
   assertEquals(descriptors, [
     { name: "env", variable: "MARKDOWN_SERVE_BROWSER_OPENED" },
     {
@@ -28,6 +32,8 @@ Deno.test("capabilities query exact browser and Git descriptors", () => {
         : "xdg-open",
     },
     { name: "run", command: "git" },
+    { name: "run", command: "fd" },
+    { name: "run", command: "fdfind" },
   ]);
 });
 
@@ -58,13 +64,13 @@ Deno.test("serve permissions query normalized root and suppress browser warning 
 
 Deno.test("unsupported help includes exact grant hints", () => {
   assertEquals(
-    formatRuntimeFeatureStatus({ browser: false, git: false }),
+    formatRuntimeFeatureStatus({ browser: false, git: false, finders: [] }),
     `\n\nRuntime features:\n  Browser opening: unsupported; grant --allow-run=${
       Deno.build.os === "darwin"
         ? "open"
         : Deno.build.os === "windows"
         ? "cmd"
         : "xdg-open"
-    } --allow-env=MARKDOWN_SERVE_BROWSER_OPENED\n  Git: unsupported; grant --allow-run=git`,
+    } --allow-env=MARKDOWN_SERVE_BROWSER_OPENED\n  Git: unsupported; grant --allow-run=git\n  Fast file search: fallback scan`,
   );
 });

@@ -6,6 +6,7 @@ import { markdownTocClient } from "./markdown-toc-client.ts";
 import { pageClient } from "./page-client.ts";
 import { relativeTimeClient } from "./relative-time-client.ts";
 import { viewTransitionClient } from "./view-transition-client.ts";
+import { fileSearchClient } from "./file-search-client.ts";
 import { pageCss } from "./page-css.ts";
 
 type PageAsset = { body: string; contentType: string; url: string };
@@ -30,7 +31,7 @@ export const pageStylesheet = versioned(
 );
 export const pageScript = versioned(
   "client",
-  `${viewTransitionClient}${displayControlsClient}${directoryTableClient}${relativeTimeClient}${pageClient}${markdownTocClient}${codeToolbarClient}`,
+  `${viewTransitionClient}${displayControlsClient}${directoryTableClient}${relativeTimeClient}${pageClient}${markdownTocClient}${codeToolbarClient}${fileSearchClient}`,
   "text/javascript; charset=UTF-8",
 );
 

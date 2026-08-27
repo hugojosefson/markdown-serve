@@ -1,4 +1,5 @@
 import type { ReloadSource } from "./reload-source.ts";
+import type { FinderRunner } from "./file-search.ts";
 
 export type ErrorHandler = (error: unknown) => Response | Promise<Response>;
 
@@ -8,6 +9,8 @@ export type HandlerOptions = {
   onError?: ErrorHandler;
   reloadSource?: ReloadSource;
   git?: boolean;
+  finders?: ("fd" | "fdfind")[];
+  finderRunner?: FinderRunner;
 };
 
 export type ServerOptions = HandlerOptions & {

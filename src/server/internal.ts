@@ -3,6 +3,7 @@ import { pageAsset } from "./page-assets.ts";
 import { sseResponse } from "./sse-response.ts";
 import { treeResponse } from "./tree-response.ts";
 import { siteResponse } from "./site-response.ts";
+import { fileSearchResponse } from "./file-search-response.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function internalResponse(
@@ -30,6 +31,13 @@ export async function internalResponse(
   }
   if (url.pathname === "/__markdown_serve__/tree") {
     return await treeResponse(config, request, url.searchParams.get("path"));
+  }
+  if (url.pathname === "/__markdown_serve__/files") {
+    return await fileSearchResponse(
+      config,
+      request,
+      url.searchParams.get("path"),
+    );
   }
   if (url.pathname === "/__markdown_serve__/events" && config.reloadSource) {
     return request.method === "HEAD"

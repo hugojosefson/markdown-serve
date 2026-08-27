@@ -52,6 +52,8 @@ function renderBody(
   const scope = model.directory ? model.parts : model.parts.slice(0, -1);
   return `<body data-go-to-file-scope="${
     escapeHtml(scope.join("/"))
+  }" data-content-search-scope="${
+    escapeHtml(scope.join("/"))
   }"><div class="layout"><aside class="tree"><details class="tree-disclosure" open><summary>Files</summary>${navigation}</details></aside><main class="content markdown-body">${
     repoContext(status)
   }${renderContentHeader(config, model, metadataExpanded, sourceExpanded)}${

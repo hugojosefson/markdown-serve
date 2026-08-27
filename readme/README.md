@@ -52,12 +52,12 @@ occupied explicitly selected `--port` fails instead.
 The [suggested installation](#installation) uses narrowly scoped runtime
 permissions:
 
-| Permission                                                                         | Purpose                                                                          |
-| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `--allow-read=.`                                                                   | Read the current directory tree without granting access to the whole filesystem. |
-| `--allow-net`                                                                      | Serve HTTP and listen for browser connections.                                   |
-| `--allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED`                    | Read terminal and CI settings and retain browser state across watched restarts.  |
-| `--allow-run=xdg-open,git,fd,fdfind`, `open,git,fd,fdfind`, or `cmd,git,fd,fdfind` | Open the browser, read Git status, and use optional fast file search.            |
+| Permission                                                                                  | Purpose                                                                          |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `--allow-read=.`                                                                            | Read the current directory tree without granting access to the whole filesystem. |
+| `--allow-net`                                                                               | Serve HTTP and listen for browser connections.                                   |
+| `--allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED`                             | Read terminal and CI settings and retain browser state across watched restarts.  |
+| `--allow-run=xdg-open,git,fd,fdfind,rg`, `open,git,fd,fdfind,rg`, or `cmd,git,fd,fdfind,rg` | Open the browser, read Git status, and use optional searches.                    |
 
 Broader read grants can expose more files.
 
@@ -101,6 +101,15 @@ directory (or a viewed file's directory), includes dotfiles, and uses canonical
 routes, including clean Markdown URLs. Type to filter; use up/down and Enter to
 open a match, or Escape to close. `fd` or `fdfind` is used when permitted and
 available; otherwise the server uses a bounded filesystem scan.
+
+### Repository search
+
+Press `/` to search below the viewed directory (or the viewed file's directory).
+It uses `rg` when `--allow-run=rg` is granted. The `search` endpoint accepts
+`fixed=1`, `smartCase=1`, `glob`, `type`, `hidden=1`, `ignored=1`, and
+`context=0` through `8`; the dialog exposes these options. Results are capped at
+100 matches (context lines do not count), include requested context, and link to
+source lines. Search runtime and each output stream are bounded.
 
 ### Browser and redirects
 

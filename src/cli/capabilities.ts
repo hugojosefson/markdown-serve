@@ -5,6 +5,7 @@ export type RuntimeCapabilities = {
   browser: boolean;
   git: boolean;
   finders: ("fd" | "fdfind")[];
+  rg: boolean;
 };
 export type PermissionQuery = (
   descriptor: Deno.PermissionDescriptor,
@@ -22,6 +23,7 @@ export function runtimeCapabilities(
     finders: ["fd", "fdfind"].filter((command): command is "fd" | "fdfind" =>
       granted(query, { name: "run", command })
     ),
+    rg: granted(query, { name: "run", command: "rg" }),
   };
 }
 
@@ -67,6 +69,8 @@ export function formatRuntimeFeatureStatus(
     capabilities.git ? "supported" : `unsupported; grant ${gitGrantHint}`
   }\n  Fast file search: ${
     capabilities.finders.join(" or ") || "fallback scan"
+  }\n  Repository search: ${
+    capabilities.rg ? "rg" : "unsupported; grant --allow-run=rg"
   }`;
 }
 

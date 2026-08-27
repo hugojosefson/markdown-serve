@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assert, assertEquals, assertMatch } from "@std/assert";
 import {
   formatRelativeTime,
   relativeTimeUpdateDelay,
@@ -27,4 +27,18 @@ Deno.test("relative timestamps schedule their next rounded-text change", () => {
     1_800_010,
   );
   assertEquals(relativeTimeUpdateDelay(new Date(+now + 61_000), now), 1_010);
+});
+
+Deno.test("relative timestamps remain meaningful at the Date range limits", () => {
+  for (
+    const date of [
+      new Date(-8_640_000_000_000_000),
+      new Date(8_640_000_000_000_000),
+    ]
+  ) {
+    assertMatch(formatRelativeTime(date, now), /years?(?: ago)?|in \d/);
+    const delay = relativeTimeUpdateDelay(date, now);
+    assert(Number.isFinite(delay));
+    assert(delay >= 10);
+  }
 });

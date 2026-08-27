@@ -40,6 +40,7 @@ function createSearch(
   const input = document.createElement("input");
   input.type = "search";
   input.placeholder = "Search repository";
+  input.setAttribute("aria-label", "Search repository");
   input.autocomplete = "off";
   const options = document.createElement("fieldset");
   const legend = document.createElement("legend");

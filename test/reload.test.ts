@@ -47,6 +47,53 @@ Deno.test("source changes close reload events before reloading the page", () => 
   assertEquals([reloads, closes], [2, 2]);
 });
 
+Deno.test("reload client defers one reload while the editor is open", () => {
+  const sourceListeners = new Map<string, () => void>();
+  const dialogListeners = new Map<string, () => void>();
+  let notifications = 0;
+  let reloads = 0;
+  const dialog = {
+    open: true,
+    addEventListener: (name: string, listener: () => void) =>
+      dialogListeners.set(name, listener),
+  };
+  class EventSource {
+    constructor(_url: string) {}
+    addEventListener(name: string, listener: () => void): void {
+      sourceListeners.set(name, listener);
+    }
+    close(): void {}
+  }
+  const document = {
+    querySelector: () => dialog,
+    addEventListener: () => {},
+    dispatchEvent: () => {
+      notifications++;
+      return true;
+    },
+  };
+  new Function(
+    "EventSource",
+    "location",
+    "document",
+    "globalThis",
+    reloadClientScript,
+  )(
+    EventSource,
+    { href: "http://x/", reload: () => reloads++ },
+    document,
+    { addEventListener: () => {} },
+  );
+  sourceListeners.get("reload")?.();
+  sourceListeners.get("reload")?.();
+  assertEquals([notifications, reloads], [1, 0]);
+  dialog.open = false;
+  dialogListeners.get("close")?.();
+  assertEquals(reloads, 1);
+  dialogListeners.get("close")?.();
+  assertEquals(reloads, 1);
+});
+
 Deno.test("reload client releases navigation connections and reconnects after restoration", () => {
   type Listener = (event: Record<string, unknown>) => void;
   const pageListeners = new Map<string, Listener>();

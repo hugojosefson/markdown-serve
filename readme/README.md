@@ -39,6 +39,7 @@ The command is `markdown-serve [root] [options]`.
 | `--redirect=<301\|302>`    | `302`       | Status for canonical URL redirects.    |
 | `--reload` / `--no-reload` | enabled     | Enable or disable browser live reload. |
 | `--open` / `--no-open`     | enabled     | Enable or disable opening the browser. |
+| `--edit` / `--no-edit`     | disabled    | Enable editing eligible text files.    |
 | `-h`, `--help`             | —           | Show command help.                     |
 | `-V`, `--version`          | —           | Show the installed version.            |
 
@@ -60,6 +61,19 @@ permissions:
 | `--allow-run=xdg-open,git,fd,fdfind,rg`, `open,git,fd,fdfind,rg`, or `cmd,git,fd,fdfind,rg` | Open the browser, read Git status, and use optional searches.                    |
 
 Broader read grants can expose more files.
+
+### Editing
+
+Editing is disabled by default. Install or run an explicit opt-in command with a
+write permission scoped to the served root, for example:
+
+```sh
+deno run --allow-read=. --allow-write=. --allow-net jsr:@hugojosefson/markdown-serve --edit .
+```
+
+The editor only changes existing regular UTF-8 text files below that root. It
+uses version checks and atomic replacement; it cannot create files or follow
+symlinks.
 
 ## URLs and pages
 

@@ -16,4 +16,5 @@ export type PageModel = {
   metadata?: FileMetadata;
   sourceExpanded?: boolean;
   gitStatus?: GitStatus;
+  editPath?: string;
 };

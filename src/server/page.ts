@@ -122,7 +122,15 @@ function renderContentHeader(
     model.metadata
       ? renderFileMetadataSummary(model.metadata, model.url, metadataExpanded)
       : ""
-  }${displayLinks(model.url, model.directoryView ?? false)}</div></header>`;
+  }${model.editPath ? editControl(model.editPath) : ""}${
+    displayLinks(model.url, model.directoryView ?? false)
+  }</div></header>`;
+}
+
+function editControl(path: string): string {
+  return `<button class="file-action edit-file" type="button" data-edit-path="${
+    escapeHtml(path)
+  }">Edit</button><dialog class="edit-dialog"><form method="dialog"><p class="edit-status" role="status">Loading…</p><textarea class="edit-text" spellcheck="false" aria-label="File contents"></textarea><div><button class="edit-cancel" value="cancel" type="button">Cancel</button><button class="edit-reload" type="button" hidden>Reload</button><button class="edit-save" type="button">Save</button></div></form></dialog>`;
 }
 
 function renderMarkdownViewToggle(url: URL, source: boolean): string {

@@ -62,7 +62,10 @@ function isTextMime(type: string): boolean {
     type.includes("javascript");
 }
 
-function isUtf8Text(sample: Uint8Array, truncated: boolean): boolean {
+export function isUtf8Text(
+  sample: Uint8Array,
+  truncated: boolean,
+): boolean {
   for (const byte of sample) {
     if (byte < 0x09 || (byte > 0x0d && byte < 0x20) || byte === 0x7f) {
       return false;

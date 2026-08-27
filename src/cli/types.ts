@@ -6,6 +6,7 @@ export type CliOptions = {
   redirectStatus: 301 | 302;
   reload: boolean;
   open: boolean;
+  edit?: boolean;
 };
 
 export type Command = { kind: "help" | "version" } | {

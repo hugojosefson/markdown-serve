@@ -8,6 +8,7 @@ const defaults: CliOptions = {
   redirectStatus: 302,
   reload: true,
   open: true,
+  edit: false,
 };
 
 export function parseArgs(args: string[]): CliOptions {
@@ -50,6 +51,14 @@ function parseAt(
       args,
       index + 1,
       { ...options, open: arg === "--open" },
+      rootSeen,
+    );
+  }
+  if (arg === "--edit" || arg === "--no-edit") {
+    return parseAt(
+      args,
+      index + 1,
+      { ...options, edit: arg === "--edit" },
       rootSeen,
     );
   }

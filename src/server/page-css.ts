@@ -4,8 +4,9 @@ import { displayControlsCss } from "./display-controls-css.ts";
 import { fileSearchCss } from "./file-search-css.ts";
 import { contentSearchCss } from "./content-search-css.ts";
 import { foldCss } from "./fold-css.ts";
+import { editCss } from "./edit-css.ts";
 
-export const pageCss = `${CSS}
+export const pageCss = `${CSS}\n${editCss}
 :root { color-scheme: light dark; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; --kind-directory: #8250df; --kind-symlink: #0969da; --kind-executable: #1a7f37; --kind-archive: #bf8700; --kind-image: #cf222e; --kind-media: #0550ae; --kind-file: var(--code-text); --git-conflict: #cf222e; --git-renamed: #8250df; --git-deleted: #cf222e; --git-modified: #bf8700; --git-added: #1a7f37; --git-untracked: #0969da; --git-ignored: var(--code-muted); }
 html { scrollbar-gutter: stable; }
 @media (prefers-reduced-motion: no-preference) {

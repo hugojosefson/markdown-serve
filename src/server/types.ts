@@ -5,6 +5,7 @@ import type { GitState } from "./git/state.ts";
 import type { SymbolCatalog } from "./symbols/catalog.ts";
 import type { FinderRunner } from "./file-search.ts";
 import type { ContentSearchRunner } from "./content-search.ts";
+import type { EditCoordinator } from "./edit-response.ts";
 
 export type ServerConfig = {
   rootPath: string;
@@ -18,4 +19,6 @@ export type ServerConfig = {
   finders?: ("fd" | "fdfind")[];
   finderRunner?: FinderRunner;
   contentSearchRunner?: ContentSearchRunner;
+  edit?: boolean;
+  editCoordinator?: EditCoordinator;
 };

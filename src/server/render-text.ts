@@ -6,6 +6,8 @@ import { fileMime, metadataForFile, textFileMime } from "./file-metadata.ts";
 import { renderSourceCodeBlockWithSymbols } from "./render-code-markdown.ts";
 import { sourceAnnotations } from "./git/source.ts";
 import type { ServerConfig } from "./types.ts";
+import { relative } from "@std/path";
+import { editableFile } from "./edit-response.ts";
 
 export async function renderText(
   config: ServerConfig,
@@ -39,6 +41,9 @@ export async function renderText(
         ...filePageActions("text/plain; charset=UTF-8", fileMime(file)),
       ],
       metadata: { ...metadataForFile(file, info), mime: textFileMime(file) },
+      editPath: config.edit && await editableFile(config.rootPath, file)
+        ? relative(config.rootPath, file).split(/[/\\]/).join("/")
+        : undefined,
     }),
   );
 }

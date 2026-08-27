@@ -28,6 +28,7 @@ async function serveAt(
       liveReloadIgnorePaths: ignoredPackageSourcePaths,
       git,
       finders,
+      edit: options.edit,
       signal,
       onListen: () => {},
     });

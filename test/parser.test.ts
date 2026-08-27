@@ -19,6 +19,7 @@ Deno.test("parser uses documented defaults", () => {
     redirectStatus: 302,
     reload: true,
     open: true,
+    edit: false,
   });
 });
 
@@ -40,6 +41,7 @@ Deno.test("parser accepts separated and equals option values", () => {
       redirectStatus: 301,
       reload: false,
       open: false,
+      edit: false,
     },
   );
   assertEquals(

@@ -6,5 +6,6 @@ Options:
   --redirect=<301|302>   Canonical redirect status (default: 302)
   --[no-]reload          Enable or disable live reload (default: enabled)
   --[no-]open            Enable or disable browser opening (default: enabled)
+  --[no-]edit            Enable editing eligible text files (default: disabled)
   -h, --help             Show this help
   -V, --version          Show version`;

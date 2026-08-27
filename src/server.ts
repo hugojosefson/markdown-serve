@@ -44,6 +44,8 @@ export async function serve(options: ServerOptions): Promise<Deno.HttpServer> {
         git: options.git,
         finders: options.finders,
         finderRunner: options.finderRunner,
+        contentSearchRunner: options.contentSearchRunner,
+        edit: options.edit,
       }),
     );
     if (watched) {

@@ -1,6 +1,7 @@
 import type { ReloadSource } from "./reload-source.ts";
 import type { FinderRunner } from "./file-search.ts";
 import type { ContentSearchRunner } from "./content-search.ts";
+import type { EditCoordinator } from "./edit-response.ts";
 
 export type ErrorHandler = (error: unknown) => Response | Promise<Response>;
 
@@ -13,6 +14,10 @@ export type HandlerOptions = {
   finders?: ("fd" | "fdfind")[];
   finderRunner?: FinderRunner;
   contentSearchRunner?: ContentSearchRunner;
+  /** Enables the internal, same-origin guarded text editor. */
+  edit?: boolean;
+  /** Coordinates editor writes; primarily useful for embedding and tests. */
+  editCoordinator?: EditCoordinator;
 };
 
 export type ServerOptions = HandlerOptions & {

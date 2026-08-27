@@ -25,6 +25,9 @@ export async function main(args: string[]): Promise<void> {
       command.options.host,
       command.options.port,
       command.options.open,
+      undefined,
+      undefined,
+      command.options.edit,
     );
     const abort = new AbortController();
     const unregister = registerSignals(() => abort.abort());

@@ -1,8 +1,22 @@
 export const reloadClientScript = `
 let reloadEvents;
 let reloadConnected = false;
+let deferredReload = false;
 const disconnectReload = () => reloadEvents?.close();
-const reloadPage = () => { disconnectReload(); location.reload(); };
+const reloadPage = () => {
+  const editor = document.querySelector?.('.edit-dialog');
+  if (editor?.open) {
+    if (!deferredReload) { document.dispatchEvent?.(new Event('markdown-serve:reload')); }
+    deferredReload = true;
+    return;
+  }
+  disconnectReload(); location.reload();
+};
+document.querySelector?.('.edit-dialog')?.addEventListener?.('close', () => {
+  if (!deferredReload) { return; }
+  deferredReload = false;
+  reloadPage();
+});
 const connectReload = () => {
   reloadConnected = false;
   reloadEvents = new EventSource('/__markdown_serve__/events');

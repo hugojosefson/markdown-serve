@@ -5,19 +5,23 @@ import { treeResponse } from "./tree-response.ts";
 import { siteResponse } from "./site-response.ts";
 import { fileSearchResponse } from "./file-search-response.ts";
 import { contentSearchResponse } from "./content-search-response.ts";
+import { editResponse } from "./edit-response.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function internalResponse(
   config: ServerConfig,
   request: Request,
 ): Promise<Response> {
+  const url = new URL(request.url);
+  if (url.pathname === "/__markdown_serve__/edit") {
+    return await editResponse(config, request, url);
+  }
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response("Method Not Allowed", {
       status: 405,
       headers: { Allow: "GET, HEAD" },
     });
   }
-  const url = new URL(request.url);
   if (url.pathname.startsWith("/__markdown_serve__/site/")) {
     return await siteResponse(config, request, url);
   }

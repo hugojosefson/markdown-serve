@@ -34,10 +34,16 @@ export function assertServePermissions(
   open: boolean,
   query: PermissionQuery = Deno.permissions.querySync,
   warn: Warn = console.warn,
+  edit = false,
 ): RuntimeCapabilities {
   const rootPath = resolve(root);
   if (!granted(query, { name: "read", path: rootPath })) {
     throw new Error(`Cannot read ${rootPath}; grant --allow-read=${rootPath}`);
+  }
+  if (edit && !granted(query, { name: "write", path: rootPath })) {
+    throw new Error(
+      `Cannot write ${rootPath}; grant --allow-write=${rootPath}`,
+    );
   }
   if (!granted(query, { name: "net", host: `${host}:${port}` })) {
     throw new Error(

@@ -12,6 +12,8 @@ import { downloadFile, rawFile } from "./responses.ts";
 import { metadataForFile } from "./file-metadata.ts";
 import type { ServerConfig } from "./types.ts";
 import { renderMarkdownToc } from "./markdown-toc.ts";
+import { relative } from "@std/path";
+import { editableFile } from "./edit-response.ts";
 
 export async function renderMarkdown(
   config: ServerConfig,
@@ -61,6 +63,9 @@ export async function renderMarkdown(
       sourceExpanded: source,
       directoryView: options.directoryView,
       sourceName: options.sourceName,
+      editPath: config.edit && await editableFile(config.rootPath, file)
+        ? relative(config.rootPath, file).split(/[/\\]/).join("/")
+        : undefined,
     }),
   );
 }

@@ -2,11 +2,7 @@ import { assert, assertEquals, assertMatch } from "@std/assert";
 import { join } from "@std/path";
 import { serve } from "../src/server.ts";
 import { reloadClientScript } from "../src/server/reload-client.ts";
-import {
-  createReloadWatcher,
-  reloadEventRelevant,
-  ReloadHub,
-} from "../src/server/reload.ts";
+import { reloadEventRelevant, ReloadHub } from "../src/server/reload.ts";
 import { fixture, handler } from "./fixture.ts";
 
 Deno.test("source changes close reload events before reloading the page", () => {
@@ -213,25 +209,36 @@ Deno.test("watcher iteration failures close subscribers and the watcher once", a
 });
 
 Deno.test("an ignored source event cancels a pending content reload", async () => {
-  const f = await fixture({ "content.txt": "before", "src/code.ts": "before" });
-  const watcher = createReloadWatcher(f.root, undefined, [join(f.root, "src")]);
+  const root = Deno.cwd();
+  const source = join(root, "src");
+  const events = new TransformStream<Deno.FsEvent>();
+  const writer = events.writable.getWriter();
+  const watcher = {
+    close: () => {
+      void writer.close();
+    },
+    [Symbol.asyncIterator](): AsyncIterator<Deno.FsEvent> {
+      return events.readable[Symbol.asyncIterator]();
+    },
+  } as unknown as Deno.FsWatcher;
+  const emit = (path: string) =>
+    writer.write({ kind: "modify", paths: [path] });
+  const hub = new ReloadHub(watcher, undefined, [source]);
   let reloads = 0;
-  const unsubscribe = watcher.subscribe(() => {
+  hub.subscribe(() => {
     reloads++;
   });
   try {
-    await Deno.writeTextFile(join(f.root, "content.txt"), "pending");
-    await Deno.writeTextFile(join(f.root, "src/code.ts"), "restart");
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await emit(join(root, "content.txt"));
+    await emit(join(source, "code.ts"));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     assertEquals(reloads, 0);
 
-    await Deno.writeTextFile(join(f.root, "content.txt"), "after restart");
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await emit(join(root, "content.txt"));
+    await new Promise((resolve) => setTimeout(resolve, 100));
     assertEquals(reloads, 1);
   } finally {
-    unsubscribe();
-    watcher.close();
-    await f.cleanup();
+    hub.close();
   }
 });
 

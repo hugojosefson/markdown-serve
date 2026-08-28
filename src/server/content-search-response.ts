@@ -23,6 +23,7 @@ export async function contentSearchResponse(
       options,
       config.contentSearchRunner ?? runRg,
       request.signal,
+      config.access,
     );
     return response(JSON.stringify(results));
   } catch {

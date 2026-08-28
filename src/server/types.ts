@@ -6,6 +6,7 @@ import type { SymbolCatalog } from "./symbols/catalog.ts";
 import type { FinderRunner } from "./file-search.ts";
 import type { ContentSearchRunner } from "./content-search.ts";
 import type { EditCoordinator } from "./edit-response.ts";
+import type { FileAccess } from "./file-access.ts";
 
 export type ServerConfig = {
   rootPath: string;
@@ -14,6 +15,7 @@ export type ServerConfig = {
   onError?: ErrorHandler;
   reloadSource?: ReloadSource;
   catalog: FileCatalog;
+  access?: FileAccess;
   git?: GitState;
   symbols?: SymbolCatalog;
   finders?: ("fd" | "fdfind")[];

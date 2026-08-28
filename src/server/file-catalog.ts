@@ -1,6 +1,7 @@
 import { join } from "@std/path";
 import { AsyncLimiter } from "./async-limiter.ts";
 import { type DirectoryEntry, readDirectory, statOrUndefined } from "./fs.ts";
+import type { FileAccess } from "./file-access.ts";
 import {
   indexCandidates,
   markdownCandidates,
@@ -23,6 +24,8 @@ export class FileCatalog {
   #readLimiter = new AsyncLimiter(16);
   #generation = 0;
 
+  constructor(readonly access?: FileAccess) {}
+
   names(path: string): Promise<Deno.DirEntry[]> {
     return this.#names.get(path) ?? this.#setNames(path);
   }
@@ -31,8 +34,11 @@ export class FileCatalog {
     return this.#directories.get(path) ?? this.#setDirectory(path);
   }
 
-  stat(path: string): Promise<Deno.FileInfo | undefined> {
-    return this.#stats.get(path) ?? this.#setStat(path);
+  stat(
+    path: string,
+    directoryHint = false,
+  ): Promise<Deno.FileInfo | undefined> {
+    return this.#stats.get(path) ?? this.#setStat(path, directoryHint);
   }
 
   index(path: string): Promise<string | undefined> {
@@ -124,10 +130,10 @@ export class FileCatalog {
     const generation = this.#generation;
     const value = this.names(path).then(async (names) => {
       const entries = await Promise.all(names.map(async (entry) => {
-        const info = await this.stat(join(path, entry.name));
+        const info = await this.stat(join(path, entry.name), entry.isDirectory);
         return {
           name: entry.name,
-          directory: info?.isDirectory ?? false,
+          directory: info?.isDirectory ?? entry.isDirectory,
           symlink: entry.isSymlink,
           info,
         };
@@ -145,8 +151,15 @@ export class FileCatalog {
     this.#directories.set(path, value);
     return value;
   }
-  #setStat(path: string): Promise<Deno.FileInfo | undefined> {
-    const value = this.#statLimiter.run(() => statOrUndefined(path));
+  #setStat(
+    path: string,
+    directoryHint = false,
+  ): Promise<Deno.FileInfo | undefined> {
+    const value = this.#statLimiter.run(() =>
+      this.access
+        ? this.access.stat(path, directoryHint)
+        : statOrUndefined(path)
+    );
     this.#stats.set(path, value);
     return value;
   }
@@ -174,7 +187,9 @@ export class FileCatalog {
   }
 
   #setNames(path: string): Promise<Deno.DirEntry[]> {
-    const value = this.#readLimiter.run(() => readDirectory(path));
+    const value = this.#readLimiter.run(() =>
+      this.access ? this.access.readDirectory(path) : readDirectory(path)
+    );
     this.#names.set(path, value);
     return value;
   }

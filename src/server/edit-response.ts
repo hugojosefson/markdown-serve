@@ -9,6 +9,7 @@ import {
 } from "./render-code-markdown.ts";
 import { isTextFile, isUtf8Text } from "./text-file.ts";
 import type { ServerConfig } from "./types.ts";
+import type { FileAccess } from "./file-access.ts";
 
 export const editLimit = 1024 * 1024;
 
@@ -54,6 +55,7 @@ export class EditCoordinator {
 export async function editableFile(
   root: string,
   path: string,
+  access?: FileAccess,
 ): Promise<boolean> {
   try {
     const link = await Deno.lstat(path);
@@ -66,7 +68,8 @@ export async function editableFile(
     }
     if (!await isTextFile(path)) return false;
     return validText(await Deno.readFile(path));
-  } catch {
+  } catch (error) {
+    access?.handlePermissionDenied(path, error);
     return false;
   }
 }
@@ -90,10 +93,25 @@ export async function editResponse(
     });
   }
   const path = editablePath(config.rootPath, url.searchParams.get("path"));
-  if (!path || !await editableFile(config.rootPath, path)) {
+  if (
+    !path || config.access?.isDenied(path) ||
+    !await editableFile(config.rootPath, path, config.access)
+  ) {
+    if (path && config.access?.isDenied(path)) {
+      return new Response("Forbidden", { status: 403 });
+    }
     return new Response("Not Found", { status: 404 });
   }
-  if (request.method !== "PUT") return await readResponse(path, request.method);
+  if (request.method !== "PUT") {
+    try {
+      return await readResponse(path, request.method);
+    } catch (error) {
+      if (config.access?.handlePermissionDenied(path, error)) {
+        return new Response("Forbidden", { status: 403 });
+      }
+      throw error;
+    }
+  }
   if (!sameOrigin(request, url)) {
     return new Response("Forbidden", { status: 403 });
   }
@@ -114,8 +132,17 @@ export async function editResponse(
   const coordinator = config.editCoordinator ?? new EditCoordinator();
   let result: Response = new Response("Not Found", { status: 404 });
   await coordinator.write(path, async () => {
-    if (!await editableFile(config.rootPath, path)) return;
-    const current = await Deno.readFile(path);
+    if (!await editableFile(config.rootPath, path, config.access)) return;
+    let current: Uint8Array;
+    try {
+      current = await Deno.readFile(path);
+    } catch (error) {
+      if (config.access?.handlePermissionDenied(path, error)) {
+        result = new Response("Forbidden", { status: 403 });
+        return;
+      }
+      throw error;
+    }
     if (ifMatch !== editTag(current)) {
       result = new Response("Precondition Failed", { status: 412 });
       return;
@@ -169,7 +196,13 @@ export async function editHighlightResponse(
     return new Response("Unsupported Media Type", { status: 415 });
   }
   const path = editablePath(config.rootPath, url.searchParams.get("path"));
-  if (!path || !await editableFile(config.rootPath, path)) {
+  if (
+    !path || config.access?.isDenied(path) ||
+    !await editableFile(config.rootPath, path, config.access)
+  ) {
+    if (path && config.access?.isDenied(path)) {
+      return new Response("Forbidden", { status: 403 });
+    }
     return new Response("Not Found", { status: 404 });
   }
   const body = await boundedBody(request);
@@ -395,8 +428,10 @@ export async function formEdit(
         : "Invalid UTF-8",
     };
   }
-  if (!await editableFile(config.rootPath, path)) {
-    return { kind: "invalid", status: 404, message: "Not Found" };
+  if (!await editableFile(config.rootPath, path, config.access)) {
+    return config.access?.isDenied(path)
+      ? { kind: "invalid", status: 403, message: "Forbidden" }
+      : { kind: "invalid", status: 404, message: "Not Found" };
   }
   const coordinator = config.editCoordinator ?? new EditCoordinator();
   let result: FormEditResult = {
@@ -405,8 +440,17 @@ export async function formEdit(
     message: "Not Found",
   };
   await coordinator.write(path, async () => {
-    if (!await editableFile(config.rootPath, path)) return;
-    const current = await Deno.readFile(path);
+    if (!await editableFile(config.rootPath, path, config.access)) return;
+    let current: Uint8Array;
+    try {
+      current = await Deno.readFile(path);
+    } catch (error) {
+      if (config.access?.handlePermissionDenied(path, error)) {
+        result = { kind: "invalid", status: 403, message: "Forbidden" };
+        return;
+      }
+      throw error;
+    }
     const currentText = new TextDecoder().decode(current);
     if (etag !== editTag(current)) {
       result = {

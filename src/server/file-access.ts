@@ -12,6 +12,7 @@ export type FileAccessOperations = {
 /** Per-handler filesystem access policy for paths below the configured root. */
 export class FileAccess {
   #warned = new Set<string>();
+  #deniedFiles = new Set<string>();
   #deniedDirectories = new Set<string>();
   readonly #root: string;
 
@@ -37,7 +38,11 @@ export class FileAccess {
       return false;
     }
     if (this.#belowDeniedDirectory(normalized)) return true;
-    if (directory) this.#deniedDirectories.add(normalized);
+    if (directory) {
+      this.#deniedDirectories.add(normalized);
+    } else {
+      this.#deniedFiles.add(normalized);
+    }
     if (!this.#warned.has(normalized)) {
       this.#warned.add(normalized);
       this.warn(
@@ -47,8 +52,16 @@ export class FileAccess {
     return true;
   }
 
-  clearDeniedDirectories(): void {
+  /** Reload retries access while retaining lifetime warning deduplication. */
+  clearDenied(): void {
+    this.#deniedFiles.clear();
     this.#deniedDirectories.clear();
+  }
+
+  isDenied(path: string): boolean {
+    const normalized = resolve(path);
+    return this.#deniedFiles.has(normalized) ||
+      this.#belowDeniedDirectory(normalized);
   }
 
   async stat(
@@ -127,7 +140,9 @@ export class FileAccess {
   ): Promise<T | undefined> {
     if (this.#belowDeniedDirectory(resolve(path))) return undefined;
     try {
-      return await operation();
+      const value = await operation();
+      this.#deniedFiles.delete(resolve(path));
+      return value;
     } catch (error) {
       if (this.handlePermissionDenied(path, error, directoryHint)) {
         return undefined;

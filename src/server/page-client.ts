@@ -42,6 +42,7 @@ const addEntries = (list, entries) => entries.forEach((entry) => {
    if (entry.git?.kind === 'ignored') { link.dataset.gitIgnored = 'true'; }
   if (entry.queryRemove) { link.dataset.queryRemove = entry.queryRemove.join(' '); }
    link.textContent = entry.name + (entry.directory ? '/' : '');
+   if (entry.accessDenied) { link.ariaLabel = entry.name + ' directory, access denied'; const lock = document.createElement('span'); lock.className = 'tree-access-denied'; lock.title = 'Access denied'; lock.ariaHidden = 'true'; lock.textContent = ' 🔒'; link.append(lock); }
    const marker = entry.git ? document.createElement('span') : null;
    if (marker) { marker.className = 'git-marker'; marker.dataset.gitKind = entry.git.kind; marker.title = marker.ariaLabel = entry.git.tooltip; marker.textContent = entry.git.display; }
   if (!entry.directory) {

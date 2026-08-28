@@ -67,6 +67,16 @@ export class FileCatalog {
       this.#setMarkdown(key, path, leaf));
   }
 
+  async markdownDenied(path: string, leaf: string): Promise<boolean> {
+    const access = this.access;
+    if (!access) return false;
+    const names = await this.#namesIfDirectory(path);
+    if (!names) return false;
+    return markdownCandidates(names.map((entry) => entry.name), leaf).some(
+      (name) => access.isDenied(join(path, name)),
+    );
+  }
+
   clear(): void {
     this.#generation++;
     this.#directories.clear();
@@ -128,9 +138,14 @@ export class FileCatalog {
 
   #setDirectory(path: string): Promise<DirectoryEntry[]> {
     const generation = this.#generation;
+    const access = this.access;
     const value = this.names(path).then(async (names) => {
       const entries = await Promise.all(names.map(async (entry) => {
-        const info = await this.stat(join(path, entry.name), entry.isDirectory);
+        const child = join(path, entry.name);
+        const info = await this.stat(child, entry.isDirectory);
+        if (entry.isDirectory && access) {
+          await this.#readLimiter.run(() => access.probeDirectory(child));
+        }
         return {
           name: entry.name,
           directory: info?.isDirectory ?? entry.isDirectory,

@@ -115,7 +115,11 @@ Deno.test("Markdown edit page saves through an ordinary versioned form", async (
       page,
       /class="token title important"|class="token punctuation"/,
     );
-    assertEquals(page.includes("<h1"), false);
+    assertMatch(
+      page,
+      /class="edit-markdown-preview"[\s\S]*<h1[^>]*>[\s\S]*first<\/h1>/,
+    );
+    assertEquals(page.includes('<div class="page-content'), false);
     const tag = page.match(/name="etag" value="([^"]+)"/)?.[1].replaceAll(
       "&quot;",
       '"',
@@ -152,6 +156,115 @@ Deno.test("Markdown edit page saves through an ordinary versioned form", async (
     assertMatch(conflict, /Conflict: merge the current version/);
     assertMatch(conflict, /<textarea[^>]*>lost<\/textarea>/);
     assertMatch(conflict, /Current file on disk[\s\S]*# second/);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("edit pages render Markdown and source syntax distinctly", async () => {
+  const f = await fixture({
+    "styled.md": "# Heading\n\n**bold** [link](./next) and `inline code`\n",
+    "data.json": '{"name": true, "count": 2}\n',
+    "code.ts": "const answer: number = 42;\n",
+  });
+  try {
+    const on = await handler(f.root, { edit: true });
+    const markdown = await (
+      await on(new Request("http://x/styled?edit"))
+    ).text();
+    assertMatch(markdown, /edit-heading-1/);
+    assertMatch(markdown, /token bold/);
+    assertMatch(markdown, /token url/);
+    assertMatch(markdown, /token code-snippet/);
+    assertMatch(
+      markdown,
+      /edit-markdown-preview[\s\S]*<h1[^>]*>[\s\S]*Heading<\/h1>/,
+    );
+    assertMatch(markdown, /<strong>bold<\/strong>/);
+    assertMatch(markdown, /<a href="http:\/\/x\/next"[^>]*>link<\/a>/);
+    assertMatch(markdown, /<code>inline code<\/code>/);
+
+    const json = await (
+      await on(new Request("http://x/data.json?edit"))
+    ).text();
+    assertMatch(json, /token property/);
+    assertMatch(json, /token boolean/);
+    assertMatch(json, /token number/);
+    assertEquals(json.includes("edit-markdown-preview"), false);
+
+    const typescript = await (
+      await on(new Request("http://x/code.ts?edit"))
+    ).text();
+    assertMatch(typescript, /token keyword/);
+    assertMatch(typescript, /token builtin|token number/);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("edit merge endpoint combines disk changes without writing", async () => {
+  const f = await fixture({ "note.txt": "one\ntwo\nthree\n" });
+  try {
+    const on = await handler(f.root, { edit: true });
+    const page = await (
+      await on(new Request("http://x/note.txt?edit"))
+    ).text();
+    const tag = pageTag(page);
+    await Deno.writeTextFile(`${f.root}/note.txt`, "one\ntwo\nTHREE\n");
+    const forbidden = await on(
+      new Request("http://x/__markdown_serve__/merge?path=note.txt", {
+        method: "POST",
+        headers: {
+          Origin: "http://elsewhere",
+          "Content-Type": "application/json; charset=UTF-8",
+        },
+        body: JSON.stringify({ base: "", draft: "", tag }),
+      }),
+    );
+    assertEquals(forbidden.status, 403);
+    const response = await on(
+      new Request("http://x/__markdown_serve__/merge?path=note.txt", {
+        method: "POST",
+        headers: {
+          Origin: "http://x",
+          "Content-Type": "application/json; charset=UTF-8",
+        },
+        body: JSON.stringify({
+          base: "one\ntwo\nthree\n",
+          draft: "ONE\ntwo\nthree\n",
+          tag,
+        }),
+      }),
+    );
+    assertEquals(response.status, 200);
+    const merged = await response.json();
+    assertEquals(
+      [merged.changed, merged.conflicted, merged.draft, merged.base],
+      [true, false, "ONE\ntwo\nTHREE\n", "one\ntwo\nTHREE\n"],
+    );
+    assertMatch(merged.tag, /^"[0-9a-f]{64}"$/);
+    assertEquals(
+      await Deno.readTextFile(`${f.root}/note.txt`),
+      "one\ntwo\nTHREE\n",
+    );
+    const abort = new AbortController();
+    abort.abort();
+    const aborted = await on(
+      new Request("http://x/__markdown_serve__/merge?path=note.txt", {
+        method: "POST",
+        signal: abort.signal,
+        headers: {
+          Origin: "http://x",
+          "Content-Type": "application/json; charset=UTF-8",
+        },
+        body: JSON.stringify({
+          base: merged.base,
+          draft: merged.draft,
+          tag: merged.tag,
+        }),
+      }),
+    );
+    assertEquals(aborted.status, 499);
   } finally {
     await f.cleanup();
   }

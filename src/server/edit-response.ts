@@ -3,7 +3,10 @@ import { dirname, isAbsolute, join, relative } from "@std/path";
 import { codeLanguageForPath } from "./code-language.ts";
 import { draftDiff } from "./draft-diff.ts";
 import { filePath, splitPath } from "./paths.ts";
-import { renderHighlightedCode } from "./render-code-markdown.ts";
+import {
+  renderCodeMarkdown,
+  renderHighlightedCode,
+} from "./render-code-markdown.ts";
 import { isTextFile, isUtf8Text } from "./text-file.ts";
 import type { ServerConfig } from "./types.ts";
 
@@ -198,11 +201,12 @@ export async function editHighlightResponse(
   if (!diff) {
     return new Response("Conflict", { status: 409 });
   }
+  const language = codeLanguageForPath(path, diff.draft);
   return Response.json({
-    html: renderHighlightedCode(
-      diff.draft,
-      codeLanguageForPath(path, diff.draft),
-    ),
+    html: renderHighlightedCode(diff.draft, language),
+    preview: language === "markdown"
+      ? renderCodeMarkdown(diff.draft, editPreviewBase(url, gitPath))
+      : undefined,
     ...diff,
     git: head !== undefined,
   }, {
@@ -213,7 +217,15 @@ export async function editHighlightResponse(
   });
 }
 
-function editablePath(root: string, value: string | null): string | undefined {
+function editPreviewBase(url: URL, path: string): string {
+  const encoded = path.split("/").map(encodeURIComponent).join("/");
+  return new URL(`/${encoded}`, url.origin).href;
+}
+
+export function editablePath(
+  root: string,
+  value: string | null,
+): string | undefined {
   if (!value) return undefined;
   const parts = splitPath(value);
   return parts?.length ? filePath(root, parts) : undefined;
@@ -233,11 +245,11 @@ async function readResponse(path: string, method: string): Promise<Response> {
   });
 }
 
-function sameOrigin(request: Request, url: URL): boolean {
+export function sameOrigin(request: Request, url: URL): boolean {
   return request.headers.get("origin") === url.origin;
 }
 
-async function boundedBody(
+export async function boundedBody(
   request: Request,
   limit = editLimit,
 ): Promise<Uint8Array | undefined> {
@@ -273,7 +285,7 @@ async function boundedBody(
   return body;
 }
 
-function validText(bytes: Uint8Array): boolean {
+export function validText(bytes: Uint8Array): boolean {
   return bytes.byteLength <= editLimit && isUtf8Text(bytes, false);
 }
 export function editTag(bytes: Uint8Array): string {

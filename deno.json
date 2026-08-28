@@ -38,6 +38,7 @@
     "@deno/gfm": "jsr:@deno/gfm@^0.12.0",
     "diff": "npm:diff@^9.0.0",
     "file-lang-map": "npm:file-lang-map@^1.1.11",
+    "node-diff3": "npm:node-diff3@^3.2.1",
     "web-tree-sitter": "npm:web-tree-sitter@0.25.10",
     "tree-sitter-wasms": "npm:tree-sitter-wasms@0.1.13",
     "prismjs/components/prism-bash.js": "npm:prismjs@^1.30.0/components/prism-bash.js",

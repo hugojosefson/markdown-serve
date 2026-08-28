@@ -6,6 +6,7 @@ import { siteResponse } from "./site-response.ts";
 import { fileSearchResponse } from "./file-search-response.ts";
 import { contentSearchResponse } from "./content-search-response.ts";
 import { editHighlightResponse, editResponse } from "./edit-response.ts";
+import { editMergeResponse } from "./edit-merge-response.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function internalResponse(
@@ -18,6 +19,9 @@ export async function internalResponse(
   }
   if (url.pathname === "/__markdown_serve__/highlight") {
     return await editHighlightResponse(config, request, url);
+  }
+  if (url.pathname === "/__markdown_serve__/merge") {
+    return await editMergeResponse(config, request, url);
   }
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response("Method Not Allowed", {

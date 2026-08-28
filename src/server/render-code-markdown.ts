@@ -71,8 +71,19 @@ export function renderCodeBlock(text: string, language: string): string {
 
 export function renderHighlightedCode(text: string, language: string): string {
   const rendered = renderCodeBlock(text, language);
-  return rendered.match(/<code[^>]*>([\s\S]*)<\/code>/)?.[1] ??
+  const highlighted = rendered.match(/<code[^>]*>([\s\S]*)<\/code>/)?.[1] ??
     rendered.match(/<pre[^>]*>([\s\S]*)<\/pre>/)?.[1] ?? "";
+  return language === "markdown"
+    ? markMarkdownHeadings(highlighted)
+    : highlighted;
+}
+
+function markMarkdownHeadings(highlighted: string): string {
+  return highlighted.replace(
+    /<span class="token title important"><span class="token punctuation">(#{1,6})<\/span>/g,
+    (_, marker: string) =>
+      `<span class="token title important edit-heading-${marker.length}"><span class="token punctuation">${marker}</span>`,
+  );
 }
 
 export function renderSourceCodeBlock(

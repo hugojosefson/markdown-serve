@@ -174,11 +174,17 @@ function renderEditPage(model: PageModel): string {
     escapeHtml(model.editTag ?? "")
   }"><p class="edit-status" role="status">${
     escapeHtml(model.editStatus ?? "Editing")
-  }</p><div class="edit-surface"><pre class="edit-highlight" aria-hidden="true"><code>${
+  }</p><div class="edit-workspace${
+    model.editPreview === undefined ? "" : " is-markdown"
+  }"><div class="edit-surface"><pre class="edit-highlight code-block" aria-hidden="true"><code>${
     model.editHighlight ?? ""
   }</code></pre><div class="edit-gutter" aria-label="Git changes"></div><textarea class="edit-text" name="content" spellcheck="false" aria-label="File contents">${
     escapeHtml(model.editText ?? "")
-  }</textarea></div><section class="edit-hunk-details" aria-label="Git change" hidden><pre></pre><div><button class="edit-hunk-close" type="button">Close diff</button><button class="edit-hunk-revert" type="button">Revert change in editor</button></div></section>${
+  }</textarea></div>${
+    model.editPreview === undefined
+      ? ""
+      : `<aside class="edit-markdown-preview" aria-label="Rendered Markdown preview">${model.editPreview}</aside>`
+  }</div><section class="edit-hunk-details" aria-label="Git change" hidden><pre></pre><div><button class="edit-hunk-close" type="button">Close diff</button><button class="edit-hunk-revert" type="button">Revert change in editor</button></div></section>${
     model.editCurrentText === undefined
       ? ""
       : `<details class="edit-current"><summary>Current file on disk</summary><pre>${

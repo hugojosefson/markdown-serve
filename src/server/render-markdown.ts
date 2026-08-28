@@ -91,7 +91,10 @@ export async function renderMarkdown(
           file,
           bytes,
           text,
-          url.searchParams.has("saved") ? "Saved" : undefined,
+          {
+            baseUrl: url.href,
+            status: url.searchParams.has("saved") ? "Saved" : undefined,
+          },
         )
         : {}),
     }),
@@ -170,9 +173,7 @@ async function markdownEditPage(
       file,
       new Uint8Array(),
       text,
-      status,
-      currentText,
-      tag,
+      { baseUrl: url.href, currentText, status, tag },
     ),
   });
   return new Response(request.method === "HEAD" ? null : body, {

@@ -40,6 +40,12 @@ Deno.test("known extensions take precedence and unsupported interpreters stay te
   assertEquals(codeLanguageForShebang("ordinary text"), undefined);
   assertEquals(codeLanguageForPath("router.rsc"), "routeros");
   assertEquals(codeLanguageForPath("network.plantuml"), "plant-uml");
+  assertEquals(codeLanguageForPath("infra/main.tf"), "hcl");
+  assertEquals(codeLanguageForPath("infra/dev.tfvars"), "hcl");
+  assertEquals(codeLanguageForPath("infra/provider.hcl"), "hcl");
+  assertEquals(codeLanguageForPath("infra/cloud-init.tftpl"), "hcl");
+  assertEquals(codeLanguageForPath("infra/main.tofu"), "hcl");
+  assertEquals(codeLanguageForPath("infra/.terraform.lock.hcl"), "hcl");
 });
 
 Deno.test("known filenames and contextual paths use supported Prism languages", () => {

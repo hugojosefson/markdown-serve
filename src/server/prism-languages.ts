@@ -4,6 +4,7 @@ import "prismjs/components/prism-cpp.js";
 import "prismjs/components/prism-csharp.js";
 import "prismjs/components/prism-css.js";
 import "prismjs/components/prism-go.js";
+import "prismjs/components/prism-hcl.js";
 import "prismjs/components/prism-ini.js";
 import "prismjs/components/prism-java.js";
 import "prismjs/components/prism-json.js";

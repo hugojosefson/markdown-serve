@@ -8,6 +8,7 @@ const linguistLanguages: Readonly<Record<string, string>> = {
   "editorconfig": "ini",
   "git config": "ini",
   "go": "go",
+  "hcl": "hcl",
   "html": "markup",
   "ini": "ini",
   "java": "java",

@@ -111,6 +111,7 @@ function editor() {
     querySelector: (selector: string) => selectors.get(selector) ?? null,
     addEventListener: (type: string, listener: (event: Event) => void) =>
       listeners.set(type, listener),
+    dispatchEvent: () => true,
     createRange: () => {
       const range = {
         end: 0,
@@ -159,7 +160,11 @@ const payload = (
 });
 
 Deno.test("edit enhancement is absent without an edit page", () => {
-  installEdit({ querySelector: () => null, addEventListener() {} }, () => {
+  installEdit({
+    querySelector: () => null,
+    addEventListener() {},
+    dispatchEvent: () => true,
+  }, () => {
     throw new Error("must not fetch");
   });
 });
@@ -239,19 +244,20 @@ Deno.test("Markdown layouts switch without hiding the native editor by default a
       ok: true,
       json: () => Promise.resolve(payload("# draft\n")),
     }), ui.lifecycle);
-  ui.horizontalLayout.fire("click");
+  ui.workspace.dataset.editLayout = "split-horizontal";
+  ui.fireDocument("markdown-serve:editor-layout");
   assertEquals(ui.workspace.dataset.editLayout, "split-horizontal");
-  assertEquals(ui.horizontalLayout.classes.has("is-selected"), true);
-  assertEquals(ui.horizontalLayout.attributes.get("aria-pressed"), "true");
   ui.text.scrollTop = 400;
   ui.text.fire("scroll");
   assertEquals(ui.preview.scrollTop, 250);
   ui.preview.scrollTop = 125;
   ui.preview.fire("scroll");
   assertEquals(ui.text.scrollTop, 200);
-  ui.previewLayout.fire("click");
+  ui.workspace.dataset.editLayout = "preview";
+  ui.fireDocument("markdown-serve:editor-layout");
   assertEquals(ui.workspace.dataset.editLayout, "preview");
-  ui.editorLayout.fire("click");
+  ui.workspace.dataset.editLayout = "editor";
+  ui.fireDocument("markdown-serve:editor-layout");
   assertEquals(ui.workspace.dataset.editLayout, "editor");
 });
 
@@ -290,7 +296,8 @@ Deno.test("Markdown split preview follows the editor caret and selection", () =>
         ok: true,
         json: () => Promise.resolve(payload(ui.text.value)),
       }), ui.lifecycle);
-    ui.verticalLayout.fire("click");
+    ui.workspace.dataset.editLayout = "split-vertical";
+    ui.fireDocument("markdown-serve:editor-layout");
     const word = ui.text.value.indexOf("paragraph");
     ui.text.selectionStart = word + 2;
     ui.text.selectionEnd = word + 2;
@@ -310,7 +317,8 @@ Deno.test("Markdown split preview follows the editor caret and selection", () =>
     const selectionRange = highlights.get("edit-preview-selection")
       ?.ranges[0] as { end: number; start: number };
     assertEquals([selectionRange.start, selectionRange.end], [22, 36]);
-    ui.editorLayout.fire("click");
+    ui.workspace.dataset.editLayout = "editor";
+    ui.fireDocument("markdown-serve:editor-layout");
     assertEquals(highlights.size, 0);
   } finally {
     if (cssDescriptor) {

@@ -45,6 +45,31 @@ Deno.test("shell aliases load the Bash grammar", () => {
   assertMatch(html, /class="token class-name">echo/);
 });
 
+Deno.test("RouterOS and PlantUML fences render Prism tokens", () => {
+  const router = renderCodeMarkdown(
+    '```rsc\n# setup\n/ip firewall filter add chain=input disabled=no\n:local enabled true\n:if ($enabled = true) do={ :log info "ready" }\n===============\n:put "\n=== inside a multiline string ===\n"\n```',
+    "http://x/",
+  );
+  assertMatch(router, /class="code-language">routeros/);
+  assertMatch(router, /class="token comment"># setup/);
+  assertMatch(router, /class="token function">\/ip firewall filter/);
+  assertMatch(router, /class="token property">chain/);
+  assertMatch(router, /class="token variable">\$enabled/);
+  assertMatch(router, /class="token operator">===============/);
+  assertMatch(
+    router,
+    /class="token string">"\n=== inside a multiline string ===\n"/,
+  );
+
+  const plantUml = renderCodeMarkdown(
+    "```plantuml\n@startuml\nAlice -> Bob: hello\n@enduml\n```",
+    "http://x/",
+  );
+  assertMatch(plantUml, /class="code-language">plant-uml/);
+  assertMatch(plantUml, /class="token delimiter punctuation">@startuml/);
+  assertMatch(plantUml, /class="token arrow operator">-&gt;/);
+});
+
 Deno.test("unlabelled fences use text and copy client targets code", () => {
   const html = renderCodeMarkdown("```\nplain\n```", "http://x/");
   assertMatch(html, /class="code-language">text/);

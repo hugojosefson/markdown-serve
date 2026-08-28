@@ -15,6 +15,10 @@ Deno.test("editor overlay keeps syntax tokens on textarea metrics", () => {
   assertMatch(editCss, /\.edit-highlight\.code-block \.token \{ font: inherit/);
   assertMatch(
     editCss,
+    /\.edit-highlight, \.edit-highlight\.code-block \{[^}]*color: var\(--code-text\)/,
+  );
+  assertMatch(
+    editCss,
     /\.edit-highlight\.code-block > code[^}]*font-size: var\(--edit-font-size\)/,
   );
   assertMatch(

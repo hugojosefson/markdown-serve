@@ -20,23 +20,16 @@ export const editCss = `
 .edit-workspace.is-markdown[data-edit-layout="preview"] .edit-markdown-preview { max-height: none; min-height: 65vh; }
 .edit-surface { display: grid; min-height: 65vh; overflow: hidden; position: relative; }
 .edit-highlight, .edit-text { box-sizing: border-box; font: var(--edit-font-size)/1.45 ui-monospace, monospace; font-kerning: none; font-variant-ligatures: none; grid-area: 1 / 1; letter-spacing: 0; margin: 0; min-height: 65vh; overflow: auto; padding: 12px 12px 12px 28px; tab-size: 2; white-space: pre; width: 100%; }
-.edit-highlight, .edit-highlight.code-block { background: var(--code-bg); border: 0; border-radius: 0; font-size: var(--edit-font-size); margin: 0; pointer-events: none; }
+.edit-highlight, .edit-highlight.code-block { background: var(--code-bg); border: 0; border-radius: 0; color: var(--code-text); font-size: var(--edit-font-size); margin: 0; pointer-events: none; }
 .edit-highlight.code-block { padding: 12px 12px 12px 28px; }
 .edit-highlight code, .edit-highlight.code-block > code { background: transparent; display: block; font: inherit; font-size: var(--edit-font-size); padding: 0; }
 .edit-text { appearance: none; background: var(--code-bg); border: 0; color: var(--code-text); resize: vertical; z-index: 1; }
 .edit-surface.is-enhanced .edit-text { background: transparent; caret-color: var(--code-text); color: transparent; }
 .edit-surface.is-enhanced .edit-text::selection { background: color-mix(in srgb, var(--focus-color) 35%, transparent); color: transparent; }
 .edit-highlight.code-block .token { font: inherit; letter-spacing: inherit; }
-.edit-highlight.code-block .token.property, .edit-highlight.code-block .token.constant, .edit-highlight.code-block .token.symbol { color: #0550ae; }
-.edit-highlight.code-block .token.operator, .edit-highlight.code-block .token.entity { color: #cf222e; }
-.edit-highlight.code-block .token.punctuation { color: var(--code-muted); }
-.edit-highlight.code-block .token.title { color: var(--focus-color); }
 .edit-highlight.code-block .token.edit-heading-1 { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .2em; }
 .edit-highlight.code-block .token.edit-heading-2 { text-decoration: underline; text-underline-offset: .2em; }
-.edit-highlight.code-block .token.bold { color: var(--git-modified); }
-.edit-highlight.code-block .token.italic { color: var(--code-muted); }
-.edit-highlight.code-block .token.url { color: var(--focus-color); text-decoration: underline; text-underline-offset: .14em; }
-.edit-highlight.code-block .token.code-snippet { background: var(--code-hover); border-radius: 3px; color: var(--git-added); }
+.edit-highlight.code-block .token.url { text-decoration: underline; text-underline-offset: .14em; }
 .edit-markdown-preview { border: 1px solid var(--code-border); border-radius: 6px; box-sizing: border-box; max-height: 65vh; overflow: auto; padding: 12px 18px; }
 ::highlight(edit-preview-caret) { background: color-mix(in srgb, var(--focus-color) 28%, transparent); text-decoration: underline 2px var(--focus-color); }
 ::highlight(edit-preview-selection) { background: color-mix(in srgb, var(--focus-color) 38%, transparent); }
@@ -48,8 +41,5 @@ export const editCss = `
 .edit-hunk-details pre, .edit-current pre { max-height: 35vh; overflow: auto; white-space: pre; }
 .edit-hunk-details > div, .edit-buttons { display: flex; gap: 8px; justify-content: end; }
 .edit-current summary { cursor: pointer; }
-html[data-color-mode="dark"] .edit-highlight.code-block .token.property, html[data-color-mode="dark"] .edit-highlight.code-block .token.constant, html[data-color-mode="dark"] .edit-highlight.code-block .token.symbol { color: #79c0ff; }
-html[data-color-mode="dark"] .edit-highlight.code-block .token.operator, html[data-color-mode="dark"] .edit-highlight.code-block .token.entity { color: #ff7b72; }
-@media (prefers-color-scheme: dark) { html[data-color-mode="auto"] .edit-highlight.code-block .token.property, html[data-color-mode="auto"] .edit-highlight.code-block .token.constant, html[data-color-mode="auto"] .edit-highlight.code-block .token.symbol { color: #79c0ff; } html[data-color-mode="auto"] .edit-highlight.code-block .token.operator, html[data-color-mode="auto"] .edit-highlight.code-block .token.entity { color: #ff7b72; } }
 @media (max-width: 900px) { .edit-workspace.is-markdown[data-edit-layout="split-vertical"] { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); } }
 `;

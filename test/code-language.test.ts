@@ -38,6 +38,8 @@ Deno.test("known extensions take precedence and unsupported interpreters stay te
   );
   assertEquals(codeLanguageForPath("tool.sample", "#!/usr/bin/ruby\n"), "text");
   assertEquals(codeLanguageForShebang("ordinary text"), undefined);
+  assertEquals(codeLanguageForPath("router.rsc"), "routeros");
+  assertEquals(codeLanguageForPath("network.plantuml"), "plant-uml");
 });
 
 Deno.test("known filenames and contextual paths use supported Prism languages", () => {

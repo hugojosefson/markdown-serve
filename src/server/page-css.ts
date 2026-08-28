@@ -109,7 +109,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .media-preview { display: block; max-width: 100%; }
 .media-preview.image { height: auto; max-height: none; max-width: var(--image-max-width, 100%); width: 100%; }
 .media-preview.audio, .media-preview.video { max-width: 100%; width: min(100%, 720px); }
-.media-preview.pdf { border: 1px solid var(--code-border); height: min(75vh, 900px); width: 100%; }
+.media-preview.pdf { border: 1px solid var(--code-border); height: calc(100vh - 8rem); height: calc(100dvh - 8rem); min-height: 20rem; width: 100%; }
 .binary-sample { overflow-x: auto; }
 .binary-sample pre { white-space: pre; }
 .sr-only { height: 1px; margin: -1px; overflow: hidden; position: absolute; width: 1px; clip: rect(0, 0, 0, 0); }

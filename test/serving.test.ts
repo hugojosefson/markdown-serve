@@ -265,7 +265,10 @@ Deno.test("Markdown edit view owns the content area and shares source styling", 
       edit,
       /class="edit-markdown-preview"[\s\S]*<h1 id="guide"/,
     );
-    assertMatch(edit, /class="edit-highlight code-block"[\s\S]*class="token/);
+    assertMatch(
+      edit,
+      /class="edit-highlight code-block gfm-highlight"[\s\S]*class="token/,
+    );
 
     const source = await (await h(new Request("http://x/guide?source"))).text();
     assertMatch(source, /class="markdown-source-panel"/);
@@ -443,6 +446,11 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     );
     assert(!image.includes("onload="));
     assertMatch(pageScript.body, /naturalWidth \* 4/);
+    assertMatch(
+      pageStylesheet.body,
+      /\.media-preview\.pdf \{[^}]*height: calc\(100dvh - 8rem\);[^}]*min-height: 20rem;/,
+    );
+    assertNotMatch(pageStylesheet.body, /\.media-preview\.pdf[^}]*900px/);
     assertMatch(
       await (await h(new Request("http://x/vector.svg"))).text(),
       /<img class="media-preview image"/,

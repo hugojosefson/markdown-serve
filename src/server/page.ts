@@ -185,7 +185,7 @@ function renderEditPage(model: PageModel): string {
     model.editPreview === undefined ? "" : renderEditLayouts(layout, model.url)
   }<div class="edit-workspace${
     model.editPreview === undefined ? "" : " is-markdown"
-  }" data-edit-layout="${layout}"><div class="edit-surface"><pre class="edit-highlight code-block" aria-hidden="true"><code>${
+  }" data-edit-layout="${layout}"><div class="edit-surface"><pre class="edit-highlight code-block gfm-highlight" aria-hidden="true"><code>${
     model.editHighlight ?? ""
   }</code></pre><div class="edit-gutter" aria-label="Git changes"></div><textarea class="edit-text" name="content" spellcheck="false" aria-label="File contents">${
     escapeHtml(model.editText ?? "")

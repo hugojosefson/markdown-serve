@@ -48,7 +48,7 @@ export async function internalResponse(
     return await fileSearchResponse(
       config,
       request,
-      url.searchParams.get("path"),
+      url.searchParams.get("search"),
     );
   }
   if (url.pathname === "/__markdown_serve__/search") {

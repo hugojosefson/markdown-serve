@@ -84,8 +84,8 @@ Deno.test("repository search client safely loads and navigates results", async (
   ], ["*.ts", "ts"]);
   input.value = "last";
   input.event("input", input);
-  await wait(190);
   assertEquals(calls[1].signal.aborted, true);
+  await wait(190);
   calls[1].resolve({ ok: false, json: () => Promise.resolve([]) });
   calls[2].resolve({ ok: true, json: () => Promise.resolve([]) });
   await Promise.resolve();
@@ -94,7 +94,8 @@ Deno.test("repository search client safely loads and navigates results", async (
   input.value = "escape";
   input.event("input", input);
   await wait(190);
-  input.event("keydown", input, "Escape");
+  dialog.event("click", dialog);
+  assertEquals(dialog.open, false);
   assertEquals([dialog.open, calls[3].signal.aborted], [false, true]);
   document.key("/", document.body);
   input.value = "failure";

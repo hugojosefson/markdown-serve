@@ -2,6 +2,7 @@ import { assert, assertEquals, assertMatch } from "@std/assert";
 import { pageClient } from "../src/server/page-client.ts";
 import { relativeTimeClient } from "../src/server/relative-time-client.ts";
 import { fileSearchClient } from "../src/server/file-search-client.ts";
+import { installDialogDismissal } from "../src/server/dialog-dismissal-client.ts";
 
 Deno.test("lazy tree entries construct Files controls without index discovery", () => {
   assertMatch(pageClient, /const filesLink = \(href, name\)/);
@@ -133,19 +134,24 @@ Deno.test("loaded image previews are limited to four times intrinsic width", () 
   assertMatch(values.get("--image-max-width") ?? "", /^480px$/);
 });
 
-Deno.test("go-to-file client opens, filters, and supports keyboard navigation", () => {
+Deno.test("go-to-file client uses root-wide search and keyboard guards", () => {
   assertMatch(fileSearchClient, /event\.key !== 'g'/);
-  assertMatch(fileSearchClient, /goToFileScope/);
+  assertMatch(fileSearchClient, /goToFilePrefix/);
   assertMatch(fileSearchClient, /ArrowDown/);
   assertMatch(fileSearchClient, /ArrowUp/);
   assertMatch(fileSearchClient, /event\.key === 'Enter'/);
-  assertMatch(fileSearchClient, /event\.key === 'Escape'/);
+  assertMatch(fileSearchClient, /installDialogDismissal/);
   assertMatch(fileSearchClient, /AbortController/);
-  assertMatch(fileSearchClient, /textContent = file\.name/);
+  assertMatch(fileSearchClient, /textContent = file\.path/);
+  assertMatch(fileSearchClient, /files\?search=/);
 });
 
 Deno.test("go-to-file client loads, selects, and aborts its dialog request", async () => {
-  type Listener = (event: { key?: string; preventDefault: () => void }) => void;
+  type Listener = (event: {
+    key?: string;
+    target?: unknown;
+    preventDefault: () => void;
+  }) => void;
   class Element {
     children: Element[] = [];
     dataset: Record<string, string> = {};
@@ -165,7 +171,7 @@ Deno.test("go-to-file client loads, selects, and aborts its dialog request", asy
     }
     dispatch(
       type: string,
-      event: { key?: string; preventDefault: () => void } = {
+      event: { key?: string; target?: unknown; preventDefault: () => void } = {
         preventDefault: () => {},
       },
     ) {
@@ -189,8 +195,10 @@ Deno.test("go-to-file client loads, selects, and aborts its dialog request", asy
     list = new Element();
     status = new Element();
     open = false;
+    shown = 0;
     showModal() {
       this.open = true;
+      this.shown++;
     }
     close() {
       this.open = false;
@@ -208,13 +216,16 @@ Deno.test("go-to-file client loads, selects, and aborts its dialog request", asy
   }
   const dialog = new Dialog();
   const body = new Element();
-  body.dataset.goToFileScope = "docs";
+  body.dataset.goToFilePrefix = "docs/";
   const listeners = new Map<string, Listener[]>();
   let signal: { aborted: boolean } | undefined;
+  let aborts = 0;
+  const urls: string[] = [];
   class Controller {
     signal = { aborted: false };
     abort() {
       this.signal.aborted = true;
+      aborts++;
     }
   }
   new Function(
@@ -222,6 +233,7 @@ Deno.test("go-to-file client loads, selects, and aborts its dialog request", asy
     "fetch",
     "AbortController",
     "location",
+    "installDialogDismissal",
     fileSearchClient,
   )(
     {
@@ -231,43 +243,56 @@ Deno.test("go-to-file client loads, selects, and aborts its dialog request", asy
       addEventListener: (type: string, listener: Listener) =>
         listeners.set(type, [...(listeners.get(type) ?? []), listener]),
     },
-    (_url: string, options: { signal: { aborted: boolean } }) => {
+    (url: string, options: { signal: { aborted: boolean } }) => {
+      urls.push(url);
       signal = options.signal;
       return Promise.resolve({
         ok: true,
         json: () =>
           Promise.resolve([
-            { name: "a.txt", href: "/docs/a.txt" },
-            { name: "b.txt", href: "/docs/b.txt" },
+            { path: "docs/a.txt", href: "/docs/a.txt" },
+            { path: "docs/b.txt", href: "/docs/b.txt" },
           ]),
       });
     },
     Controller,
     { assign: () => {} },
+    installDialogDismissal,
   );
   listeners.get("keydown")?.[0]({ key: "g", preventDefault: () => {} });
   await Promise.resolve();
   await Promise.resolve();
   assertEquals(
-    [dialog.open, dialog.input.focused, dialog.list.children.length],
+    [
+      dialog.open,
+      dialog.shown,
+      dialog.input.focused,
+      dialog.input.value,
+      urls[0],
+      dialog.list.children.length,
+      dialog.list.children[0].children[0].textContent,
+    ],
     [
       true,
+      1,
       true,
+      "docs/",
+      "/__markdown_serve__/files?search=docs%2F",
       2,
+      "docs/a.txt",
     ],
   );
   dialog.dispatch("keydown", { key: "ArrowDown", preventDefault: () => {} });
   assertEquals(dialog.list.children[1].dataset.selected, "true");
   assertEquals(dialog.list.children[1].scrolled, true);
-  dialog.input.value = "b";
+  dialog.input.value = "root file";
   dialog.input.dispatch("input");
-  assertEquals(
-    [
-      dialog.list.children.length,
-      dialog.list.children[0].children[0].textContent,
-    ],
-    [1, "b.txt"],
-  );
-  dialog.close();
+  assertEquals(aborts, 1);
+  await new Promise((resolve) => setTimeout(resolve, 190));
+  await Promise.resolve();
+  await Promise.resolve();
+  assertEquals(urls[1], "/__markdown_serve__/files?search=root%20file");
+  dialog.dispatch("click", { target: dialog, preventDefault: () => {} });
+  assertEquals(dialog.open, false);
   assertEquals(signal?.aborted, true);
 });

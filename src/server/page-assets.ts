@@ -10,6 +10,7 @@ import { fileSearchClient } from "./file-search-client.ts";
 import { contentSearchClient } from "./content-search-client.ts";
 import { editClient } from "./edit-client.ts";
 import { editorRouteClient } from "./editor-route-client.ts";
+import { dialogDismissalClient } from "./dialog-dismissal-client.ts";
 import { pageCss } from "./page-css.ts";
 
 type PageAsset = { body: string; contentType: string; url: string };
@@ -34,7 +35,7 @@ export const pageStylesheet = versioned(
 );
 export const pageScript = versioned(
   "client",
-  `${viewTransitionClient}${displayControlsClient}${directoryTableClient}${relativeTimeClient}${pageClient}${markdownTocClient}${codeToolbarClient}${fileSearchClient}${contentSearchClient}${editClient}${editorRouteClient}`,
+  `${viewTransitionClient}${displayControlsClient}${directoryTableClient}${relativeTimeClient}${pageClient}${markdownTocClient}${codeToolbarClient}${dialogDismissalClient}${fileSearchClient}${contentSearchClient}${editClient}${editorRouteClient}`,
   "text/javascript; charset=UTF-8",
 );
 

@@ -12,7 +12,7 @@ html { scrollbar-gutter: stable; }
 @media (prefers-reduced-motion: no-preference) {
   @view-transition { navigation: auto; }
   .content-header .file-metadata { view-transition-name: file-metadata; }
-  .content:has(.file-metadata) .page-content { view-transition-name: file-content; }
+  .layout > .content:has(.file-metadata) .page-content { view-transition-name: file-content; }
   .file-metadata-details { view-transition-name: file-metadata-details; }
    .content-header .markdown-view-toggle { view-transition-name: markdown-view-toggle; }
   .markdown-source-panel { view-transition-name: markdown-source-panel; }
@@ -61,7 +61,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .tree .tree-files-link { align-items: center; background: var(--tree-hover); bottom: 0; color: var(--tree-muted); display: flex; font-size: 11px; opacity: 0; padding: 0 5px; pointer-events: none; position: absolute; right: 0; top: 0; }
  .tree summary:hover .tree-files-link, .tree summary:focus-within .tree-files-link, .tree .tree-root-row:hover .tree-files-link, .tree .tree-root-row:focus-within .tree-files-link, .tree .tree-entry-row:hover .tree-files-link, .tree .tree-entry-row:focus-within .tree-files-link, .tree .tree-files-link:focus-visible { opacity: 1; pointer-events: auto; }
 .tree-root { font-weight: 600; }
-.content { min-width: 0; padding: 8px 16px 32px; }
+.layout > .content { min-width: 0; padding: 8px 16px 32px; }
 .page-content { position: relative; }
 .page-content-top { padding-top: 30px; }
 .file-actions { align-items: center; display: flex; gap: 4px; }
@@ -152,7 +152,7 @@ ${foldCss}
 }
 @media (max-width: 560px) {
   .layout { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
-  .content { order: 1; padding: 0; }
+  .layout > .content { order: 1; padding: 0; }
    .tree { max-height: none; order: 0; overflow: visible; padding: 0; position: static; width: 100%; }
   .tree-disclosure > summary { align-items: center; display: flex; font-weight: 600; min-height: 34px; padding: 0 8px; }
   .tree-disclosure > nav { border-top: 1px solid var(--tree-border); max-height: 40vh; overflow: auto; padding: 8px; }

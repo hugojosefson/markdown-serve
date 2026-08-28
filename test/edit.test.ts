@@ -8,6 +8,7 @@ import {
   editLimit,
 } from "../src/server/edit-response.ts";
 import { editCss } from "../src/server/edit-css.ts";
+import { pageCss } from "../src/server/page-css.ts";
 import { fixture, handler } from "./fixture.ts";
 
 Deno.test("editor overlay keeps syntax tokens on textarea metrics", () => {
@@ -29,6 +30,8 @@ Deno.test("editor overlay keeps syntax tokens on textarea metrics", () => {
     /\.token\.(?:title|bold)[^{]*\{[^}]*font-weight/.test(editCss),
     false,
   );
+  assertMatch(pageCss, /\.layout > \.content \{ min-width: 0; padding:/);
+  assertEquals(/\n\.content \{ min-width: 0; padding:/.test(pageCss), false);
 });
 
 Deno.test("Markdown layout styles default to a full-width editor and bound split panes", () => {
@@ -260,7 +263,8 @@ Deno.test("native Markdown layout links retain display queries", async () => {
 
 Deno.test("edit pages render Markdown and source syntax distinctly", async () => {
   const f = await fixture({
-    "styled.md": "# Heading\n\n**bold** [link](./next) and `inline code`\n",
+    "styled.md":
+      "# Heading\n\n**bold** [devices.md](devices.md) and `inline code`\n",
     "data.json": '{"name": true, "count": 2}\n',
     "code.ts": "const answer: number = 42;\n",
   });
@@ -272,13 +276,20 @@ Deno.test("edit pages render Markdown and source syntax distinctly", async () =>
     assertMatch(markdown, /edit-heading-1/);
     assertMatch(markdown, /token bold/);
     assertMatch(markdown, /token url/);
+    assertMatch(
+      markdown,
+      /class="token url">\[<span class="token content">devices\.md<\/span>\]\(<span class="token url">devices\.md<\/span>\)<\/span>/,
+    );
     assertMatch(markdown, /token code-snippet/);
     assertMatch(
       markdown,
       /edit-markdown-preview[\s\S]*<h1[^>]*>[\s\S]*Heading<\/h1>/,
     );
     assertMatch(markdown, /<strong>bold<\/strong>/);
-    assertMatch(markdown, /<a href="http:\/\/x\/next"[^>]*>link<\/a>/);
+    assertMatch(
+      markdown,
+      /<a href="http:\/\/x\/devices\.md"[^>]*>devices\.md<\/a>/,
+    );
     assertMatch(markdown, /<code>inline code<\/code>/);
 
     const json = await (

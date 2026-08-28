@@ -3,6 +3,7 @@ import { readCapped } from "./capped-stream.ts";
 import { entryRoute } from "./entry-route.ts";
 import { canonicalPath } from "./paths.ts";
 import { childTerminator } from "./terminate-child.ts";
+import type { FileAccess } from "./file-access.ts";
 
 const maximumResults = 100;
 const maximumContext = 8;
@@ -28,6 +29,7 @@ export type ContentSearchRunner = (
   scope: string,
   options: ContentSearchOptions,
   signal?: AbortSignal,
+  onPermissionDenied?: (path: string) => void,
 ) => Promise<ContentSearchResult[]>;
 export type RgChild = {
   stdout: ReadableStream<Uint8Array>;
@@ -92,10 +94,28 @@ export async function searchContent(
   options: ContentSearchOptions,
   runner: ContentSearchRunner,
   signal?: AbortSignal,
+  access?: FileAccess,
 ): Promise<ContentSearchResult[]> {
   const scope = join(root, ...parts);
   if (!(await within(root, scope))) return [];
-  const results = await runner(scope, options, signal);
+  if (access) {
+    if (!await access.probeDirectory(scope)) return [];
+  }
+  const results = await runner(scope, options, signal, (path) => {
+    const normalized = normalize(path);
+    const deniedPath = isAbsolute(path)
+      ? path
+      : safe(normalized)
+      ? join(scope, normalized)
+      : undefined;
+    if (deniedPath) {
+      access?.handlePermissionDenied(
+        deniedPath,
+        new Deno.errors.PermissionDenied(),
+        true,
+      );
+    }
+  });
   return (await Promise.all(
     results.filter((result) => typeof result.text === "string" && result.text)
       .slice(0, maximumResults).map(
@@ -143,7 +163,7 @@ export function createRgRunner(
   spawn: RgSpawner,
   limits = { timeoutMilliseconds: 1_500, outputBytes: maximumOutputBytes },
 ): ContentSearchRunner {
-  return async (scope, options, signal) => {
+  return async (scope, options, signal, onPermissionDenied) => {
     if (signal?.aborted) throw new SearchUnavailable("search cancelled");
     let child: RgChild;
     try {
@@ -167,7 +187,7 @@ export function createRgRunner(
     const abort = () => stop(new SearchUnavailable("search cancelled"));
     signal?.addEventListener("abort", abort, { once: true });
     try {
-      const [stdout, _stderr, status] = await Promise.all([
+      const [stdout, stderr, status] = await Promise.all([
         readCapped(
           child.stdout,
           limits.outputBytes,
@@ -184,8 +204,15 @@ export function createRgRunner(
         terminator.status,
       ]);
       if (failure) throw failure;
-      if (status?.code === 1) return [];
-      if (!status?.success) throw new SearchUnavailable("rg failed");
+      const denied = permissionDeniedPaths(stderr);
+      for (const path of denied) onPermissionDenied?.(path);
+      if (status?.code === 1 && !stderr.trim()) return [];
+      if (!status?.success && !denied.length) {
+        throw new SearchUnavailable("rg failed");
+      }
+      if (!status?.success && !permissionOnly(stderr)) {
+        throw new SearchUnavailable("rg failed");
+      }
       return parseRgOutput(new TextEncoder().encode(stdout));
     } catch (error) {
       if (failure) throw failure;
@@ -199,6 +226,21 @@ export function createRgRunner(
       signal?.removeEventListener("abort", abort);
     }
   };
+}
+
+function permissionDeniedPaths(stderr: string): string[] {
+  return stderr.split("\n").flatMap((line) => {
+    if (!/permission denied \(os error 13\)$/i.test(line)) return [];
+    const operation = /operation on (.+): permission denied/i.exec(line)?.[1];
+    const direct = /^rg: (.+): permission denied/i.exec(line)?.[1];
+    return [operation ?? direct].filter((path): path is string => !!path);
+  });
+}
+
+function permissionOnly(stderr: string): boolean {
+  return stderr.trim().split("\n").every((line) =>
+    !line || /permission denied \(os error 13\)$/i.test(line)
+  );
 }
 export function rgArgs(options: ContentSearchOptions): string[] {
   const args = [

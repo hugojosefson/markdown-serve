@@ -8,6 +8,7 @@ import {
 import { pageScript, pageStylesheet } from "../src/server/page-assets.ts";
 import { navigationSpeculation } from "../src/server/navigation-speculation.ts";
 import { fixture, handler } from "./fixture.ts";
+import { join } from "@std/path";
 
 Deno.test("handlers reject missing and non-directory roots", async () => {
   const f = await fixture({ "file.txt": "content" });
@@ -22,6 +23,122 @@ Deno.test("handlers reject missing and non-directory roots", async () => {
   } finally {
     await f.cleanup();
   }
+});
+
+Deno.test({
+  name: "permission-denied paths are skipped without repeated warnings",
+  ignore: Deno.build.os === "windows",
+  fn: async () => {
+    const f = await fixture({
+      "blocked/hidden.ts": "export function hidden() {}",
+      "visible.ts": "export function visible() {}",
+    });
+    const blocked = join(f.root, "blocked");
+    const warnings: string[] = [];
+    let notify: () => void | Promise<void> = () => {};
+    try {
+      await Deno.chmod(blocked, 0o000);
+      try {
+        await Array.fromAsync(Deno.readDir(blocked));
+        return;
+      } catch (error) {
+        if (!(error instanceof Deno.errors.PermissionDenied)) throw error;
+      }
+      const h = await handler(f.root, {
+        reloadSource: {
+          subscribe: (listener: () => void | Promise<void>) => (
+            notify = listener, () => {}
+          ),
+        },
+        warn: (warning) => warnings.push(warning),
+      });
+      assertEquals((await h(new Request("http://x/"))).status, 200);
+      assertEquals(
+        (await h(
+          new Request("http://x/__markdown_serve__/files?search=hidden"),
+        ))
+          .status,
+        200,
+      );
+      assertEquals(
+        (await h(new Request("http://x/blocked/hidden.ts"))).status,
+        404,
+      );
+      assertEquals(
+        (await h(new Request("http://x/blocked/hidden.ts"))).status,
+        404,
+      );
+      assertEquals((await h(new Request("http://x/visible.ts"))).status, 200);
+      await Deno.chmod(blocked, 0o755);
+      await notify();
+      assertEquals(
+        (await h(new Request("http://x/blocked/hidden.ts"))).status,
+        200,
+      );
+      assertEquals(warnings, ["Cannot access blocked: permission denied"]);
+    } finally {
+      await Deno.chmod(blocked, 0o755);
+      await f.cleanup();
+    }
+  },
+});
+
+Deno.test({
+  name: "unreadable roots reject handler creation",
+  ignore: Deno.build.os === "windows",
+  fn: async () => {
+    const f = await fixture({ "visible.ts": "export const visible = true" });
+    try {
+      await Deno.chmod(f.root, 0o000);
+      try {
+        await Array.fromAsync(Deno.readDir(f.root));
+        return;
+      } catch (error) {
+        if (!(error instanceof Deno.errors.PermissionDenied)) throw error;
+      }
+      await assertRejects(() => handler(f.root), Error, "cannot access root");
+    } finally {
+      await Deno.chmod(f.root, 0o755);
+      await f.cleanup();
+    }
+  },
+});
+
+Deno.test({
+  name:
+    "unreadable files return 404 once while sibling symbols remain available",
+  ignore: Deno.build.os === "windows",
+  fn: async () => {
+    const f = await fixture({
+      "hidden.ts": "export function hidden() {}",
+      "visible.ts": "export function visible() {}",
+      "consumer.ts": "visible();",
+    });
+    const hidden = join(f.root, "hidden.ts");
+    const warnings: string[] = [];
+    try {
+      await Deno.chmod(hidden, 0o000);
+      try {
+        await Deno.readFile(hidden);
+        return;
+      } catch (error) {
+        if (!(error instanceof Deno.errors.PermissionDenied)) throw error;
+      }
+      const h = await handler(f.root, {
+        warn: (warning) => warnings.push(warning),
+      });
+      assertEquals((await h(new Request("http://x/hidden.ts"))).status, 404);
+      assertEquals((await h(new Request("http://x/hidden.ts"))).status, 404);
+      assertMatch(
+        await (await h(new Request("http://x/consumer.ts"))).text(),
+        /href="\/visible\.ts#symbol-visible">visible<\/a>/,
+      );
+      assertEquals(warnings, ["Cannot access hidden.ts: permission denied"]);
+    } finally {
+      await Deno.chmod(hidden, 0o644);
+      await f.cleanup();
+    }
+  },
 });
 
 Deno.test("source references use unique declarations from the served tree", async () => {

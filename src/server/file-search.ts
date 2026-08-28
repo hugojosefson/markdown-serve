@@ -3,6 +3,7 @@ import { entryRoute } from "./entry-route.ts";
 import { canonicalPath, lexical } from "./paths.ts";
 import { readCapped } from "./capped-stream.ts";
 import { childTerminator } from "./terminate-child.ts";
+import { FileAccess } from "./file-access.ts";
 import { type GitStatus, gitStatusAt } from "./git/status.ts";
 import type { ServerConfig } from "./types.ts";
 
@@ -54,7 +55,7 @@ export async function searchFiles(
       query,
       signal,
     )
-    : await searchedByCatalog(config.rootPath, query, signal);
+    : await searchedByCatalog(config, query, signal);
   return names.toSorted((a, b) => compareSearchPaths(a, b, status)).slice(
     0,
     maximumResults,
@@ -193,7 +194,9 @@ async function normalizeFinderPaths(
       !safeRelativePath(normalized) || !subsequenceMatch(path, query)
     ) continue;
     const candidate = join(config.rootPath, normalized);
-    const link = await Deno.lstat(candidate).catch(() => undefined);
+    const link = await (config.access ?? new FileAccess(config.rootPath)).lstat(
+      candidate,
+    );
     if (!link || link.isSymlink) continue;
     const info = await config.catalog.stat(candidate);
     if (info?.isFile) results.push(normalized);
@@ -205,18 +208,20 @@ async function normalizeFinderPaths(
 }
 
 async function searchedByCatalog(
-  root: string,
+  config: ServerConfig,
   query: string,
   signal?: AbortSignal,
 ): Promise<string[]> {
   const results: string[] = [];
+  const { rootPath: root } = config;
+  const access = config.access ?? new FileAccess(root);
   const pending = [root];
   let examined = 0;
   while (pending.length && examined < maximumEntries) {
     if (signal?.aborted) break;
     const directory = pending.pop()!;
     try {
-      for await (const entry of Deno.readDir(directory)) {
+      for (const entry of await access.readDirectory(directory)) {
         if (
           signal?.aborted || ++examined > maximumEntries
         ) break;

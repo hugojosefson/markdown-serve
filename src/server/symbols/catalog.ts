@@ -5,6 +5,7 @@ import { canonicalPath } from "../paths.ts";
 import { analyzeSymbols } from "./analyze.ts";
 import { declarationTypes } from "./declaration-rules.ts";
 import type { SymbolTargets } from "./types.ts";
+import type { FileAccess } from "../file-access.ts";
 
 const maxFileBytes = 1024 * 1024;
 const defaultLimits = {
@@ -28,6 +29,7 @@ export class SymbolCatalog {
   constructor(
     readonly rootPath: string,
     limits: SymbolCatalogLimits = {},
+    readonly access?: FileAccess,
   ) {
     this.#limits = { ...defaultLimits, maxFileBytes, ...limits };
   }
@@ -48,20 +50,24 @@ export class SymbolCatalog {
       totalBytes: 0,
       truncated: false,
     };
-    for await (const path of sourceFiles(this.rootPath, state, this.#limits)) {
-      const info = await statOrUndefined(path);
+    for await (
+      const path of sourceFiles(this.rootPath, state, this.#limits, this.access)
+    ) {
+      const info = this.access
+        ? await this.access.stat(path)
+        : await statOrUndefined(path);
       if (!info?.isFile) {
-        state.truncated = true;
-        break;
+        continue;
       }
       if (info.size > this.#limits.maxFileBytes) continue;
       const pathLanguage = codeLanguageForPath(path);
       // Known unsupported formats need no content sniffing.
       if (pathLanguage !== "text" && !declarationTypes(pathLanguage)) continue;
-      const text = await readTextOrUndefined(path);
+      const text = this.access
+        ? await this.access.readTextFile(path)
+        : await readTextOrUndefined(path);
       if (text === undefined) {
-        state.truncated = true;
-        break;
+        continue;
       }
       const language = codeLanguageForPath(path, text);
       if (!declarationTypes(language)) continue;
@@ -115,9 +121,13 @@ async function* sourceFiles(
   path: string,
   state: { entries: number; truncated: boolean },
   limits: Required<SymbolCatalogLimits>,
+  access?: FileAccess,
 ): AsyncGenerator<string> {
   try {
-    for await (const entry of Deno.readDir(path)) {
+    const entries = access
+      ? await access.readDirectory(path)
+      : await Array.fromAsync(Deno.readDir(path));
+    for (const entry of entries) {
       state.entries++;
       if (state.entries > limits.maxTraversalEntries) {
         state.truncated = true;
@@ -131,14 +141,15 @@ async function* sourceFiles(
       }
       const child = join(path, entry.name);
       if (entry.isDirectory && !entry.isSymlink) {
-        yield* sourceFiles(child, state, limits);
+        yield* sourceFiles(child, state, limits, access);
         if (state.truncated) return;
       } else if (entry.isFile) {
         yield child;
       }
     }
-  } catch {
-    state.truncated = true;
+  } catch (error) {
+    if (access?.handlePermissionDenied(path, error, true)) return;
+    throw error;
   }
 }
 

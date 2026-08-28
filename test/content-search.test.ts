@@ -140,6 +140,54 @@ Deno.test("rg runner pre-abort, spawn failure, status, and argument boundaries",
   assertEquals(noMatches, []);
 });
 
+Deno.test("rg retains matches after permission-only diagnostics", async () => {
+  const options = contentSearchOptions(new URLSearchParams("search=x"))!;
+  const stream = (text: string) =>
+    new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(text));
+        controller.close();
+      },
+    });
+  const denied: string[] = [];
+  const results = await createRgRunner(() => ({
+    stdout: stream(
+      '{"type":"match","data":{"path":{"text":"ok.ts"},"line_number":1,"lines":{"text":"x\\n"}}}\n',
+    ),
+    stderr: stream(
+      "rg: ./blocked: Permission denied (os error 13)\n" +
+        "rg: ./other: IO error for operation on ./other: Permission denied (os error 13)\n",
+    ),
+    status: Promise.resolve({ success: false, code: 2, signal: null }),
+    kill() {},
+  }))(".", options, undefined, (path) => denied.push(path));
+  assertEquals(results.map((result) => result.path), ["ok.ts"]);
+  assertEquals(denied, ["./blocked", "./other"]);
+});
+
+Deno.test("rg rejects mixed permission and fatal diagnostics", async () => {
+  const options = contentSearchOptions(new URLSearchParams("search=x"))!;
+  const stream = (text: string) =>
+    new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(text));
+        controller.close();
+      },
+    });
+  await assertRejects(
+    () =>
+      createRgRunner(() => ({
+        stdout: stream(""),
+        stderr: stream(
+          "rg: ./blocked: Permission denied (os error 13)\nrg: broken: IO error\n",
+        ),
+        status: Promise.resolve({ success: false, code: 2, signal: null }),
+        kill() {},
+      }))(".", options),
+    SearchUnavailable,
+  );
+});
+
 Deno.test("rg runner kills, reaps, caps output, aborts, fails, and parses", async () => {
   const options = contentSearchOptions(new URLSearchParams("search=x"))!;
   const encoder = new TextEncoder();

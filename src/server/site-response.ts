@@ -30,16 +30,28 @@ export async function siteResponse(
     if (!(await config.catalog.stat(index))?.isFile) {
       return plain("Not Found", 404, request.method);
     }
-    return await previewFile(request, index);
+    return await previewFile(config, request, index);
   }
   if (!stat?.isFile) {
     return plain("Not Found", 404, request.method);
   }
-  return await previewFile(request, path);
+  return await previewFile(config, request, path);
 }
 
-async function previewFile(request: Request, path: string): Promise<Response> {
-  const response = await rawFile(request, path);
+async function previewFile(
+  config: ServerConfig,
+  request: Request,
+  path: string,
+): Promise<Response> {
+  let response: Response;
+  try {
+    response = await rawFile(request, path);
+  } catch (error) {
+    if (config.access?.handlePermissionDenied(path, error)) {
+      return plain("Not Found", 404, request.method);
+    }
+    throw error;
+  }
   if (response.headers.get("content-type")?.startsWith("text/html")) {
     response.headers.set("Content-Security-Policy", htmlPreviewCsp);
   }

@@ -8,6 +8,7 @@ import type { ServerConfig } from "./types.ts";
 import { createGitState } from "./git/state.ts";
 import { SymbolCatalog } from "./symbols/catalog.ts";
 import { EditCoordinator } from "./edit-response.ts";
+import { FileAccess } from "./file-access.ts";
 
 export async function createRequestHandler(
   options: HandlerOptions,
@@ -28,6 +29,7 @@ export async function createRequestHandler(
     if (!(await Deno.stat(rootPath)).isDirectory) {
       throw new Error("not a directory");
     }
+    for await (const _entry of Deno.readDir(rootPath)) break;
   } catch (error) {
     throw new Error(
       `cannot access root ${options.root}: ${
@@ -35,8 +37,9 @@ export async function createRequestHandler(
       }`,
     );
   }
-  const catalog = new FileCatalog();
-  const symbols = new SymbolCatalog(rootPath);
+  const access = new FileAccess(rootPath, options.warn);
+  const catalog = new FileCatalog(access);
+  const symbols = new SymbolCatalog(rootPath, {}, access);
   let warmRevision = 0;
   let warmQueue = Promise.resolve();
   const scheduleWarm = (clear: boolean): Promise<void> => {
@@ -45,9 +48,10 @@ export async function createRequestHandler(
       catalog.clear();
       symbols.clear();
     }
-    warmQueue = warmQueue.catch(() => {}).then(() =>
-      catalog.warmRoot(rootPath)
-    );
+    warmQueue = warmQueue.catch(() => {}).then(() => {
+      if (clear) access.clearDeniedDirectories();
+      return catalog.warmRoot(rootPath);
+    });
     return warmQueue;
   };
   let sourceClosed = false;
@@ -75,6 +79,7 @@ export async function createRequestHandler(
     onError: options.onError,
     reloadSource: options.reloadSource,
     catalog,
+    access,
     symbols,
     git: options.git === false
       ? undefined

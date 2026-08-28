@@ -41,64 +41,74 @@ export async function route(
       request.method,
     );
   }
-  if (resolved.kind === "directory") {
-    if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
-      return methodNotAllowed();
+  try {
+    if (resolved.kind === "directory") {
+      if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
+        return methodNotAllowed();
+      }
+      return await renderDirectory(
+        config,
+        request,
+        resolved.url,
+        resolved.path,
+        resolved.parts,
+      );
     }
-    return await renderDirectory(
-      config,
-      request,
-      resolved.url,
-      resolved.path,
-      resolved.parts,
-    );
-  }
-  if (resolved.kind === "markdown") {
-    if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
-      return methodNotAllowed();
+    if (resolved.kind === "markdown") {
+      if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
+        return methodNotAllowed();
+      }
+      return await renderMarkdown(
+        config,
+        request,
+        resolved.url.pathname,
+        resolved.path,
+        resolved.parts,
+        { sourceName: resolved.sourceName },
+      );
     }
-    return await renderMarkdown(
-      config,
-      request,
-      resolved.url.pathname,
-      resolved.path,
-      resolved.parts,
-      { sourceName: resolved.sourceName },
-    );
-  }
-  if (resolved.kind === "raw" || resolved.kind === "download") {
-    if (request.method === "POST") {
-      return methodNotAllowed();
+    if (resolved.kind === "raw" || resolved.kind === "download") {
+      if (request.method === "POST") {
+        return methodNotAllowed();
+      }
+      return resolved.kind === "raw"
+        ? await rawFile(request, resolved.path, resolved.text)
+        : await downloadFile(request, resolved.path);
     }
-    return resolved.kind === "raw"
-      ? await rawFile(request, resolved.path, resolved.text)
-      : await downloadFile(request, resolved.path);
-  }
-  if (resolved.kind === "text") {
-    if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
-      return methodNotAllowed();
+    if (resolved.kind === "text") {
+      if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
+        return methodNotAllowed();
+      }
+      return await renderText(
+        config,
+        request,
+        resolved.url,
+        resolved.path,
+        resolved.parts,
+      );
     }
-    return await renderText(
-      config,
-      request,
-      resolved.url,
-      resolved.path,
-      resolved.parts,
-    );
-  }
-  if (resolved.kind === "static") {
-    if (request.method === "POST") {
-      return methodNotAllowed();
+    if (resolved.kind === "static") {
+      if (request.method === "POST") {
+        return methodNotAllowed();
+      }
+      return await renderFile(
+        config,
+        request,
+        resolved.url,
+        resolved.path,
+        resolved.parts,
+      );
     }
-    return await renderFile(
-      config,
-      request,
-      resolved.url,
-      resolved.path,
-      resolved.parts,
-    );
+    throw new Error("unreachable route");
+  } catch (error) {
+    if (
+      "path" in resolved &&
+      config.access?.handlePermissionDenied(resolved.path, error)
+    ) {
+      return plain("Not Found", 404, request.method);
+    }
+    throw error;
   }
-  throw new Error("unreachable route");
 }
 
 function methodNotAllowed(): Response {
@@ -179,7 +189,8 @@ export async function resolveRoute(
     };
   }
   if (url.searchParams.has("raw")) {
-    const text = !previewableFile(target) && await isTextFile(target);
+    const text = !previewableFile(target) &&
+      await isTextFile(target, config.access);
     return { kind: "raw", url, path: target, parts, text };
   }
   if (url.searchParams.has("download")) {
@@ -189,7 +200,7 @@ export async function resolveRoute(
     return { kind: "static", url, path: target, parts };
   }
   // Sampling stays method-independent so GET and HEAD have matching types.
-  const text = await isTextFile(target);
+  const text = await isTextFile(target, config.access);
   if (text) {
     return { kind: "text", url, path: target, parts };
   }

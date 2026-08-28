@@ -89,7 +89,9 @@ uses version checks and atomic replacement; it cannot create files or follow
 symlinks. Dedicated edit pages and their Save forms work without JavaScript.
 When JavaScript and Git are available, the editor adds live highlighting and Git
 `HEAD` change markers. Reverting a marker only updates the draft; only Save
-writes to disk. Markdown editors include a live rendered preview, while other
+writes to disk. Markdown editors default to a full-width editor and can switch
+to stacked, side-by-side, or preview-only layouts. Split layouts synchronize
+scrolling and mark the editor caret or selection in the rendered preview. Other
 source formats use their syntax highlighting. The browser warns before leaving a
 changed draft. Live-reload events automatically load and three-way merge
 external filesystem changes; overlapping edits remain marked for manual

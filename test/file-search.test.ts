@@ -4,7 +4,13 @@ import {
   parseFinderOutput,
   subsequenceMatch,
 } from "../src/server/file-search.ts";
+import { runGit } from "../src/server/git/command.ts";
 import { fixture, handler } from "./fixture.ts";
+
+async function git(root: string, args: string[]): Promise<void> {
+  const result = await runGit(root, args);
+  if (!result.success) throw new Error(result.stderr);
+}
 
 Deno.test("root-wide file search matches full paths, directories, and canonical routes", async () => {
   const f = await fixture({
@@ -24,18 +30,28 @@ Deno.test("root-wide file search matches full paths, directories, and canonical 
       path: "docs/nested/",
       href: "/docs/nested/",
     }, {
-      name: "docs/nested/.secret",
-      path: "docs/nested/.secret",
-      href: "/docs/nested/.secret",
-    }, {
       name: "docs/note.txt",
       path: "docs/note.txt",
       href: "/docs/note.txt",
+    }, {
+      name: "docs/nested/.secret",
+      path: "docs/nested/.secret",
+      href: "/docs/nested/.secret",
     }]);
     const root = await h(
       new Request("http://x/__markdown_serve__/files?search="),
     );
     const values = await root.json();
+    const paths = values.map((value: { path: string }) => value.path);
+    const firstHidden = paths.findIndex((path: string) =>
+      path.split("/").some((part) => part.startsWith("."))
+    );
+    assertEquals(
+      paths.slice(firstHidden).every((path: string) =>
+        path.split("/").some((part) => part.startsWith("."))
+      ),
+      true,
+    );
     assertEquals(
       values.some((value: { path: string; href: string }) =>
         value.path === "docs/" && value.href === "/docs/"
@@ -94,6 +110,27 @@ Deno.test("file search validates query length and caps after filtering", async (
   }
 });
 
+Deno.test("fallback ranking applies before the result cap", async () => {
+  const f = await fixture({
+    ...Object.fromEntries(
+      Array.from({ length: 205 }, (_, index) => [
+        `.hidden-rank-${index}.txt`,
+        "hidden",
+      ]),
+    ),
+    "visible-rank.txt": "visible",
+  });
+  try {
+    const h = await handler(f.root);
+    const results = await (await h(
+      new Request("http://x/__markdown_serve__/files?search=rank"),
+    )).json();
+    assertEquals([results.length, results[0].path], [200, "visible-rank.txt"]);
+  } finally {
+    await f.cleanup();
+  }
+});
+
 Deno.test("subsequence matching is deterministic and case insensitive", () => {
   assertEquals([
     subsequenceMatch("docs/Note.TXT", "dnt"),
@@ -105,6 +142,73 @@ Deno.test("subsequence matching is deterministic and case insensitive", () => {
     ),
     ["dir/guide.md", "dir/nested/"],
   );
+});
+
+Deno.test("file search ranks Git and visibility before applying its cap", async () => {
+  const ignored = Object.fromEntries(
+    Array.from({ length: 205 }, (_, index) => [
+      `ignored/cap-${index}.txt`,
+      "ignored",
+    ]),
+  );
+  const f = await fixture({
+    ".gitignore": "ignored/\n",
+    "visible-order.txt": "tracked",
+    ".hidden-order.txt": "tracked",
+    "ignored/visible-order.txt": "ignored",
+    "ignored/.hidden-order.txt": "ignored",
+    "tracked-cap.txt": "tracked",
+    ...ignored,
+  });
+  try {
+    await git(f.root, ["init", "--initial-branch=main"]);
+    await git(f.root, ["add", "."]);
+    await git(f.root, [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.invalid",
+      "commit",
+      "-m",
+      "initial commit",
+    ]);
+    const h = await handler(f.root, {
+      git: true,
+      finders: ["fd"],
+      finderRunner: (_finders, _root, query) =>
+        Promise.resolve(
+          query === "order"
+            ? [
+              "ignored/.hidden-order.txt",
+              "ignored/visible-order.txt",
+              ".hidden-order.txt",
+              "visible-order.txt",
+            ]
+            : [
+              ...Object.keys(ignored),
+              "tracked-cap.txt",
+            ],
+        ),
+    });
+    const ordered = await (await h(
+      new Request("http://x/__markdown_serve__/files?search=order"),
+    )).json();
+    assertEquals(
+      ordered.map((result: { path: string }) => result.path),
+      [
+        "visible-order.txt",
+        ".hidden-order.txt",
+        "ignored/visible-order.txt",
+        "ignored/.hidden-order.txt",
+      ],
+    );
+    const capped = await (await h(
+      new Request("http://x/__markdown_serve__/files?search=cap"),
+    )).json();
+    assertEquals([capped.length, capped[0].path], [200, "tracked-cap.txt"]);
+  } finally {
+    await f.cleanup();
+  }
 });
 
 Deno.test("finder results stay root-scoped and continue after non-matches", async () => {

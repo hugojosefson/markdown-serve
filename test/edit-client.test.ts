@@ -223,8 +223,13 @@ Deno.test("edit enhancement keeps native text current and reports disk changes",
   ui.text.scrollLeft = 12;
   ui.text.fire("scroll");
   assertEquals(
-    [ui.pre.scrollTop, ui.pre.scrollLeft, ui.gutter.style.transform],
-    [30, 12, "translateY(-30px)"],
+    [
+      ui.code.style.transform,
+      ui.pre.scrollTop,
+      ui.pre.scrollLeft,
+      ui.gutter.style.transform,
+    ],
+    ["translate(-12px, -30px)", 0, 0, "translateY(-30px)"],
   );
   ui.fireDocument("markdown-serve:reload");
   assertMatch(ui.status.textContent!, /Loading changes/);

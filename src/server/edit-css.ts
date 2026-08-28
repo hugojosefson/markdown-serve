@@ -21,6 +21,7 @@ export const editCss = `
 .edit-surface { display: grid; min-height: 65vh; overflow: hidden; position: relative; }
 .edit-highlight, .edit-text { box-sizing: border-box; font: var(--edit-font-size)/1.45 ui-monospace, monospace; font-kerning: none; font-variant-ligatures: none; grid-area: 1 / 1; letter-spacing: 0; margin: 0; min-height: 65vh; overflow: auto; padding: 12px 12px 12px 28px; tab-size: 2; white-space: pre; width: 100%; }
 .edit-highlight, .edit-highlight.code-block { background: var(--code-bg); border: 0; border-radius: 0; color: var(--code-text); font-size: var(--edit-font-size); margin: 0; pointer-events: none; }
+.edit-highlight { overflow: hidden; }
 .edit-highlight.code-block { padding: 12px 12px 12px 28px; }
 .edit-highlight code, .edit-highlight.code-block > code { background: transparent; display: block; font: inherit; font-size: var(--edit-font-size); padding: 0; }
 .edit-text { appearance: none; background: var(--code-bg); border: 0; color: var(--code-text); resize: vertical; z-index: 1; }

@@ -121,8 +121,8 @@ export function installEdit(
     details.hidden = true;
   };
   const syncScroll = (): void => {
-    pre.scrollTop = text.scrollTop;
-    pre.scrollLeft = text.scrollLeft;
+    code.style.transform = `translate(${-text.scrollLeft}px, ${-text
+      .scrollTop}px)`;
     gutter.style.transform = `translateY(${-text.scrollTop}px)`;
   };
   let expectedEditorScroll: number | undefined;

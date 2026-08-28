@@ -127,9 +127,10 @@ Press `g` to search files and directories from the content root. The picker
 starts with the viewed directory in its input; replace that prefix to search
 elsewhere. Typed characters match in order against each full relative path.
 Results include dotfiles and use canonical routes, including clean Markdown
-URLs. Use up/down and Enter to open a match. Escape or a backdrop click closes
-the picker. `fd` or `fdfind` is used when permitted and available; otherwise the
-server uses a bounded filesystem scan.
+URLs. Non-ignored paths rank before Git-ignored paths; within each group, paths
+without hidden components rank first. Use up/down and Enter to open a match.
+Escape or a backdrop click closes the picker. `fd` or `fdfind` is used when
+permitted and available; otherwise the server uses a bounded filesystem scan.
 
 ### Repository search
 

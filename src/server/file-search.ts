@@ -3,9 +3,11 @@ import { entryRoute } from "./entry-route.ts";
 import { canonicalPath, lexical } from "./paths.ts";
 import { readCapped } from "./capped-stream.ts";
 import { childTerminator } from "./terminate-child.ts";
+import { type GitStatus, gitStatusAt } from "./git/status.ts";
 import type { ServerConfig } from "./types.ts";
 
 const maximumResults = 200;
+const maximumCandidates = 10_000;
 const maximumEntries = 10_000;
 const maximumOutputBytes = 512 * 1024;
 const finderTimeoutMilliseconds = 1_500;
@@ -34,6 +36,7 @@ export async function searchFiles(
   signal?: AbortSignal,
 ): Promise<FileSearchResult[]> {
   if (signal?.aborted) return [];
+  const statusPromise = config.git?.status().catch(() => undefined);
   const paths = config.finders?.length
     ? await (config.finderRunner ?? searchedByFinder)(
       config.finders,
@@ -43,10 +46,19 @@ export async function searchFiles(
     ).catch(() => undefined)
     : undefined;
   if (signal?.aborted) return [];
+  const status = await statusPromise;
   const names = paths
-    ? await normalizeFinderPaths(config, paths, query, signal)
+    ? await normalizeFinderPaths(
+      config,
+      paths.toSorted((a, b) => compareSearchPaths(a, b, status)),
+      query,
+      signal,
+    )
     : await searchedByCatalog(config.rootPath, query, signal);
-  return names.map(resultFor).toSorted((a, b) => lexical(a.path, b.path));
+  return names.toSorted((a, b) => compareSearchPaths(a, b, status)).slice(
+    0,
+    maximumResults,
+  ).map(resultFor);
 }
 
 function resultFor(name: string): FileSearchResult {
@@ -93,7 +105,7 @@ const runFinder = createFinderRunner((finder, root, query) =>
       ".git",
       "--print0",
       "--max-results",
-      String(maximumResults),
+      String(maximumCandidates),
       "--",
       subsequenceRegex(query),
     ],
@@ -164,7 +176,7 @@ export function parseFinderOutput(output: Uint8Array): string[] {
   return new TextDecoder().decode(output).split("\0").filter(Boolean)
     .map((path) => path.replaceAll("\\", "/").replace(/^\.\//, ""))
     .filter((path) => safeRelativePath(path.replace(/\/$/, "")))
-    .slice(0, maximumResults);
+    .slice(0, maximumCandidates);
 }
 
 async function normalizeFinderPaths(
@@ -200,17 +212,13 @@ async function searchedByCatalog(
   const results: string[] = [];
   const pending = [root];
   let examined = 0;
-  while (
-    pending.length && results.length < maximumResults &&
-    examined < maximumEntries
-  ) {
+  while (pending.length && examined < maximumEntries) {
     if (signal?.aborted) break;
     const directory = pending.pop()!;
     try {
       for await (const entry of Deno.readDir(directory)) {
         if (
-          signal?.aborted || results.length >= maximumResults ||
-          ++examined > maximumEntries
+          signal?.aborted || ++examined > maximumEntries
         ) break;
         if (entry.isSymlink || (entry.isDirectory && entry.name === ".git")) {
           continue;
@@ -243,6 +251,26 @@ export function subsequenceMatch(path: string, query: string): boolean {
     if (character === expected[index]) index++;
   }
   return index === expected.length;
+}
+
+function compareSearchPaths(
+  a: string,
+  b: string,
+  status?: GitStatus,
+): number {
+  return ignoredRank(a, status) - ignoredRank(b, status) ||
+    hiddenRank(a) - hiddenRank(b) || lexical(a, b);
+}
+
+function ignoredRank(path: string, status?: GitStatus): number {
+  const normalized = path.replace(/\/$/, "");
+  return gitStatusAt(status, normalized)?.kind === "ignored" ? 1 : 0;
+}
+
+function hiddenRank(path: string): number {
+  return path.replace(/\/$/, "").split("/").some((part) => part.startsWith("."))
+    ? 1
+    : 0;
 }
 
 function subsequenceRegex(query: string): string {

@@ -26,6 +26,7 @@ Deno.test("editor overlay keeps syntax tokens on textarea metrics", () => {
     editCss,
     /\.edit-highlight\.code-block \{ padding: 12px 12px 12px 28px; \}/,
   );
+  assertMatch(editCss, /\.edit-highlight \{ overflow: hidden; \}/);
   assertEquals(
     /\.token\.(?:title|bold)[^{]*\{[^}]*font-weight/.test(editCss),
     false,

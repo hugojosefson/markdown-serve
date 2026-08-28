@@ -12,7 +12,12 @@ type EditorElement = {
   innerHTML: string;
   scrollLeft: number;
   scrollTop: number;
+  scrollHeight: number;
+  selectionEnd: number;
+  selectionStart: number;
+  clientHeight: number;
   style: { transform: string };
+  setAttribute(name: string, value: string): void;
   textContent: string | null;
   value: string;
   addEventListener(type: string, listener: (event: EditorEvent) => void): void;
@@ -22,6 +27,14 @@ type EditorElement = {
 type EditorDocument = {
   querySelector<T>(selector: string): T | null;
   addEventListener(type: string, listener: (event: EditorEvent) => void): void;
+  createRange?(): {
+    setEnd(node: unknown, offset: number): void;
+    setStart(node: unknown, offset: number): void;
+  };
+  createTreeWalker?(
+    root: unknown,
+    whatToShow: number,
+  ): { nextNode(): { nodeValue: string | null } | null };
 };
 
 type EditorLifecycle = {
@@ -52,6 +65,7 @@ export function installEdit(
   document: EditorDocument,
   fetcher: EditFetch = fetch as unknown as EditFetch,
   lifecycle: EditorLifecycle = globalThis as unknown as EditorLifecycle,
+  indicatorInstaller: typeof installPreviewIndicator = installPreviewIndicator,
 ): void {
   const select = <T extends EditorElement>(selector: string) =>
     document.querySelector<T>(selector);
@@ -68,6 +82,11 @@ export function installEdit(
   const revert = select(".edit-hunk-revert");
   const status = select(".edit-status");
   const preview = select(".edit-markdown-preview");
+  const workspace = select(".edit-workspace");
+  const layouts = ["editor", "split-horizontal", "split-vertical", "preview"]
+    .map((layout) =>
+      select(`.edit-layout-controls [data-edit-layout="${layout}"]`)
+    );
   if (
     !form?.dataset.editPath || !tag || !text || !surface || !pre || !code ||
     !gutter || !details || !diff || !close || !revert || !status
@@ -87,6 +106,12 @@ export function installEdit(
   let mergeConflicted = false;
   let submitting = false;
   let baseText = text.value;
+  const updatePreviewIndicator = indicatorInstaller(
+    document,
+    text,
+    preview,
+    workspace,
+  );
 
   const hideDiff = (): void => {
     selected = undefined;
@@ -96,6 +121,61 @@ export function installEdit(
     pre.scrollTop = text.scrollTop;
     pre.scrollLeft = text.scrollLeft;
     gutter.style.transform = `translateY(${-text.scrollTop}px)`;
+  };
+  let expectedEditorScroll: number | undefined;
+  let expectedPreviewScroll: number | undefined;
+  const scrollRange = (element: EditorElement): number =>
+    Math.max(0, element.scrollHeight - element.clientHeight);
+  const syncPreviewScroll = (): void => {
+    if (!preview) {
+      return;
+    }
+    const sourceRange = scrollRange(text);
+    const previewRange = scrollRange(preview);
+    if (!sourceRange || !previewRange) {
+      return;
+    }
+    const target = text.scrollTop / sourceRange * previewRange;
+    if (Math.abs(preview.scrollTop - target) < 0.5) {
+      return;
+    }
+    expectedPreviewScroll = target;
+    preview.scrollTop = target;
+  };
+  const syncEditorScroll = (): void => {
+    if (!preview) {
+      return;
+    }
+    const sourceRange = scrollRange(text);
+    const previewRange = scrollRange(preview);
+    if (!sourceRange || !previewRange) {
+      return;
+    }
+    const target = preview.scrollTop / previewRange * sourceRange;
+    if (Math.abs(text.scrollTop - target) < 0.5) {
+      return;
+    }
+    expectedEditorScroll = target;
+    text.scrollTop = target;
+    syncScroll();
+  };
+  const selectLayout = (layout: string): void => {
+    if (!workspace) {
+      return;
+    }
+    workspace.dataset.editLayout = layout;
+    layouts.forEach((control, index) => {
+      const selected = layout ===
+        ["editor", "split-horizontal", "split-vertical", "preview"][index];
+      if (selected) {
+        control?.classList.add("is-selected");
+      } else {
+        control?.classList.remove("is-selected");
+      }
+      control?.setAttribute("aria-pressed", String(selected));
+    });
+    syncPreviewScroll();
+    updatePreviewIndicator();
   };
   const renderGutter = (next: DraftHunk[]): void => {
     hunks = next.filter((hunk) =>
@@ -127,6 +207,8 @@ export function installEdit(
     hideDiff();
     surface.classList.add("is-enhanced");
     syncScroll();
+    syncPreviewScroll();
+    updatePreviewIndicator();
     if (mergeConflicted) {
       status.textContent =
         "Disk changes overlap your draft. Resolve the merge markers before saving.";
@@ -177,6 +259,7 @@ export function installEdit(
     code.textContent = text.value;
     renderGutter([]);
     hideDiff();
+    updatePreviewIndicator();
     if (timer !== undefined) {
       clearTimeout(timer);
     }
@@ -291,7 +374,41 @@ export function installEdit(
     value.includes(">>>>>>> current disk version");
 
   text.addEventListener("input", schedule);
-  text.addEventListener("scroll", syncScroll);
+  text.addEventListener("scroll", () => {
+    syncScroll();
+    if (
+      expectedEditorScroll !== undefined &&
+      Math.abs(text.scrollTop - expectedEditorScroll) < 0.5
+    ) {
+      expectedEditorScroll = undefined;
+      return;
+    }
+    expectedEditorScroll = undefined;
+    syncPreviewScroll();
+  });
+  preview?.addEventListener("scroll", () => {
+    if (
+      expectedPreviewScroll !== undefined &&
+      Math.abs(preview.scrollTop - expectedPreviewScroll) < 0.5
+    ) {
+      expectedPreviewScroll = undefined;
+      return;
+    }
+    expectedPreviewScroll = undefined;
+    syncEditorScroll();
+  });
+  layouts.forEach((control, index) =>
+    control?.addEventListener(
+      "click",
+      () =>
+        selectLayout(
+          ["editor", "split-horizontal", "split-vertical", "preview"][index],
+        ),
+    )
+  );
+  if (workspace && layouts.every(Boolean)) {
+    form.classList.add("is-enhanced");
+  }
   gutter.addEventListener("click", (event) => {
     const button = event.target?.closest<EditorElement>("[data-edit-hunk]");
     const index = Number(button?.dataset.editHunk);
@@ -337,4 +454,9 @@ export function installEdit(
   void update();
 }
 
-export const editClient = `(${installEdit.toString()})(document);`;
+export const editClient =
+  `const installPreviewIndicator=${editPreviewIndicatorClient};(${installEdit.toString()})(document,undefined,undefined,installPreviewIndicator);`;
+import {
+  editPreviewIndicatorClient,
+  installPreviewIndicator,
+} from "./edit-preview-indicator.ts";

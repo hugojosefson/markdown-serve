@@ -27,6 +27,27 @@ Deno.test("editor overlay keeps syntax tokens on textarea metrics", () => {
   );
 });
 
+Deno.test("Markdown layout styles default to a full-width editor and bound split panes", () => {
+  assertMatch(
+    editCss,
+    /\[data-edit-layout="editor"\] \.edit-markdown-preview \{ display: none;/,
+  );
+  assertMatch(
+    editCss,
+    /\[data-edit-layout="split-horizontal"\] \{ grid-template-rows:/,
+  );
+  assertMatch(
+    editCss,
+    /\[data-edit-layout="split-vertical"\] \{ grid-template-columns:/,
+  );
+  assertMatch(
+    editCss,
+    /split-vertical"\] \.edit-text \{ height: 100%; min-height: 0; resize: none;/,
+  );
+  assertMatch(editCss, /::highlight\(edit-preview-caret\)/);
+  assertMatch(editCss, /::highlight\(edit-preview-selection\)/);
+});
+
 Deno.test("editing is opt-in and requires a root-scoped write grant", () => {
   assertEquals(parseArgs([]).edit, false);
   assertEquals(parseArgs(["--edit"]).edit, true);
@@ -137,6 +158,18 @@ Deno.test("Markdown edit page saves through an ordinary versioned form", async (
       page,
       /class="edit-markdown-preview"[\s\S]*<h1[^>]*>[\s\S]*first<\/h1>/,
     );
+    assertMatch(
+      page,
+      /aria-label="Editor layout"[\s\S]*data-edit-layout="editor"[\s\S]*data-edit-layout="split-horizontal"[\s\S]*data-edit-layout="split-vertical"[\s\S]*data-edit-layout="preview"/,
+    );
+    assertMatch(page, /aria-label="Write only"/);
+    assertMatch(page, /aria-label="Stacked editor and preview"/);
+    assertMatch(page, /aria-label="Editor and preview side by side"/);
+    assertMatch(page, /aria-label="Preview only"/);
+    assertMatch(
+      page,
+      /class="edit-workspace is-markdown" data-edit-layout="editor"/,
+    );
     assertEquals(page.includes('<div class="page-content'), false);
     const tag = page.match(/name="etag" value="([^"]+)"/)?.[1].replaceAll(
       "&quot;",
@@ -209,6 +242,7 @@ Deno.test("edit pages render Markdown and source syntax distinctly", async () =>
     assertMatch(json, /token boolean/);
     assertMatch(json, /token number/);
     assertEquals(json.includes("edit-markdown-preview"), false);
+    assertEquals(json.includes("edit-layout-controls"), false);
 
     const typescript = await (
       await on(new Request("http://x/code.ts?edit"))

@@ -174,9 +174,13 @@ function renderEditPage(model: PageModel): string {
     escapeHtml(model.editTag ?? "")
   }"><p class="edit-status" role="status">${
     escapeHtml(model.editStatus ?? "Editing")
-  }</p><div class="edit-workspace${
+  }</p>${
+    model.editPreview === undefined
+      ? ""
+      : `<nav class="edit-layout-controls" aria-label="Editor layout"><button type="button" class="is-selected" data-edit-layout="editor" aria-label="Write only" title="Write only" aria-pressed="true"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 13 1-4 7-7 3 3-7 7-4 1Z M9.5 3.5l3 3"/></svg></button><button type="button" data-edit-layout="split-horizontal" aria-label="Stacked editor and preview" title="Stacked editor and preview" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M2 8h12"/></svg></button><button type="button" data-edit-layout="split-vertical" aria-label="Editor and preview side by side" title="Editor and preview side by side" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M8 2v12"/></svg></button><button type="button" data-edit-layout="preview" aria-label="Preview only" title="Preview only" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8s2.5-4 7-4 7 4 7 4-2.5 4-7 4-7-4-7-4Z"/><circle cx="8" cy="8" r="2"/></svg></button></nav>`
+  }<div class="edit-workspace${
     model.editPreview === undefined ? "" : " is-markdown"
-  }"><div class="edit-surface"><pre class="edit-highlight code-block" aria-hidden="true"><code>${
+  }" data-edit-layout="editor"><div class="edit-surface"><pre class="edit-highlight code-block" aria-hidden="true"><code>${
     model.editHighlight ?? ""
   }</code></pre><div class="edit-gutter" aria-label="Git changes"></div><textarea class="edit-text" name="content" spellcheck="false" aria-label="File contents">${
     escapeHtml(model.editText ?? "")

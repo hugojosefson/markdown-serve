@@ -20,12 +20,20 @@ class Element {
   innerHTML = "";
   scrollLeft = 0;
   scrollTop = 0;
+  scrollHeight = 0;
+  selectionEnd = 0;
+  selectionStart = 0;
+  clientHeight = 0;
   style = { transform: "" };
+  attributes = new Map<string, string>();
   textContent: string | null = "";
   value = "";
   readonly listeners = new Map<string, ((event: Event) => void)[]>();
   addEventListener(type: string, listener: (event: Event) => void): void {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+  }
+  setAttribute(name: string, value: string): void {
+    this.attributes.set(name, value);
   }
   closest<T>(_selector: string): T | null {
     return this as unknown as T;
@@ -54,6 +62,11 @@ function editor() {
     revert: new Element(),
     status: new Element(),
     preview: new Element(),
+    workspace: new Element(),
+    editorLayout: new Element(),
+    horizontalLayout: new Element(),
+    verticalLayout: new Element(),
+    previewLayout: new Element(),
   };
   elements.form.dataset.editPath = "guide.md";
   elements.tag.value =
@@ -74,6 +87,23 @@ function editor() {
     [".edit-hunk-revert", elements.revert],
     [".edit-status", elements.status],
     [".edit-markdown-preview", elements.preview],
+    [".edit-workspace", elements.workspace],
+    [
+      '.edit-layout-controls [data-edit-layout="editor"]',
+      elements.editorLayout,
+    ],
+    [
+      '.edit-layout-controls [data-edit-layout="split-horizontal"]',
+      elements.horizontalLayout,
+    ],
+    [
+      '.edit-layout-controls [data-edit-layout="split-vertical"]',
+      elements.verticalLayout,
+    ],
+    [
+      '.edit-layout-controls [data-edit-layout="preview"]',
+      elements.previewLayout,
+    ],
   ]);
   const listeners = new Map<string, (event: Event) => void>();
   const lifecycleListeners = new Map<string, (event: Event) => void>();
@@ -81,6 +111,27 @@ function editor() {
     querySelector: (selector: string) => selectors.get(selector) ?? null,
     addEventListener: (type: string, listener: (event: Event) => void) =>
       listeners.set(type, listener),
+    createRange: () => {
+      const range = {
+        end: 0,
+        start: 0,
+        setEnd: (_node: unknown, offset: number) => range.end = offset,
+        setStart: (_node: unknown, offset: number) => range.start = offset,
+      };
+      return range;
+    },
+    createTreeWalker: (root: Element) => {
+      let pending = true;
+      return {
+        nextNode: () => {
+          if (!pending) {
+            return null;
+          }
+          pending = false;
+          return { nodeValue: root.textContent };
+        },
+      };
+    },
   };
   const lifecycle = {
     addEventListener: (type: string, listener: (event: Event) => void) =>
@@ -175,6 +226,104 @@ Deno.test("edit enhancement keeps native text current and reports disk changes",
   await new Promise((resolve) => setTimeout(resolve, 180));
   assertMatch(ui.status.textContent!, /draft is preserved/);
   assertEquals(ui.surface.classes.has("is-enhanced"), false);
+});
+
+Deno.test("Markdown layouts switch without hiding the native editor by default and synchronize scroll ranges", () => {
+  const ui = editor();
+  ui.text.scrollHeight = 1_000;
+  ui.text.clientHeight = 200;
+  ui.preview.scrollHeight = 600;
+  ui.preview.clientHeight = 100;
+  installEdit(ui.document, () =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(payload("# draft\n")),
+    }), ui.lifecycle);
+  ui.horizontalLayout.fire("click");
+  assertEquals(ui.workspace.dataset.editLayout, "split-horizontal");
+  assertEquals(ui.horizontalLayout.classes.has("is-selected"), true);
+  assertEquals(ui.horizontalLayout.attributes.get("aria-pressed"), "true");
+  ui.text.scrollTop = 400;
+  ui.text.fire("scroll");
+  assertEquals(ui.preview.scrollTop, 250);
+  ui.preview.scrollTop = 125;
+  ui.preview.fire("scroll");
+  assertEquals(ui.text.scrollTop, 200);
+  ui.previewLayout.fire("click");
+  assertEquals(ui.workspace.dataset.editLayout, "preview");
+  ui.editorLayout.fire("click");
+  assertEquals(ui.workspace.dataset.editLayout, "editor");
+});
+
+Deno.test("Markdown split preview follows the editor caret and selection", () => {
+  const cssDescriptor = Object.getOwnPropertyDescriptor(globalThis, "CSS");
+  const highlightDescriptor = Object.getOwnPropertyDescriptor(
+    globalThis,
+    "Highlight",
+  );
+  const highlights = new Map<string, { ranges: unknown[] }>();
+  try {
+    Object.defineProperty(globalThis, "CSS", {
+      configurable: true,
+      value: {
+        highlights: {
+          delete: (name: string) => highlights.delete(name),
+          set: (name: string, highlight: { ranges: unknown[] }) =>
+            highlights.set(name, highlight),
+        },
+      },
+    });
+    Object.defineProperty(globalThis, "Highlight", {
+      configurable: true,
+      value: class {
+        ranges: unknown[];
+        constructor(...ranges: unknown[]) {
+          this.ranges = ranges;
+        }
+      },
+    });
+    const ui = editor();
+    ui.text.value = "# Title\n\nA paragraph with selected words.";
+    ui.preview.textContent = "TitleA paragraph with selected words.";
+    installEdit(ui.document, () =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(payload(ui.text.value)),
+      }), ui.lifecycle);
+    ui.verticalLayout.fire("click");
+    const word = ui.text.value.indexOf("paragraph");
+    ui.text.selectionStart = word + 2;
+    ui.text.selectionEnd = word + 2;
+    ui.text.fire("select");
+    assertEquals(highlights.has("edit-preview-caret"), true);
+    const caretRange = highlights.get("edit-preview-caret")?.ranges[0] as {
+      end: number;
+      start: number;
+    };
+    assertEquals([caretRange.start, caretRange.end], [7, 16]);
+
+    ui.text.selectionStart = ui.text.value.indexOf("selected");
+    ui.text.selectionEnd = ui.text.value.indexOf("words") + "words".length;
+    ui.text.fire("select");
+    assertEquals(highlights.has("edit-preview-caret"), false);
+    assertEquals(highlights.has("edit-preview-selection"), true);
+    const selectionRange = highlights.get("edit-preview-selection")
+      ?.ranges[0] as { end: number; start: number };
+    assertEquals([selectionRange.start, selectionRange.end], [22, 36]);
+    ui.editorLayout.fire("click");
+    assertEquals(highlights.size, 0);
+  } finally {
+    if (cssDescriptor) {
+      Object.defineProperty(globalThis, "CSS", cssDescriptor);
+    } else {
+      Reflect.deleteProperty(globalThis, "CSS");
+    }
+    if (highlightDescriptor) {
+      Object.defineProperty(globalThis, "Highlight", highlightDescriptor);
+    } else {
+      Reflect.deleteProperty(globalThis, "Highlight");
+    }
+  }
 });
 
 Deno.test("edit enhancement does not overwrite typing during hunk revert", async () => {

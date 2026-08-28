@@ -51,7 +51,7 @@ export async function renderText(
       file,
       bytes,
       text,
-      url.searchParams.has("saved") ? "Saved" : undefined,
+      { status: url.searchParams.has("saved") ? "Saved" : undefined },
     )
     : undefined;
   return await textPage(config, request, url, file, parts, content, editor);
@@ -123,9 +123,11 @@ async function postTextEdit(
       file,
       new Uint8Array(),
       result.text,
-      "Conflict: merge the current version before saving",
-      result.currentText,
-      result.tag,
+      {
+        currentText: result.currentText,
+        status: "Conflict: merge the current version before saving",
+        tag: result.tag,
+      },
     ),
     409,
   );

@@ -1,4 +1,6 @@
 type EditorEvent = {
+  preventDefault?(): void;
+  returnValue?: string;
   target?: EditorElement;
 };
 
@@ -19,7 +21,11 @@ type EditorElement = {
 
 type EditorDocument = {
   querySelector<T>(selector: string): T | null;
-  addEventListener(type: string, listener: () => void): void;
+  addEventListener(type: string, listener: (event: EditorEvent) => void): void;
+};
+
+type EditorLifecycle = {
+  addEventListener(type: string, listener: (event: EditorEvent) => void): void;
 };
 
 type DraftHunk = { start: number; count: number; text: string };
@@ -29,6 +35,7 @@ type DraftPayload = {
   html: string;
   hunks: DraftHunk[];
   limited: boolean;
+  preview?: string;
 };
 type EditFetch = (
   url: string,
@@ -38,16 +45,18 @@ type EditFetch = (
     headers: Record<string, string>;
     body: string;
   },
-) => Promise<{ ok: boolean; json(): Promise<DraftPayload> }>;
+) => Promise<{ ok: boolean; json(): Promise<unknown> }>;
 
 /** Adds live highlighting and in-memory Git hunk actions to the native form. */
 export function installEdit(
   document: EditorDocument,
   fetcher: EditFetch = fetch as unknown as EditFetch,
+  lifecycle: EditorLifecycle = globalThis as unknown as EditorLifecycle,
 ): void {
   const select = <T extends EditorElement>(selector: string) =>
     document.querySelector<T>(selector);
   const form = select(".edit-page");
+  const tag = select('.edit-page input[name="etag"]');
   const text = select(".edit-text");
   const surface = select(".edit-surface");
   const pre = select(".edit-highlight");
@@ -58,9 +67,10 @@ export function installEdit(
   const close = select(".edit-hunk-close");
   const revert = select(".edit-hunk-revert");
   const status = select(".edit-status");
+  const preview = select(".edit-markdown-preview");
   if (
-    !form?.dataset.editPath || !text || !surface || !pre || !code || !gutter ||
-    !details || !diff || !close || !revert || !status
+    !form?.dataset.editPath || !tag || !text || !surface || !pre || !code ||
+    !gutter || !details || !diff || !close || !revert || !status
   ) {
     return;
   }
@@ -70,9 +80,13 @@ export function installEdit(
   let hunks: DraftHunk[] = [];
   let selected: number | undefined;
   let timer: number | undefined;
-  let diskChanged = false;
-  const diskChangedMessage =
-    "File changed on disk; your draft is preserved. Save will check for conflicts.";
+  let mergeTimer: number | undefined;
+  let mergeController: AbortController | undefined;
+  let mergeGeneration = 0;
+  let mergeNeeded = false;
+  let mergeConflicted = false;
+  let submitting = false;
+  let baseText = text.value;
 
   const hideDiff = (): void => {
     selected = undefined;
@@ -106,12 +120,16 @@ export function installEdit(
       text.value = payload.draft;
     }
     code.innerHTML = payload.html;
+    if (preview && typeof payload.preview === "string") {
+      preview.innerHTML = payload.preview;
+    }
     renderGutter(payload.hunks);
     hideDiff();
     surface.classList.add("is-enhanced");
     syncScroll();
-    if (diskChanged) {
-      status.textContent = diskChangedMessage;
+    if (mergeConflicted) {
+      status.textContent =
+        "Disk changes overlap your draft. Resolve the merge markers before saving.";
     } else if (payload.limited) {
       status.textContent = "Editing; Git diff is too large to display";
     }
@@ -138,18 +156,24 @@ export function installEdit(
       ) {
         return;
       }
-      const payload = await response.json();
+      const value = await response.json();
       if (
         mine !== generation || requestController.signal.aborted ||
         text.value !== snapshot
       ) {
         return;
       }
-      apply(payload);
+      if (!value || typeof value !== "object") {
+        return;
+      }
+      apply(value as DraftPayload);
     } catch { /* The server-rendered/native editor remains usable. */ }
   };
   const schedule = (): void => {
-    status.textContent = diskChanged ? diskChangedMessage : "Editing";
+    mergeConflicted = hasConflictMarkers(text.value);
+    status.textContent = mergeConflicted
+      ? "Resolve the disk merge markers before saving"
+      : "Editing";
     code.textContent = text.value;
     renderGutter([]);
     hideDiff();
@@ -157,7 +181,114 @@ export function installEdit(
       clearTimeout(timer);
     }
     timer = setTimeout(() => update(), 120) as unknown as number;
+    if (mergeNeeded) {
+      scheduleDiskMerge();
+    }
   };
+  const mergeFromDisk = async (): Promise<void> => {
+    const mine = ++mergeGeneration;
+    const snapshot = text.value;
+    const baseSnapshot = baseText;
+    const tagSnapshot = tag.value;
+    mergeController?.abort();
+    const requestController = mergeController = new AbortController();
+    try {
+      const response = await fetcher(
+        `/__markdown_serve__/merge?path=${encodeURIComponent(path)}`,
+        {
+          method: "POST",
+          signal: requestController.signal,
+          headers: { "Content-Type": "application/json; charset=UTF-8" },
+          body: JSON.stringify({
+            base: baseSnapshot,
+            draft: snapshot,
+            tag: tagSnapshot,
+          }),
+        },
+      );
+      if (
+        mine !== mergeGeneration || requestController.signal.aborted
+      ) {
+        return;
+      }
+      if (!response.ok) {
+        throw new Error("disk merge failed");
+      }
+      const value = await response.json();
+      if (!value || typeof value !== "object") {
+        throw new Error("invalid merge response");
+      }
+      const payload = value as {
+        base?: unknown;
+        changed?: unknown;
+        conflicted?: unknown;
+        draft?: unknown;
+        limited?: unknown;
+        tag?: unknown;
+      };
+      if (payload.changed === false) {
+        mergeNeeded = false;
+        return;
+      }
+      if (payload.changed !== true) {
+        throw new Error("invalid merge response");
+      }
+      if (
+        mine !== mergeGeneration || requestController.signal.aborted ||
+        text.value !== snapshot || baseText !== baseSnapshot ||
+        tag.value !== tagSnapshot
+      ) {
+        scheduleDiskMerge();
+        return;
+      }
+      if (payload.limited === true) {
+        mergeNeeded = false;
+        status.textContent =
+          "File changed on disk; automatic merge is too large. Save will check for conflicts.";
+        return;
+      }
+      if (
+        typeof payload.base !== "string" ||
+        typeof payload.draft !== "string" ||
+        typeof payload.tag !== "string" ||
+        typeof payload.conflicted !== "boolean"
+      ) {
+        throw new Error("invalid merge response");
+      }
+      generation++;
+      controller?.abort();
+      text.value = payload.draft;
+      baseText = payload.base;
+      tag.value = payload.tag;
+      mergeNeeded = false;
+      mergeConflicted = payload.conflicted;
+      code.textContent = text.value;
+      renderGutter([]);
+      hideDiff();
+      status.textContent = mergeConflicted
+        ? "Disk changes overlap your draft. Resolve the merge markers before saving."
+        : snapshot === baseSnapshot
+        ? "Loaded changes from disk"
+        : "Merged changes from disk into your draft";
+      void update();
+    } catch {
+      if (mine === mergeGeneration && !requestController.signal.aborted) {
+        mergeNeeded = false;
+        status.textContent =
+          "Could not load changes from disk; your draft is preserved";
+      }
+    }
+  };
+  const scheduleDiskMerge = (): void => {
+    if (mergeTimer !== undefined) {
+      clearTimeout(mergeTimer);
+    }
+    mergeTimer = setTimeout(() => mergeFromDisk(), 160) as unknown as number;
+  };
+  const hasConflictMarkers = (value: string): boolean =>
+    value.includes("<<<<<<< draft\n") ||
+    value.includes("||||||| previous disk version\n") ||
+    value.includes(">>>>>>> current disk version");
 
   text.addEventListener("input", schedule);
   text.addEventListener("scroll", syncScroll);
@@ -179,9 +310,28 @@ export function installEdit(
     revert.disabled = true;
     void update(selected).finally(() => revert.disabled = false);
   });
+  form.addEventListener("submit", (event) => {
+    mergeConflicted = hasConflictMarkers(text.value);
+    if (mergeConflicted) {
+      event.preventDefault?.();
+      status.textContent = "Resolve the disk merge markers before saving";
+      return;
+    }
+    submitting = true;
+  });
+  lifecycle.addEventListener("beforeunload", (event) => {
+    if (submitting || text.value === baseText) {
+      return;
+    }
+    event.preventDefault?.();
+    event.returnValue = "";
+  });
   document.addEventListener("markdown-serve:reload", () => {
-    diskChanged = true;
-    status.textContent = diskChangedMessage;
+    mergeGeneration++;
+    mergeController?.abort();
+    mergeNeeded = true;
+    status.textContent = "Loading changes from disk…";
+    scheduleDiskMerge();
   });
   syncScroll();
   void update();

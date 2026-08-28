@@ -22,5 +22,6 @@ export type PageModel = {
   editStatus?: string;
   editView?: boolean;
   editHighlight?: string;
+  editPreview?: string;
   editCurrentText?: string;
 };

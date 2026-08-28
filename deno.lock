@@ -18,6 +18,7 @@
     "npm:marked-footnote@^1.4.0": "1.4.0_marked@17.0.6",
     "npm:marked-gfm-heading-id@^4.1.3": "4.1.4_marked@17.0.6",
     "npm:marked@^17.0.1": "17.0.6",
+    "npm:node-diff3@^3.2.1": "3.2.1",
     "npm:prismjs@^1.30.0": "1.30.0",
     "npm:sanitize-html@^2.17.0": "2.17.7",
     "npm:tree-sitter-wasms@0.1.13": "0.1.13",
@@ -715,6 +716,9 @@
     "neo-async@2.6.2": {
       "integrity": "sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw=="
     },
+    "node-diff3@3.2.1": {
+      "integrity": "sha512-eKZcJ8RtMQ3cIaA15EgmtwG927fYnRlhtdA4Q9HAcCpAZPQhhU2XptnTH9GeAkMiX2bAXxlJSAFa9shFbztPgw=="
+    },
     "normalize-package-data@6.0.2": {
       "integrity": "sha512-V6gygoYb/5EmNI+MEGrWkC+e6+Rr7mTmfHrxDbLzxQogBkgzo76rkok0Am6thgSF7Mv2nLOajAJj5vDJZEFn7g==",
       "dependencies": [
@@ -919,6 +923,7 @@
       "jsr:@std/path@^1.1.6",
       "npm:diff@9",
       "npm:file-lang-map@^1.1.11",
+      "npm:node-diff3@^3.2.1",
       "npm:prismjs@^1.30.0",
       "npm:tree-sitter-wasms@0.1.13",
       "npm:web-tree-sitter@0.25.10"

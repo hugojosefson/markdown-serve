@@ -261,8 +261,11 @@ Deno.test("Markdown edit view owns the content area and shares source styling", 
       edit.includes('<section class="file-metadata-details"'),
       false,
     );
-    assertEquals(edit.includes('<h1 id="guide"'), false);
-    assertMatch(edit, /class="edit-highlight"[\s\S]*class="token/);
+    assertMatch(
+      edit,
+      /class="edit-markdown-preview"[\s\S]*<h1 id="guide"/,
+    );
+    assertMatch(edit, /class="edit-highlight code-block"[\s\S]*class="token/);
 
     const source = await (await h(new Request("http://x/guide?source"))).text();
     assertMatch(source, /class="markdown-source-panel"/);

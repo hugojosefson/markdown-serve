@@ -13,6 +13,14 @@ import { fixture, handler } from "./fixture.ts";
 Deno.test("editor overlay keeps syntax tokens on textarea metrics", () => {
   assertMatch(editCss, /font-variant-ligatures: none/);
   assertMatch(editCss, /\.edit-highlight\.code-block \.token \{ font: inherit/);
+  assertMatch(
+    editCss,
+    /\.edit-highlight\.code-block > code[^}]*font-size: var\(--edit-font-size\)/,
+  );
+  assertMatch(
+    editCss,
+    /\.edit-highlight\.code-block \{ padding: 12px 12px 12px 28px; \}/,
+  );
   assertEquals(
     /\.token\.(?:title|bold)[^{]*\{[^}]*font-weight/.test(editCss),
     false,

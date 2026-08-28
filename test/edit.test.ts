@@ -7,7 +7,17 @@ import {
   type EditFileSystem,
   editLimit,
 } from "../src/server/edit-response.ts";
+import { editCss } from "../src/server/edit-css.ts";
 import { fixture, handler } from "./fixture.ts";
+
+Deno.test("editor overlay keeps syntax tokens on textarea metrics", () => {
+  assertMatch(editCss, /font-variant-ligatures: none/);
+  assertMatch(editCss, /\.edit-highlight\.code-block \.token \{ font: inherit/);
+  assertEquals(
+    /\.token\.(?:title|bold)[^{]*\{[^}]*font-weight/.test(editCss),
+    false,
+  );
+});
 
 Deno.test("editing is opt-in and requires a root-scoped write grant", () => {
   assertEquals(parseArgs([]).edit, false);

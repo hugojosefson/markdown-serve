@@ -1,4 +1,10 @@
+import {
+  editPreviewIndicatorClient,
+  installPreviewIndicator,
+} from "./edit-preview-indicator.ts";
+
 type EditorEvent = {
+  detail?: { base?: unknown; tag?: unknown };
   preventDefault?(): void;
   returnValue?: string;
   target?: EditorElement;
@@ -27,6 +33,7 @@ type EditorElement = {
 type EditorDocument = {
   querySelector<T>(selector: string): T | null;
   addEventListener(type: string, listener: (event: EditorEvent) => void): void;
+  dispatchEvent(event: Event): boolean;
   createRange?(): {
     setEnd(node: unknown, offset: number): void;
     setStart(node: unknown, offset: number): void;
@@ -83,10 +90,6 @@ export function installEdit(
   const status = select(".edit-status");
   const preview = select(".edit-markdown-preview");
   const workspace = select(".edit-workspace");
-  const layouts = ["editor", "split-horizontal", "split-vertical", "preview"]
-    .map((layout) =>
-      select(`.edit-layout-controls [data-edit-layout="${layout}"]`)
-    );
   if (
     !form?.dataset.editPath || !tag || !text || !surface || !pre || !code ||
     !gutter || !details || !diff || !close || !revert || !status
@@ -159,24 +162,6 @@ export function installEdit(
     text.scrollTop = target;
     syncScroll();
   };
-  const selectLayout = (layout: string): void => {
-    if (!workspace) {
-      return;
-    }
-    workspace.dataset.editLayout = layout;
-    layouts.forEach((control, index) => {
-      const selected = layout ===
-        ["editor", "split-horizontal", "split-vertical", "preview"][index];
-      if (selected) {
-        control?.classList.add("is-selected");
-      } else {
-        control?.classList.remove("is-selected");
-      }
-      control?.setAttribute("aria-pressed", String(selected));
-    });
-    syncPreviewScroll();
-    updatePreviewIndicator();
-  };
   const renderGutter = (next: DraftHunk[]): void => {
     hunks = next.filter((hunk) =>
       Number.isSafeInteger(hunk.start) && hunk.start > 0 &&
@@ -196,7 +181,8 @@ export function installEdit(
     ) {
       return;
     }
-    if (text.value !== payload.draft) {
+    const draftChanged = text.value !== payload.draft;
+    if (draftChanged) {
       text.value = payload.draft;
     }
     code.innerHTML = payload.html;
@@ -209,6 +195,9 @@ export function installEdit(
     syncScroll();
     syncPreviewScroll();
     updatePreviewIndicator();
+    if (draftChanged) {
+      document.dispatchEvent(new Event("markdown-serve:editor-draft"));
+    }
     if (mergeConflicted) {
       status.textContent =
         "Disk changes overlap your draft. Resolve the merge markers before saving.";
@@ -343,6 +332,11 @@ export function installEdit(
       text.value = payload.draft;
       baseText = payload.base;
       tag.value = payload.tag;
+      document.dispatchEvent(
+        new CustomEvent("markdown-serve:editor-base", {
+          detail: { base: baseText, tag: tag.value },
+        }),
+      );
       mergeNeeded = false;
       mergeConflicted = payload.conflicted;
       code.textContent = text.value;
@@ -397,16 +391,7 @@ export function installEdit(
     expectedPreviewScroll = undefined;
     syncEditorScroll();
   });
-  layouts.forEach((control, index) =>
-    control?.addEventListener(
-      "click",
-      () =>
-        selectLayout(
-          ["editor", "split-horizontal", "split-vertical", "preview"][index],
-        ),
-    )
-  );
-  if (workspace && layouts.every(Boolean)) {
+  if (workspace) {
     form.classList.add("is-enhanced");
   }
   gutter.addEventListener("click", (event) => {
@@ -428,6 +413,9 @@ export function installEdit(
     void update(selected).finally(() => revert.disabled = false);
   });
   form.addEventListener("submit", (event) => {
+    if ((event as { defaultPrevented?: boolean }).defaultPrevented) {
+      return;
+    }
     mergeConflicted = hasConflictMarkers(text.value);
     if (mergeConflicted) {
       event.preventDefault?.();
@@ -450,13 +438,24 @@ export function installEdit(
     status.textContent = "Loading changes from disk…";
     scheduleDiskMerge();
   });
+  document.addEventListener("markdown-serve:editor-layout", () => {
+    syncPreviewScroll();
+    updatePreviewIndicator();
+  });
+  document.addEventListener("markdown-serve:editor-state", (event) => {
+    if (
+      typeof event.detail?.base === "string" &&
+      typeof event.detail.tag === "string"
+    ) {
+      baseText = event.detail.base;
+      tag.value = event.detail.tag;
+    }
+    code.textContent = text.value;
+    void update();
+  });
   syncScroll();
   void update();
 }
 
 export const editClient =
   `const installPreviewIndicator=${editPreviewIndicatorClient};(${installEdit.toString()})(document,undefined,undefined,installPreviewIndicator);`;
-import {
-  editPreviewIndicatorClient,
-  installPreviewIndicator,
-} from "./edit-preview-indicator.ts";

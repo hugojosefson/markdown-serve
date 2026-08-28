@@ -160,7 +160,7 @@ Deno.test("Markdown edit page saves through an ordinary versioned form", async (
     );
     assertMatch(
       page,
-      /aria-label="Editor layout"[\s\S]*data-edit-layout="editor"[\s\S]*data-edit-layout="split-horizontal"[\s\S]*data-edit-layout="split-vertical"[\s\S]*data-edit-layout="preview"/,
+      /aria-label="Editor layout"[\s\S]*href="\?edit"[\s\S]*href="\?edit=preview-stacked"[\s\S]*href="\?edit=preview-side-by-side"[\s\S]*href="\?edit=preview"/,
     );
     assertMatch(page, /aria-label="Write only"/);
     assertMatch(page, /aria-label="Stacked editor and preview"/);
@@ -207,6 +207,48 @@ Deno.test("Markdown edit page saves through an ordinary versioned form", async (
     assertMatch(conflict, /Conflict: merge the current version/);
     assertMatch(conflict, /<textarea[^>]*>lost<\/textarea>/);
     assertMatch(conflict, /Current file on disk[\s\S]*# second/);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("Markdown edit query modes server-render the selected workspace", async () => {
+  const f = await fixture({ "guide.md": "# first\n" });
+  try {
+    const on = await handler(f.root, { edit: true });
+    for (
+      const [query, layout] of [
+        ["?edit", "editor"],
+        ["?edit=preview-stacked", "split-horizontal"],
+        ["?edit=preview-side-by-side", "split-vertical"],
+        ["?edit=preview", "preview"],
+      ]
+    ) {
+      const page = await (await on(new Request(`http://x/guide${query}`)))
+        .text();
+      assertMatch(page, new RegExp(`data-edit-layout="${layout}"`));
+      assertMatch(
+        page,
+        new RegExp(`data-edit-layout="${layout}" class="is-selected"`),
+      );
+    }
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("native Markdown layout links retain display queries", async () => {
+  const f = await fixture({ "guide.md": "# first\n" });
+  try {
+    const on = await handler(f.root, { edit: true });
+    const page = await (await on(
+      new Request("http://x/guide?edit=preview&theme=dark&wide"),
+    )).text();
+    assertMatch(page, /href="\?edit&amp;theme=dark&amp;wide"/);
+    assertMatch(
+      page,
+      /href="\?edit=preview-side-by-side&amp;theme=dark&amp;wide"/,
+    );
   } finally {
     await f.cleanup();
   }

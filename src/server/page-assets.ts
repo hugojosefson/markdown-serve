@@ -9,6 +9,7 @@ import { viewTransitionClient } from "./view-transition-client.ts";
 import { fileSearchClient } from "./file-search-client.ts";
 import { contentSearchClient } from "./content-search-client.ts";
 import { editClient } from "./edit-client.ts";
+import { editorRouteClient } from "./editor-route-client.ts";
 import { pageCss } from "./page-css.ts";
 
 type PageAsset = { body: string; contentType: string; url: string };
@@ -33,7 +34,7 @@ export const pageStylesheet = versioned(
 );
 export const pageScript = versioned(
   "client",
-  `${viewTransitionClient}${displayControlsClient}${directoryTableClient}${relativeTimeClient}${pageClient}${markdownTocClient}${codeToolbarClient}${fileSearchClient}${contentSearchClient}${editClient}`,
+  `${viewTransitionClient}${displayControlsClient}${directoryTableClient}${relativeTimeClient}${pageClient}${markdownTocClient}${codeToolbarClient}${fileSearchClient}${contentSearchClient}${editClient}${editorRouteClient}`,
   "text/javascript; charset=UTF-8",
 );
 

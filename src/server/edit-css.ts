@@ -1,13 +1,12 @@
 export const editCss = `
 .edit-page { --edit-font-size: 13px; display: grid; gap: 10px; padding: 12px; }
 .edit-status { color: var(--code-muted); font: 13px ui-monospace, monospace; margin: 0; }
-.edit-layout-controls { display: none; justify-content: end; }
-.edit-page.is-enhanced .edit-layout-controls { display: flex; }
-.edit-layout-controls button { align-items: center; background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 0; color: var(--code-muted); display: inline-flex; height: 28px; justify-content: center; margin-left: -1px; padding: 0; width: 34px; }
-.edit-layout-controls button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
-.edit-layout-controls button:last-child { border-radius: 0 6px 6px 0; }
-.edit-layout-controls button:hover, .edit-layout-controls button.is-selected { background: var(--code-hover); color: var(--focus-color); }
-.edit-layout-controls button:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 1px; z-index: 1; }
+.edit-layout-controls { display: flex; justify-content: end; }
+.edit-layout-controls a { align-items: center; background: var(--code-bg); border: 1px solid var(--code-border); border-radius: 0; color: var(--code-muted); display: inline-flex; height: 28px; justify-content: center; margin-left: -1px; padding: 0; width: 34px; }
+.edit-layout-controls a:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
+.edit-layout-controls a:last-child { border-radius: 0 6px 6px 0; }
+.edit-layout-controls a:hover, .edit-layout-controls a.is-selected { background: var(--code-hover); color: var(--focus-color); }
+.edit-layout-controls a:focus-visible { outline: 2px solid var(--focus-color); outline-offset: 1px; z-index: 1; }
 .edit-layout-controls svg { fill: none; height: 16px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.5; width: 16px; }
 .edit-workspace.is-markdown { display: grid; min-width: 0; }
 .edit-workspace.is-markdown[data-edit-layout="editor"] .edit-markdown-preview { display: none; }

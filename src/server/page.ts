@@ -15,6 +15,7 @@ import { reloadClientScript } from "./reload-client.ts";
 import type { ServerConfig } from "./types.ts";
 import { gitDirtyCount, type GitStatus } from "./git/status.ts";
 import { markdownViewHref } from "./page-action.ts";
+import { queryHref, retainQuery, setQuery } from "./query.ts";
 
 export async function page(
   config: ServerConfig,
@@ -166,8 +167,14 @@ function renderSourcePanel(model: PageModel): string {
 }
 
 function renderEditPage(model: PageModel): string {
+  const layout = editLayout(model.url);
   return `<section class="markdown-source-panel markdown-edit-panel" aria-label="File editor"><form class="edit-page" method="post" action="${
-    escapeHtml(markdownViewHref(model.url, "edit"))
+    escapeHtml(
+      queryHref(
+        model.url.pathname,
+        retainQuery(model.url.search, ["edit", "theme", "wide"]),
+      ),
+    )
   }" data-edit-path="${
     escapeHtml(model.editPath ?? "")
   }"><input type="hidden" name="etag" value="${
@@ -175,12 +182,10 @@ function renderEditPage(model: PageModel): string {
   }"><p class="edit-status" role="status">${
     escapeHtml(model.editStatus ?? "Editing")
   }</p>${
-    model.editPreview === undefined
-      ? ""
-      : `<nav class="edit-layout-controls" aria-label="Editor layout"><button type="button" class="is-selected" data-edit-layout="editor" aria-label="Write only" title="Write only" aria-pressed="true"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 13 1-4 7-7 3 3-7 7-4 1Z M9.5 3.5l3 3"/></svg></button><button type="button" data-edit-layout="split-horizontal" aria-label="Stacked editor and preview" title="Stacked editor and preview" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M2 8h12"/></svg></button><button type="button" data-edit-layout="split-vertical" aria-label="Editor and preview side by side" title="Editor and preview side by side" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M8 2v12"/></svg></button><button type="button" data-edit-layout="preview" aria-label="Preview only" title="Preview only" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8s2.5-4 7-4 7 4 7 4-2.5 4-7 4-7-4-7-4Z"/><circle cx="8" cy="8" r="2"/></svg></button></nav>`
+    model.editPreview === undefined ? "" : renderEditLayouts(layout, model.url)
   }<div class="edit-workspace${
     model.editPreview === undefined ? "" : " is-markdown"
-  }" data-edit-layout="editor"><div class="edit-surface"><pre class="edit-highlight code-block" aria-hidden="true"><code>${
+  }" data-edit-layout="${layout}"><div class="edit-surface"><pre class="edit-highlight code-block" aria-hidden="true"><code>${
     model.editHighlight ?? ""
   }</code></pre><div class="edit-gutter" aria-label="Git changes"></div><textarea class="edit-text" name="content" spellcheck="false" aria-label="File contents">${
     escapeHtml(model.editText ?? "")
@@ -195,6 +200,55 @@ function renderEditPage(model: PageModel): string {
         escapeHtml(model.editCurrentText)
       }</pre></details>`
   }<div class="edit-buttons"><button type="submit">Save</button></div></form></section>`;
+}
+
+function editLayout(
+  url: URL,
+): "editor" | "split-horizontal" | "split-vertical" | "preview" {
+  return ({
+    "preview-stacked": "split-horizontal",
+    "preview-side-by-side": "split-vertical",
+    preview: "preview",
+  } as const)[url.searchParams.get("edit") ?? ""] ?? "editor";
+}
+
+function renderEditLayouts(
+  layout: ReturnType<typeof editLayout>,
+  url: URL,
+): string {
+  const retained = retainQuery(url.search, ["theme", "wide"]);
+  const href = (mode: string | null) =>
+    queryHref("", setQuery(retained, "edit", mode));
+  const controls = [[
+    "editor",
+    href(null),
+    "Write only",
+    '<path d="m3 13 1-4 7-7 3 3-7 7-4 1Z M9.5 3.5l3 3"/>',
+  ], [
+    "split-horizontal",
+    href("preview-stacked"),
+    "Stacked editor and preview",
+    '<rect x="2" y="2" width="12" height="12" rx="1"/><path d="M2 8h12"/>',
+  ], [
+    "split-vertical",
+    href("preview-side-by-side"),
+    "Editor and preview side by side",
+    '<rect x="2" y="2" width="12" height="12" rx="1"/><path d="M8 2v12"/>',
+  ], [
+    "preview",
+    href("preview"),
+    "Preview only",
+    '<path d="M1 8s2.5-4 7-4 7 4 7 4-2.5 4-7 4-7-4-7-4Z"/><circle cx="8" cy="8" r="2"/>',
+  ]] as const;
+  return `<nav class="edit-layout-controls" aria-label="Editor layout">${
+    controls.map(([name, href, label, icon]) =>
+      `<a href="${escapeHtml(href)}" data-edit-layout="${name}" class="${
+        layout === name ? "is-selected" : ""
+      }" aria-label="${label}" title="${label}"${
+        layout === name ? ' aria-current="true"' : ""
+      }><svg viewBox="0 0 16 16" aria-hidden="true">${icon}</svg></a>`
+    ).join("")
+  }</nav>`;
 }
 
 function renderPageContent(model: PageModel): string {

@@ -76,13 +76,16 @@ uses version checks and atomic replacement; it cannot create files or follow
 symlinks. Dedicated edit pages and their Save forms work without JavaScript.
 When JavaScript and Git are available, the editor adds live highlighting and Git
 `HEAD` change markers. Reverting a marker only updates the draft; only Save
-writes to disk. Markdown editors default to a full-width editor and can switch
-to stacked, side-by-side, or preview-only layouts. Split layouts synchronize
-scrolling and mark the editor caret or selection in the rendered preview. Other
-source formats use their syntax highlighting. The browser warns before leaving a
-changed draft. Live-reload events automatically load and three-way merge
-external filesystem changes; overlapping edits remain marked for manual
-resolution.
+writes to disk. Markdown editors default to a full-width editor and link to
+stacked, side-by-side, or preview-only layouts. Split layouts synchronize
+scrolling and mark the editor caret or selection in the rendered preview.
+Enhanced pages keep the draft, file version, selection, and scroll positions in
+the URL across layout changes, reloads, and browser history. Browser-session
+storage safeguards new input while URL compression is pending and holds drafts
+too large for a practical URL. Other source formats use their syntax
+highlighting. The browser warns before leaving a changed draft. Live-reload
+events automatically load and three-way merge external filesystem changes;
+overlapping edits remain marked for manual resolution.
 
 ## URLs and pages
 

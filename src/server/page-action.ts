@@ -61,7 +61,7 @@ export function markdownViewHref(
 
 export function savedEditHref(url: URL): string {
   const query = setQuery(
-    setQuery(retainQuery(url.search, ["theme", "wide"]), "edit", null),
+    retainQuery(url.search, ["edit", "theme", "wide"]),
     "saved",
     null,
   );

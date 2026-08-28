@@ -1,3 +1,5 @@
+import { installDialogDismissal } from "./dialog-dismissal-client.ts";
+
 export function installContentSearch(
   document: ClientDocument,
   location: ClientLocation,
@@ -9,7 +11,7 @@ export function installContentSearch(
   const open = () => {
     if (!search) search = createSearch(document, location, fetch, scope);
     const { dialog, input } = search;
-    dialog.showModal();
+    if (!dialog.open) dialog.showModal();
     input.value = "";
     input.dispatchEvent(new Event("input"));
     input.focus();
@@ -20,7 +22,7 @@ export function installContentSearch(
       event.key !== "/" || event.altKey || event.ctrlKey || event.metaKey ||
       event.shiftKey ||
       target?.closest(
-        'input, textarea, select, button, [contenteditable], [contenteditable="true"]',
+        "a, input, textarea, select, button, [contenteditable]",
       )
     ) return;
     event.preventDefault();
@@ -119,6 +121,7 @@ function createSearch(
   };
   const schedule = () => {
     clearTimeout(timer);
+    controller?.abort();
     timer = setTimeout(load, 180) as unknown as number;
   };
   form.addEventListener("input", schedule);
@@ -126,10 +129,7 @@ function createSearch(
   dialog.addEventListener("keydown", (event) => {
     if (event.target !== input) return;
     const links = list.querySelectorAll("a");
-    if (event.key === "Escape") {
-      event.preventDefault();
-      dialog.close();
-    } else if (event.key === "Enter" && links[selected]) {
+    if (event.key === "Enter" && links[selected]) {
       event.preventDefault();
       location.assign(links[selected].href);
     } else if (
@@ -145,7 +145,7 @@ function createSearch(
       links[selected].scrollIntoView({ block: "nearest" });
     }
   });
-  dialog.addEventListener("close", clear);
+  installDialogDismissal(dialog, clear);
   return { dialog, input };
 }
 
@@ -248,6 +248,7 @@ type ClientElement = {
   scrollIntoView(options: { block: string }): void;
   setAttribute(name: string, value: string): void;
   showModal(): void;
+  open: boolean;
   toggleAttribute(name: string, force?: boolean): boolean;
   closest(selector: string): ClientElement | null;
 };

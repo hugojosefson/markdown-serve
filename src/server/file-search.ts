@@ -1,4 +1,4 @@
-import { isAbsolute, join, relative } from "@std/path";
+import { join, relative } from "@std/path";
 import { entryRoute } from "./entry-route.ts";
 import { canonicalPath, lexical } from "./paths.ts";
 import { readCapped } from "./capped-stream.ts";
@@ -13,7 +13,8 @@ const finderTimeoutMilliseconds = 1_500;
 export type FileSearchResult = { name: string; path: string; href: string };
 export type FinderRunner = (
   finders: ("fd" | "fdfind")[],
-  scope: string,
+  root: string,
+  query: string,
   signal?: AbortSignal,
 ) => Promise<string[]>;
 export type FinderChild = {
@@ -23,53 +24,52 @@ export type FinderChild = {
 };
 export type FinderSpawner = (
   finder: "fd" | "fdfind",
-  scope: string,
+  root: string,
+  query: string,
 ) => FinderChild;
 
 export async function searchFiles(
   config: ServerConfig,
-  scopeParts: string[],
+  query: string,
   signal?: AbortSignal,
 ): Promise<FileSearchResult[]> {
   if (signal?.aborted) return [];
-  const scope = join(config.rootPath, ...scopeParts);
-  const info = await config.catalog.stat(scope);
-  if (!info?.isDirectory || !(await scopeWithinRoot(config.rootPath, scope))) {
-    return [];
-  }
   const paths = config.finders?.length
     ? await (config.finderRunner ?? searchedByFinder)(
       config.finders,
-      scope,
+      config.rootPath,
+      query,
       signal,
     ).catch(() => undefined)
     : undefined;
   if (signal?.aborted) return [];
-  const names = paths ?? await searchedByCatalog(scope, signal);
-  return names.map((name) => resultFor(scopeParts, name)).toSorted((a, b) =>
-    lexical(a.path, b.path)
-  );
+  const names = paths
+    ? await normalizeFinderPaths(config, paths, query, signal)
+    : await searchedByCatalog(config.rootPath, query, signal);
+  return names.map(resultFor).toSorted((a, b) => lexical(a.path, b.path));
 }
 
-function resultFor(scope: string[], name: string): FileSearchResult {
-  const parts = name.split("/");
-  const route = entryRoute([...scope, ...parts.slice(0, -1)], {
+function resultFor(name: string): FileSearchResult {
+  const directory = name.endsWith("/");
+  const parts = name.replace(/\/$/, "").split("/");
+  const route = entryRoute(parts.slice(0, -1), {
     name: parts.at(-1)!,
-    directory: false,
+    directory,
   });
   return { name, path: name, href: canonicalPath(route.parts, route.trailing) };
 }
 
 async function searchedByFinder(
   finders: ("fd" | "fdfind")[],
-  scope: string,
+  root: string,
+  query: string,
   signal?: AbortSignal,
 ): Promise<string[]> {
   if (signal?.aborted) throw new Error("finder cancelled");
   let error: unknown;
   for (const finder of finders) {
     try {
-      return await runFinder(finder, scope, signal);
+      return await runFinder(finder, root, query, signal);
     } catch (caught) {
       error = caught;
       if (signal?.aborted) throw caught;
@@ -78,18 +78,26 @@ async function searchedByFinder(
   throw error;
 }
 
-const runFinder = createFinderRunner((finder, scope) =>
+const runFinder = createFinderRunner((finder, root, query) =>
   new Deno.Command(finder, {
     args: [
       "--type",
       "file",
+      "--type",
+      "directory",
       "--hidden",
+      "--no-ignore",
+      "--ignore-case",
+      "--full-path",
+      "--exclude",
+      ".git",
       "--print0",
       "--max-results",
       String(maximumResults),
-      ".",
+      "--",
+      subsequenceRegex(query),
     ],
-    cwd: scope,
+    cwd: root,
     stdin: "null",
     stdout: "piped",
     stderr: "null",
@@ -104,12 +112,13 @@ export function createFinderRunner(
   },
 ): (
   finder: "fd" | "fdfind",
-  scope: string,
+  root: string,
+  query: string,
   signal?: AbortSignal,
 ) => Promise<string[]> {
-  return async (finder, scope, signal) => {
+  return async (finder, root, query, signal) => {
     if (signal?.aborted) throw new Error("finder cancelled");
-    const child = spawn(finder, scope);
+    const child = spawn(finder, root, query);
     const terminator = childTerminator(child);
     let failure: Error | undefined;
     const outputAbort = new AbortController();
@@ -154,16 +163,42 @@ export function createFinderRunner(
 export function parseFinderOutput(output: Uint8Array): string[] {
   return new TextDecoder().decode(output).split("\0").filter(Boolean)
     .map((path) => path.replaceAll("\\", "/").replace(/^\.\//, ""))
-    .filter(safeRelativePath)
+    .filter((path) => safeRelativePath(path.replace(/\/$/, "")))
     .slice(0, maximumResults);
 }
 
-async function searchedByCatalog(
-  scope: string,
+async function normalizeFinderPaths(
+  config: ServerConfig,
+  paths: string[],
+  query: string,
   signal?: AbortSignal,
 ): Promise<string[]> {
   const results: string[] = [];
-  const pending = [scope];
+  for (const path of paths) {
+    if (signal?.aborted || results.length === maximumResults) break;
+    const normalized = path.replace(/\/$/, "");
+    if (
+      !safeRelativePath(normalized) || !subsequenceMatch(path, query)
+    ) continue;
+    const candidate = join(config.rootPath, normalized);
+    const link = await Deno.lstat(candidate).catch(() => undefined);
+    if (!link || link.isSymlink) continue;
+    const info = await config.catalog.stat(candidate);
+    if (info?.isFile) results.push(normalized);
+    if (info?.isDirectory && normalized !== ".git") {
+      results.push(`${normalized}/`);
+    }
+  }
+  return results;
+}
+
+async function searchedByCatalog(
+  root: string,
+  query: string,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const results: string[] = [];
+  const pending = [root];
   let examined = 0;
   while (
     pending.length && results.length < maximumResults &&
@@ -181,11 +216,17 @@ async function searchedByCatalog(
           continue;
         }
         const path = join(directory, entry.name);
+        const name = relative(root, path).replaceAll("\\", "/") +
+          (entry.isDirectory ? "/" : "");
         if (entry.isDirectory) {
           pending.push(path);
-        } else if (entry.isFile) {
-          const name = relative(scope, path).replaceAll("\\", "/");
-          if (safeRelativePath(name)) results.push(name);
+        }
+        if (
+          (entry.isDirectory || entry.isFile) &&
+          safeRelativePath(name.replace(/\/$/, "")) &&
+          subsequenceMatch(name, query)
+        ) {
+          results.push(name);
         }
       }
     } catch (error) {
@@ -193,6 +234,21 @@ async function searchedByCatalog(
     }
   }
   return results;
+}
+
+export function subsequenceMatch(path: string, query: string): boolean {
+  const expected = [...query.toLowerCase()];
+  let index = 0;
+  for (const character of path.toLowerCase()) {
+    if (character === expected[index]) index++;
+  }
+  return index === expected.length;
+}
+
+function subsequenceRegex(query: string): string {
+  return [...query].map((character) =>
+    character.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&")
+  ).join(".*");
 }
 
 function transientDirectoryError(error: unknown): boolean {
@@ -206,18 +262,4 @@ function safeRelativePath(path: string): boolean {
     path.split("/").every((part) =>
       part !== "" && part !== "." && part !== ".."
     );
-}
-
-async function scopeWithinRoot(root: string, scope: string): Promise<boolean> {
-  try {
-    const path = relative(
-      await Deno.realPath(root),
-      await Deno.realPath(scope),
-    );
-    return path === "" ||
-      (!(path === ".." || path.startsWith("../") || path.startsWith("..\\")) &&
-        !isAbsolute(path));
-  } catch {
-    return false;
-  }
 }

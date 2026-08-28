@@ -2,134 +2,145 @@ import { assertEquals, assertMatch, assertRejects } from "@std/assert";
 import {
   createFinderRunner,
   parseFinderOutput,
+  subsequenceMatch,
 } from "../src/server/file-search.ts";
 import { fixture, handler } from "./fixture.ts";
 
-Deno.test("scoped file search includes dotfiles and uses canonical file routes", async () => {
+Deno.test("root-wide file search matches full paths, directories, and canonical routes", async () => {
   const f = await fixture({
     ".hidden": "x",
     "guide.md": "guide",
     "docs/note.txt": "note",
     "docs/nested/.secret": "secret",
-    "..scope/inside.txt": "inside",
+    ".git/config": "excluded",
   });
   try {
     const h = await handler(f.root);
     const response = await h(
-      new Request("http://x/__markdown_serve__/files?path=docs"),
+      new Request("http://x/__markdown_serve__/files?search=nt"),
+    );
+    assertEquals(await response.json(), [{
+      name: "docs/nested/",
+      path: "docs/nested/",
+      href: "/docs/nested/",
+    }, {
+      name: "docs/nested/.secret",
+      path: "docs/nested/.secret",
+      href: "/docs/nested/.secret",
+    }, {
+      name: "docs/note.txt",
+      path: "docs/note.txt",
+      href: "/docs/note.txt",
+    }]);
+    const root = await h(
+      new Request("http://x/__markdown_serve__/files?search="),
+    );
+    const values = await root.json();
+    assertEquals(
+      values.some((value: { path: string; href: string }) =>
+        value.path === "docs/" && value.href === "/docs/"
+      ),
+      true,
     );
     assertEquals(
-      response.headers.get("content-type"),
-      "application/json; charset=utf-8",
+      values.some((value: { path: string }) => value.path.startsWith(".git")),
+      false,
     );
-    assertEquals(await response.json(), [
-      {
-        name: "nested/.secret",
-        path: "nested/.secret",
-        href: "/docs/nested/.secret",
-      },
-      { name: "note.txt", path: "note.txt", href: "/docs/note.txt" },
-    ]);
-    const root = await h(
-      new Request("http://x/__markdown_serve__/files?path="),
+    assertMatch(
+      await (await h(new Request("http://x/docs/note.txt"))).text(),
+      /data-go-to-file-prefix="docs\/"/,
     );
-    assertEquals(await root.json(), [
-      {
-        name: "..scope/inside.txt",
-        path: "..scope/inside.txt",
-        href: "/..scope/inside.txt",
-      },
-      { name: ".hidden", path: ".hidden", href: "/.hidden" },
-      {
-        name: "docs/nested/.secret",
-        path: "docs/nested/.secret",
-        href: "/docs/nested/.secret",
-      },
-      { name: "docs/note.txt", path: "docs/note.txt", href: "/docs/note.txt" },
-      { name: "guide.md", path: "guide.md", href: "/guide" },
-    ]);
-    const dottedScope = await h(
-      new Request("http://x/__markdown_serve__/files?path=..scope"),
-    );
-    assertEquals(await dottedScope.json(), [{
-      name: "inside.txt",
-      path: "inside.txt",
-      href: "/..scope/inside.txt",
-    }]);
-    const page = await (await h(new Request("http://x/docs/note.txt"))).text();
-    assertMatch(page, /data-go-to-file-scope="docs"/);
     assertMatch(
       await (await h(new Request("http://x/guide"))).text(),
-      /data-go-to-file-scope=""/,
+      /data-go-to-file-prefix=""/,
     );
   } finally {
     await f.cleanup();
   }
 });
 
-Deno.test("file search validates scopes and handles HEAD and methods", async () => {
-  const f = await fixture({ "safe.txt": "safe" });
+Deno.test("file search validates query length and caps after filtering", async () => {
+  const f = await fixture(
+    Object.fromEntries(
+      Array.from({ length: 205 }, (_, i) => [`many/${i}.txt`, "x"]),
+    ),
+  );
   try {
     const h = await handler(f.root);
     assertEquals(
-      (await h(new Request("http://x/__markdown_serve__/files?path=..")))
-        .status,
+      (await h(
+        new Request(
+          `http://x/__markdown_serve__/files?search=${"😀".repeat(257)}`,
+        ),
+      )).status,
       400,
     );
-    const head = await h(
-      new Request("http://x/__markdown_serve__/files?path=", {
-        method: "HEAD",
-      }),
+    assertEquals(
+      (await (await h(
+        new Request("http://x/__markdown_serve__/files?search=.txt"),
+      )).json()).length,
+      200,
     );
-    assertEquals([head.status, await head.text()], [200, ""]);
-    const post = await h(
-      new Request("http://x/__markdown_serve__/files?path=", {
-        method: "POST",
-      }),
+    assertEquals(
+      (await h(
+        new Request("http://x/__markdown_serve__/files?search=", {
+          method: "HEAD",
+        }),
+      )).status,
+      200,
     );
-    assertEquals([post.status, post.headers.get("allow")], [405, "GET, HEAD"]);
   } finally {
     await f.cleanup();
   }
 });
 
-Deno.test("file search caps results, escapes special names, and tolerates removed scopes", async () => {
-  const f = await fixture({
-    ...Object.fromEntries(
-      Array.from({ length: 205 }, (_, index) => [`many/${index}.txt`, "x"]),
+Deno.test("subsequence matching is deterministic and case insensitive", () => {
+  assertEquals([
+    subsequenceMatch("docs/Note.TXT", "dnt"),
+    subsequenceMatch("docs/Note.TXT", "td"),
+  ], [true, false]);
+  assertEquals(
+    parseFinderOutput(
+      new TextEncoder().encode(".\\dir\\guide.md\0.\\dir\\nested\\\0"),
     ),
-    "nested/space #?.md": "special",
-    "vanished/file.txt": "gone",
+    ["dir/guide.md", "dir/nested/"],
+  );
+});
+
+Deno.test("finder results stay root-scoped and continue after non-matches", async () => {
+  const f = await fixture({
+    "docs/match.txt": "match",
+    "docs/nested/value.txt": "value",
   });
   try {
-    const h = await handler(f.root);
-    const many = await h(
-      new Request("http://x/__markdown_serve__/files?path=many"),
+    let received = "";
+    const h = await handler(f.root, {
+      finders: ["fd"],
+      finderRunner: (_finders, _root, query) => {
+        received = query;
+        return Promise.resolve([
+          "outside.txt",
+          "../escape.txt",
+          "docs/match.txt",
+          "docs/nested",
+        ]);
+      },
+    });
+    const response = await h(
+      new Request("http://x/__markdown_serve__/files?search=dmt"),
     );
-    assertEquals((await many.json()).length, 200);
-    const nested = await h(
-      new Request("http://x/__markdown_serve__/files?path=nested"),
-    );
-    assertEquals(await nested.json(), [{
-      name: "space #?.md",
-      path: "space #?.md",
-      href: "/nested/space%20%23%3F",
+    assertEquals(received, "dmt");
+    assertEquals(await response.json(), [{
+      name: "docs/match.txt",
+      path: "docs/match.txt",
+      href: "/docs/match.txt",
     }]);
-    await Deno.remove(`${f.root}/vanished`, { recursive: true });
-    const vanished = await h(
-      new Request("http://x/__markdown_serve__/files?path=vanished"),
-    );
-    assertEquals(await vanished.json(), []);
   } finally {
     await f.cleanup();
   }
 });
 
-Deno.test("finder output normalizes Windows paths and finder failure falls back", async () => {
-  assertEquals(
-    parseFinderOutput(new TextEncoder().encode(".\\dir\\guide.md\0")),
-    ["dir/guide.md"],
-  );
+Deno.test("finder failure falls back to root traversal", async () => {
   const f = await fixture({ "fallback.txt": "x" });
   try {
     const h = await handler(f.root, {
@@ -137,7 +148,7 @@ Deno.test("finder output normalizes Windows paths and finder failure falls back"
       finderRunner: () => Promise.reject(new Error("broken finder")),
     });
     const response = await h(
-      new Request("http://x/__markdown_serve__/files?path="),
+      new Request("http://x/__markdown_serve__/files?search=fbt"),
     );
     assertEquals(await response.json(), [{
       name: "fallback.txt",
@@ -149,46 +160,27 @@ Deno.test("finder output normalizes Windows paths and finder failure falls back"
   }
 });
 
-Deno.test("finder caps streamed output and times out without a binary", async () => {
-  const stream = (text: string, open = false) =>
-    new ReadableStream<Uint8Array>({
-      start(controller) {
-        if (text) controller.enqueue(new TextEncoder().encode(text));
-        if (!open) controller.close();
-      },
-    });
-  const child = (stdout: ReadableStream<Uint8Array>) => {
-    let settle!: () => void;
-    const signals: Deno.Signal[] = [];
-    return {
-      stdout,
-      status: new Promise<Deno.CommandStatus>((resolve) => {
-        settle = () =>
-          resolve({ success: false, code: 137, signal: "SIGKILL" });
-      }),
-      kill(signal: Deno.Signal = "SIGTERM") {
-        signals.push(signal);
-        if (signal === "SIGKILL") settle();
-      },
-      signals,
-    };
+Deno.test("finder runner preserves output and timeout bounds", async () => {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode("x".repeat(21)));
+      controller.close();
+    },
+  });
+  let settle!: () => void;
+  const child = {
+    stdout: stream,
+    status: new Promise<Deno.CommandStatus>((resolve) =>
+      settle = () => resolve({ success: false, code: 137, signal: "SIGKILL" })
+    ),
+    kill(signal?: Deno.Signal) {
+      if (signal === "SIGKILL") settle();
+    },
   };
-  const excessive = child(stream("x".repeat(21)));
-  await assertRejects(
-    () =>
-      createFinderRunner(() => excessive, {
-        timeoutMilliseconds: 100,
-        outputBytes: 20,
-      })("fd", "."),
+  await assertRejects(() =>
+    createFinderRunner(() => child, {
+      timeoutMilliseconds: 100,
+      outputBytes: 20,
+    })("fd", ".", "")
   );
-  assertEquals(excessive.signals, ["SIGTERM", "SIGKILL"]);
-  const timeout = child(stream("", true));
-  await assertRejects(
-    () =>
-      createFinderRunner(() => timeout, {
-        timeoutMilliseconds: 1,
-        outputBytes: 20,
-      })("fd", "."),
-  );
-  assertEquals(timeout.signals, ["SIGTERM", "SIGKILL"]);
 });

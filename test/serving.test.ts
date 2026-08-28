@@ -239,6 +239,43 @@ Deno.test("file actions have stable placements and preserve raw/download priorit
   }
 });
 
+Deno.test("Markdown edit view owns the content area and shares source styling", async () => {
+  const f = await fixture({
+    "guide.md": "# Guide\n\nRendered paragraph.\n",
+  });
+  try {
+    const h = await handler(f.root, { edit: true });
+    const edit = await (await h(
+      new Request("http://x/guide?edit&metadata&theme=dark&wide"),
+    )).text();
+    assertMatch(
+      edit,
+      /aria-label="Markdown view"><a[^>]*>Rendered<\/a><a[^>]*>Source<\/a><a class="is-selected"[^>]*>Edit<\/a>/,
+    );
+    assertMatch(
+      edit,
+      /<section class="markdown-source-panel markdown-edit-panel"[\s\S]*<textarea class="edit-text"[^>]*># Guide\n\nRendered paragraph\.\n<\/textarea>/,
+    );
+    assertEquals(edit.includes("markdown-toc"), false);
+    assertEquals(
+      edit.includes('<section class="file-metadata-details"'),
+      false,
+    );
+    assertEquals(edit.includes('<h1 id="guide"'), false);
+    assertMatch(edit, /class="edit-highlight"[\s\S]*class="token/);
+
+    const source = await (await h(new Request("http://x/guide?source"))).text();
+    assertMatch(source, /class="markdown-source-panel"/);
+    assertMatch(source, /id="L1"/);
+    assertMatch(
+      source,
+      />Rendered<\/a><a class="is-selected"[^>]*>Source<\/a><a[^>]*>Edit<\/a>/,
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
 Deno.test("site previews serve scoped assets and safely resolve directories", async () => {
   const f = await fixture({
     "site/index.html":

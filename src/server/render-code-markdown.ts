@@ -69,6 +69,12 @@ export function renderCodeBlock(text: string, language: string): string {
   });
 }
 
+export function renderHighlightedCode(text: string, language: string): string {
+  const rendered = renderCodeBlock(text, language);
+  return rendered.match(/<code[^>]*>([\s\S]*)<\/code>/)?.[1] ??
+    rendered.match(/<pre[^>]*>([\s\S]*)<\/pre>/)?.[1] ?? "";
+}
+
 export function renderSourceCodeBlock(
   text: string,
   language: string,

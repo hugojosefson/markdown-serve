@@ -14,7 +14,7 @@ import type { PageModel } from "./page-model.ts";
 import { reloadClientScript } from "./reload-client.ts";
 import type { ServerConfig } from "./types.ts";
 import { gitDirtyCount, type GitStatus } from "./git/status.ts";
-import { markdownSourceHref } from "./page-action.ts";
+import { markdownViewHref } from "./page-action.ts";
 
 export async function page(
   config: ServerConfig,
@@ -47,8 +47,9 @@ function renderBody(
   navigation: string,
   status?: GitStatus,
 ): string {
-  const metadataExpanded = model.url.searchParams.has("metadata");
-  const sourceExpanded = model.sourceExpanded ?? false;
+  const metadataExpanded = model.markdownView === "edit" || model.editView
+    ? false
+    : model.url.searchParams.has("metadata");
   const scope = model.directory ? model.parts : model.parts.slice(0, -1);
   return `<body data-go-to-file-scope="${
     escapeHtml(scope.join("/"))
@@ -56,12 +57,16 @@ function renderBody(
     escapeHtml(scope.join("/"))
   }"><div class="layout"><aside class="tree"><details class="tree-disclosure" open><summary>Files</summary>${navigation}</details></aside><main class="content markdown-body">${
     repoContext(status)
-  }${renderContentHeader(config, model, metadataExpanded, sourceExpanded)}${
+  }${renderContentHeader(config, model, metadataExpanded)}${
     model.metadata && metadataExpanded
       ? renderFileMetadataDetails(model.metadata, model.url)
       : ""
   }${
-    sourceExpanded ? renderSourcePanel(model) : renderPageContent(model)
+    model.markdownView === "source"
+      ? renderSourcePanel(model)
+      : model.markdownView === "edit" || model.editView
+      ? renderEditPage(model)
+      : renderPageContent(model)
   }</main></div><script src="${pageScript.url}"></script>${
     reloadClient(config)
   }</body>`;
@@ -90,7 +95,6 @@ function renderContentHeader(
   config: ServerConfig,
   model: PageModel,
   metadataExpanded: boolean,
-  sourceExpanded: boolean,
 ): string {
   const breadcrumb = breadcrumbs(
     config.rootLabel,
@@ -105,11 +109,17 @@ function renderContentHeader(
   return `<header class="content-header${
     model.metadata && metadataExpanded ? " metadata-expanded" : ""
   }">${breadcrumb}${actions}<div class="content-controls">${
-    model.sourceExpanded === undefined
-      ? ""
-      : renderMarkdownViewToggle(model.url, sourceExpanded)
+    model.markdownView === undefined
+      ? model.editPath
+        ? renderTextViewToggle(model.url, Boolean(model.editView))
+        : ""
+      : renderMarkdownViewToggle(
+        model.url,
+        model.markdownView,
+        Boolean(model.editPath),
+      )
   }${
-    model.sourceExpanded === undefined
+    model.markdownView === undefined
       ? ""
       : `<div class="file-actions">${
         renderFileActions(
@@ -122,33 +132,63 @@ function renderContentHeader(
     model.metadata
       ? renderFileMetadataSummary(model.metadata, model.url, metadataExpanded)
       : ""
-  }${model.editPath ? editControl(model.editPath) : ""}${
-    displayLinks(model.url, model.directoryView ?? false)
-  }</div></header>`;
+  }${displayLinks(model.url, model.directoryView ?? false)}</div></header>`;
 }
 
-function editControl(path: string): string {
-  return `<button class="file-action edit-file" type="button" data-edit-path="${
-    escapeHtml(path)
-  }">Edit</button><dialog class="edit-dialog"><form method="dialog"><p class="edit-status" role="status">Loading…</p><textarea class="edit-text" spellcheck="false" aria-label="File contents"></textarea><div><button class="edit-cancel" value="cancel" type="button">Cancel</button><button class="edit-reload" type="button" hidden>Reload</button><button class="edit-save" type="button">Save</button></div></form></dialog>`;
+function renderMarkdownViewToggle(
+  url: URL,
+  view: "rendered" | "source" | "edit",
+  editable: boolean,
+): string {
+  const link = (target: "rendered" | "source" | "edit", label: string) =>
+    `<a class="${view === target ? "is-selected" : ""}" href="${
+      escapeHtml(markdownViewHref(url, target))
+    }"${view === target ? ' aria-current="true"' : ""}>${label}</a>`;
+  return `<nav class="markdown-view-toggle" aria-label="Markdown view">${
+    link("rendered", "Rendered")
+  }${link("source", "Source")}${editable ? link("edit", "Edit") : ""}</nav>`;
 }
 
-function renderMarkdownViewToggle(url: URL, source: boolean): string {
-  return `<nav class="markdown-view-toggle" aria-label="Markdown view"><a class="${
-    source ? "" : "is-selected"
-  }" href="${escapeHtml(markdownSourceHref(url, true))}"${
-    source ? "" : ' aria-current="true"'
-  }>Rendered</a><a class="${source ? "is-selected" : ""}" href="${
-    escapeHtml(markdownSourceHref(url, false))
-  }"${source ? ' aria-current="true"' : ""}>Source</a></nav>`;
+function renderTextViewToggle(url: URL, edit: boolean): string {
+  const link = (target: "rendered" | "edit", label: string) =>
+    `<a class="${edit === (target === "edit") ? "is-selected" : ""}" href="${
+      escapeHtml(markdownViewHref(url, target))
+    }"${
+      edit === (target === "edit") ? ' aria-current="true"' : ""
+    }>${label}</a>`;
+  return `<nav class="markdown-view-toggle" aria-label="Text view">${
+    link("rendered", "Source")
+  }${link("edit", "Edit")}</nav>`;
 }
 
 function renderSourcePanel(model: PageModel): string {
   return `<section class="markdown-source-panel" aria-label="Markdown source">${model.content}</section>`;
 }
 
+function renderEditPage(model: PageModel): string {
+  return `<section class="markdown-source-panel markdown-edit-panel" aria-label="File editor"><form class="edit-page" method="post" action="${
+    escapeHtml(markdownViewHref(model.url, "edit"))
+  }" data-edit-path="${
+    escapeHtml(model.editPath ?? "")
+  }"><input type="hidden" name="etag" value="${
+    escapeHtml(model.editTag ?? "")
+  }"><p class="edit-status" role="status">${
+    escapeHtml(model.editStatus ?? "Editing")
+  }</p><div class="edit-surface"><pre class="edit-highlight" aria-hidden="true"><code>${
+    model.editHighlight ?? ""
+  }</code></pre><div class="edit-gutter" aria-label="Git changes"></div><textarea class="edit-text" name="content" spellcheck="false" aria-label="File contents">${
+    escapeHtml(model.editText ?? "")
+  }</textarea></div><section class="edit-hunk-details" aria-label="Git change" hidden><pre></pre><div><button class="edit-hunk-close" type="button">Close diff</button><button class="edit-hunk-revert" type="button">Revert change in editor</button></div></section>${
+    model.editCurrentText === undefined
+      ? ""
+      : `<details class="edit-current"><summary>Current file on disk</summary><pre>${
+        escapeHtml(model.editCurrentText)
+      }</pre></details>`
+  }<div class="edit-buttons"><button type="submit">Save</button></div></form></section>`;
+}
+
 function renderPageContent(model: PageModel): string {
-  if (model.sourceExpanded !== undefined) {
+  if (model.markdownView !== undefined) {
     return `<div class="page-content page-content-markdown">${model.content}</div>`;
   }
   if (!model.fileActions?.length) {

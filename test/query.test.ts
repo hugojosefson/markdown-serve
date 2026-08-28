@@ -7,8 +7,9 @@ import {
 } from "../src/server/query.ts";
 import { navigationQueryClient } from "../src/server/client-query.ts";
 import {
-  markdownSourceHref,
+  markdownViewHref,
   rawPageAction,
+  savedEditHref,
 } from "../src/server/page-action.ts";
 import { canonicalQueryFixtures } from "./query-fixtures.ts";
 
@@ -48,19 +49,15 @@ Deno.test("raw links are always query-relative and clean", () => {
   );
 });
 
-Deno.test("Markdown source links preserve same-file query state", () => {
-  const rendered = new URL(
-    "http://x/guide?metadata&order=size&theme=dark&unknown=value&wide",
+Deno.test("Markdown view links are mutually exclusive and canonical", () => {
+  const url = new URL(
+    "http://x/guide?edit&metadata&order=size&saved&source&theme=dark&unknown=value&wide",
   );
+  assertEquals(markdownViewHref(url, "rendered"), "?metadata&theme=dark&wide");
   assertEquals(
-    markdownSourceHref(rendered, false),
+    markdownViewHref(url, "source"),
     "?metadata&source&theme=dark&wide",
   );
-  const source = new URL(
-    "http://x/guide?metadata&order=size&source&theme=dark&unknown=value&wide",
-  );
-  assertEquals(
-    markdownSourceHref(source, true),
-    "?metadata&theme=dark&wide",
-  );
+  assertEquals(markdownViewHref(url, "edit"), "?edit&theme=dark&wide");
+  assertEquals(savedEditHref(url), "?edit&saved&theme=dark&wide");
 });

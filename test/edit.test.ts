@@ -101,6 +101,202 @@ Deno.test("edit endpoint supplies read headers and rejects unsafe writes", async
   }
 });
 
+Deno.test("Markdown edit page saves through an ordinary versioned form", async () => {
+  const f = await fixture({ "guide.md": "# first\n" });
+  try {
+    const on = await handler(f.root, { edit: true });
+    const page = await (await on(new Request("http://x/guide?edit"))).text();
+    assertMatch(
+      page,
+      /Rendered<\/a><a[^>]*>Source<\/a><a class="is-selected"[^>]*>Edit<\/a>/,
+    );
+    assertMatch(page, /<textarea[^>]*># first\n<\/textarea>/);
+    assertMatch(
+      page,
+      /class="token title important"|class="token punctuation"/,
+    );
+    assertEquals(page.includes("<h1"), false);
+    const tag = page.match(/name="etag" value="([^"]+)"/)?.[1].replaceAll(
+      "&quot;",
+      '"',
+    );
+    assertEquals(Boolean(tag), true);
+    const form = new URLSearchParams({ etag: tag!, content: "# second\n" });
+    const saved = await on(
+      new Request("http://x/guide?edit", {
+        method: "POST",
+        headers: {
+          Origin: "http://x",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: form,
+      }),
+    );
+    assertEquals([saved.status, saved.headers.get("location")], [
+      303,
+      "?edit&saved",
+    ]);
+    assertEquals(await Deno.readTextFile(`${f.root}/guide.md`), "# second\n");
+    const stale = await on(
+      new Request("http://x/guide?edit", {
+        method: "POST",
+        headers: {
+          Origin: "http://x",
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({ etag: tag!, content: "lost" }),
+      }),
+    );
+    assertEquals(stale.status, 409);
+    const conflict = await stale.text();
+    assertMatch(conflict, /Conflict: merge the current version/);
+    assertMatch(conflict, /<textarea[^>]*>lost<\/textarea>/);
+    assertMatch(conflict, /Current file on disk[\s\S]*# second/);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("native edit forms are bounded, strict, and same-origin", async () => {
+  const f = await fixture({ "guide.md": "original\n" });
+  try {
+    const on = await handler(f.root, { edit: true });
+    const tag = pageTag(
+      await (await on(new Request("http://x/guide?edit"))).text(),
+    );
+    const request = (body: BodyInit, origin = "http://x") =>
+      on(
+        new Request("http://x/guide?edit", {
+          method: "POST",
+          headers: {
+            ...(origin ? { Origin: origin } : {}),
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body,
+        }),
+      );
+    assertEquals(
+      (await request(new URLSearchParams({ etag: tag, content: "x" }), ""))
+        .status,
+      403,
+    );
+    assertEquals(
+      (await request(
+        new URLSearchParams({ etag: tag, content: "x" }),
+        "http://evil",
+      ))
+        .status,
+      403,
+    );
+    for (
+      const body of [
+        `etag=${encodeURIComponent(tag)}&content=%ZZ`,
+        `etag=${encodeURIComponent(tag)}&etag=${
+          encodeURIComponent(tag)
+        }&content=x`,
+        `etag=${encodeURIComponent(tag)}&content=x&extra=y`,
+        "etag=bad&content=x",
+      ]
+    ) {
+      assertEquals((await request(body)).status, 400);
+    }
+    const oversized = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode("x".repeat(editLimit * 3 + 1025)),
+        );
+        controller.close();
+      },
+    });
+    assertEquals((await request(oversized)).status, 413);
+    assertEquals(await Deno.readTextFile(`${f.root}/guide.md`), "original\n");
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("native edit forms preserve file line-ending and BOM policy", async () => {
+  const f = await fixture({ "guide.md": "one\ntwo\n" });
+  try {
+    const on = await handler(f.root, { edit: true });
+    const save = async (content: string) => {
+      const tag = pageTag(
+        await (await on(new Request("http://x/guide?edit"))).text(),
+      );
+      return await on(
+        new Request("http://x/guide?edit", {
+          method: "POST",
+          headers: {
+            Origin: "http://x",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({ etag: tag, content }),
+        }),
+      );
+    };
+    assertEquals((await save("changed\r\nlines\r\n")).status, 303);
+    assertEquals(
+      await Deno.readTextFile(`${f.root}/guide.md`),
+      "changed\nlines\n",
+    );
+
+    await Deno.writeTextFile(`${f.root}/guide.md`, "one\r\ntwo\r\n");
+    assertEquals((await save("changed\nlines\n")).status, 303);
+    assertEquals(
+      await Deno.readFile(`${f.root}/guide.md`),
+      new TextEncoder().encode(
+        "changed\r\nlines\r\n",
+      ),
+    );
+
+    await Deno.writeFile(
+      `${f.root}/guide.md`,
+      new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode("old\n")]),
+    );
+    assertEquals((await save("new\n")).status, 303);
+    assertEquals(
+      await Deno.readFile(`${f.root}/guide.md`),
+      new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode("new\n")]),
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("text and directory-index edit pages save without JavaScript", async () => {
+  const f = await fixture({
+    "note.txt": "note\n",
+    "docs/README.md": "# docs\n",
+  });
+  try {
+    const on = await handler(f.root, { edit: true });
+    for (
+      const [route, path, content] of [
+        ["/note.txt", "note.txt", "changed note\n"],
+        ["/docs/", "docs/README.md", "# changed docs\n"],
+      ] as const
+    ) {
+      const tag = pageTag(
+        await (await on(new Request(`http://x${route}?edit`))).text(),
+      );
+      const saved = await on(
+        new Request(`http://x${route}?edit`, {
+          method: "POST",
+          headers: {
+            Origin: "http://x",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({ etag: tag, content }),
+        }),
+      );
+      assertEquals(saved.status, 303);
+      assertEquals(await Deno.readTextFile(`${f.root}/${path}`), content);
+    }
+  } finally {
+    await f.cleanup();
+  }
+});
+
 Deno.test("edit controls expose only eligible files and preserve index paths", async () => {
   const f = await fixture({
     "note.txt": "text\n",
@@ -116,14 +312,19 @@ Deno.test("edit controls expose only eligible files and preserve index paths", a
       ),
       false,
     );
+    assertEquals((await off(new Request("http://x/docs/?edit"))).status, 404);
     const on = await handler(f.root, { edit: true });
     assertMatch(
       await (await on(new Request("http://x/note.txt"))).text(),
-      /data-edit-path="note\.txt"/,
+      /aria-label="Text view"[\s\S]*>Source<\/a><a[^>]*href="\?edit"[^>]*>Edit<\/a>/,
     );
     assertMatch(
-      await (await on(new Request("http://x/docs/"))).text(),
-      /data-edit-path="docs\/README\.md"/,
+      await (await on(new Request("http://x/note.txt?edit"))).text(),
+      /<form class="edit-page" method="post" action="\?edit" data-edit-path="note\.txt">/,
+    );
+    assertMatch(
+      await (await on(new Request("http://x/docs/?edit"))).text(),
+      /<form class="edit-page" method="post" action="\?edit" data-edit-path="docs\/README\.md">/,
     );
     for (const path of ["binary.bin", "missing.txt"]) {
       assertEquals(
@@ -206,7 +407,7 @@ Deno.test({
       }
       assertEquals(
         (await (await on(new Request("http://x/link.txt"))).text()).includes(
-          "edit-file",
+          ">Edit</a>",
         ),
         false,
       );
@@ -407,3 +608,11 @@ Deno.test("edit endpoint is disabled by default and atomically saves versioned t
     await f.cleanup();
   }
 });
+
+function pageTag(html: string): string {
+  const value = html.match(/name="etag" value="([^"]+)"/)?.[1];
+  if (!value) {
+    throw new Error("missing edit tag");
+  }
+  return value.replaceAll("&quot;", '"');
+}

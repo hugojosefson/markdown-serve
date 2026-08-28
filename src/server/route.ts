@@ -13,7 +13,10 @@ export async function route(
   config: ServerConfig,
   request: Request,
 ): Promise<Response> {
-  if (request.method !== "GET" && request.method !== "HEAD") {
+  if (
+    request.method !== "GET" && request.method !== "HEAD" &&
+    request.method !== "POST"
+  ) {
     return new Response("Method Not Allowed", {
       status: 405,
       headers: { Allow: "GET, HEAD" },
@@ -39,6 +42,9 @@ export async function route(
     );
   }
   if (resolved.kind === "directory") {
+    if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
+      return methodNotAllowed();
+    }
     return await renderDirectory(
       config,
       request,
@@ -48,6 +54,9 @@ export async function route(
     );
   }
   if (resolved.kind === "markdown") {
+    if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
+      return methodNotAllowed();
+    }
     return await renderMarkdown(
       config,
       request,
@@ -58,11 +67,17 @@ export async function route(
     );
   }
   if (resolved.kind === "raw" || resolved.kind === "download") {
+    if (request.method === "POST") {
+      return methodNotAllowed();
+    }
     return resolved.kind === "raw"
       ? await rawFile(request, resolved.path, resolved.text)
       : await downloadFile(request, resolved.path);
   }
   if (resolved.kind === "text") {
+    if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
+      return methodNotAllowed();
+    }
     return await renderText(
       config,
       request,
@@ -72,6 +87,9 @@ export async function route(
     );
   }
   if (resolved.kind === "static") {
+    if (request.method === "POST") {
+      return methodNotAllowed();
+    }
     return await renderFile(
       config,
       request,
@@ -81,6 +99,13 @@ export async function route(
     );
   }
   throw new Error("unreachable route");
+}
+
+function methodNotAllowed(): Response {
+  return new Response("Method Not Allowed", {
+    status: 405,
+    headers: { Allow: "GET, HEAD" },
+  });
 }
 
 export type ResolvedRoute =

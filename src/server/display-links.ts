@@ -90,7 +90,7 @@ function displayOptionHref(
         url.search,
         directory
           ? ["dir", "order", "theme", "wide"]
-          : ["metadata", "source", "theme", "wide"],
+          : ["edit", "metadata", "source", "theme", "wide"],
       ),
       option === "width" ? "wide" : option,
       value === defaultValue ? undefined : option === "width" ? null : value,

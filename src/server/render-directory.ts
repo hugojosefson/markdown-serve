@@ -16,6 +16,15 @@ export async function renderDirectory(
   parts: string[],
 ): Promise<Response> {
   const index = await config.catalog.index(path);
+  if (
+    request.method === "POST" &&
+    (!index || url.searchParams.has("dir") || !url.searchParams.has("edit"))
+  ) {
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: { Allow: "GET, HEAD" },
+    });
+  }
   if (!index && url.searchParams.has("dir")) {
     url.searchParams.delete("dir");
     return redirect(url, url.pathname, config.redirectStatus, request.method);

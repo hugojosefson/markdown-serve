@@ -36,12 +36,36 @@ export function rawPageAction(contentType: string): FileAction {
   };
 }
 
-export function markdownSourceHref(url: URL, source: boolean): string {
-  const query = retainQuery(url.search, ["metadata", "theme", "wide"]);
+export function markdownViewHref(
+  url: URL,
+  view: "rendered" | "source" | "edit",
+): string {
+  const query = retainQuery(
+    url.search,
+    view === "edit" ? ["theme", "wide"] : ["metadata", "theme", "wide"],
+  );
+  const withoutViews = setQuery(
+    setQuery(query, "source", undefined),
+    "edit",
+    undefined,
+  );
   return queryHref(
     url.pathname,
-    source ? query : setQuery(query, "source", null),
+    view === "source"
+      ? setQuery(withoutViews, "source", null)
+      : view === "edit"
+      ? setQuery(withoutViews, "edit", null)
+      : withoutViews,
   );
+}
+
+export function savedEditHref(url: URL): string {
+  const query = setQuery(
+    setQuery(retainQuery(url.search, ["theme", "wide"]), "edit", null),
+    "saved",
+    null,
+  );
+  return queryHref(url.pathname, query);
 }
 
 export function filePageActions(

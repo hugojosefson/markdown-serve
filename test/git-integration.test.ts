@@ -1,8 +1,8 @@
-import { assertEquals, assertRejects } from "@std/assert";
+import { assertEquals, assertMatch, assertRejects } from "@std/assert";
 import { join } from "@std/path";
 import { runGit } from "../src/server/git/command.ts";
 import { createGitState } from "../src/server/git/state.ts";
-import { fixture } from "./fixture.ts";
+import { fixture, handler } from "./fixture.ts";
 
 async function git(root: string, args: string[]): Promise<void> {
   const result = await runGit(root, args);
@@ -59,6 +59,48 @@ Deno.test("Git state refreshes after reload invalidation and combines real stage
       [2, { staged: true, deletions: 1 }],
       [3, { unstaged: true, deletions: 1 }],
     ]);
+    assertEquals(await state?.head("tracked.md"), "one\ntwo\nthree\n");
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("editor Git hunks inspect and revert a draft without writing", async () => {
+  const f = await repository({ "guide.md": "# head\n" });
+  try {
+    await Deno.writeTextFile(join(f.root, "guide.md"), "# disk\n");
+    const on = await handler(f.root, { edit: true, git: true });
+    const preview = async (draft: string, revert = "") => {
+      const response = await on(
+        new Request(
+          `http://x/__markdown_serve__/highlight?path=guide.md${revert}`,
+          {
+            method: "POST",
+            headers: {
+              Origin: "http://x",
+              "Content-Type": "text/plain; charset=UTF-8",
+            },
+            body: draft,
+          },
+        ),
+      );
+      assertEquals(response.status, 200);
+      return await response.json() as {
+        draft: string;
+        git: boolean;
+        html: string;
+        hunks: Array<{ start: number; count: number; text: string }>;
+      };
+    };
+    const changed = await preview("# editor\n");
+    assertEquals(changed.git, true);
+    assertEquals(changed.hunks.length, 1);
+    assertMatch(changed.hunks[0].text, /-# head[\s\S]*\+# editor/);
+    assertMatch(changed.html, /token/);
+
+    const reverted = await preview("# editor\n", "&revert=0");
+    assertEquals([reverted.draft, reverted.hunks], ["# head\n", []]);
+    assertEquals(await Deno.readTextFile(join(f.root, "guide.md")), "# disk\n");
   } finally {
     await f.cleanup();
   }
@@ -68,6 +110,21 @@ Deno.test("Git state is unavailable outside repositories", async () => {
   const f = await fixture({ "plain.md": "text" });
   try {
     assertEquals(await createGitState(f.root), undefined);
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("Git HEAD reads are served-root-relative and recognize untracked files", async () => {
+  const f = await repository({ "served/tracked.md": "tracked\n" });
+  try {
+    const served = join(f.root, "served");
+    const state = await createGitState(served, undefined, 60_000);
+    assertEquals(await state?.head("tracked.md"), "tracked\n");
+    await Deno.writeTextFile(join(served, "new.md"), "new\n");
+    await state?.refresh();
+    assertEquals(await state?.head("new.md"), "");
+    assertEquals(await state?.head("../tracked.md"), undefined);
   } finally {
     await f.cleanup();
   }

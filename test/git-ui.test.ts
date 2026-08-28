@@ -31,6 +31,7 @@ Deno.test("Git context and statuses match SSR and lazy navigation", async () => 
         worktree: true,
         status: () => Promise.resolve(status),
         diff: () => Promise.resolve(undefined),
+        head: () => Promise.resolve(undefined),
         refresh: () => Promise.resolve(),
       },
     };

@@ -64,7 +64,7 @@ Deno.test("file access handles descendants when the configured root is a filesys
   assertEquals(warnings, ["Cannot access private: permission denied"]);
 });
 
-Deno.test("clearing denied directories retries access without repeating warnings", async () => {
+Deno.test("clearing active denials retries access without repeating warnings", async () => {
   let deniedNow = true;
   let reads = 0;
   const warnings: string[] = [];
@@ -77,9 +77,23 @@ Deno.test("clearing denied directories retries access without repeating warnings
     },
   });
   assertEquals(await access.readDirectory("/root/private"), []);
-  access.clearDeniedDirectories();
+  assert(access.isDenied("/root/private/file"));
+  access.clearDenied();
+  assertEquals(access.isDenied("/root/private/file"), false);
   deniedNow = false;
   assertEquals(await access.readDirectory("/root/private"), []);
   assertEquals(reads, 2);
   assertEquals(warnings, ["Cannot access private: permission denied"]);
+});
+
+Deno.test("active file denials clear independently of warning history", () => {
+  const warnings: string[] = [];
+  const access = new FileAccess("/root", (warning) => warnings.push(warning));
+  assert(access.handlePermissionDenied("/root/private.txt", denied));
+  assert(access.isDenied("/root/private.txt"));
+  assertEquals(access.isDenied("/root/private.txt/child"), false);
+  access.clearDenied();
+  assertEquals(access.isDenied("/root/private.txt"), false);
+  assert(access.handlePermissionDenied("/root/private.txt", denied));
+  assertEquals(warnings, ["Cannot access private.txt: permission denied"]);
 });

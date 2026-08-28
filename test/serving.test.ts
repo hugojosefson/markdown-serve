@@ -52,7 +52,24 @@ Deno.test({
         },
         warn: (warning) => warnings.push(warning),
       });
-      assertEquals((await h(new Request("http://x/"))).status, 200);
+      const root = await h(new Request("http://x/"));
+      assertEquals(root.status, 200);
+      const rootBody = await root.text();
+      assertMatch(
+        rootBody,
+        /blocked\/<span class="tree-access-denied"[^>]*> 🔒<\/span>/,
+      );
+      assertMatch(rootBody, /aria-label="blocked directory, access denied"/);
+      const rootTree = await h(
+        new Request("http://x/__markdown_serve__/tree?path="),
+      );
+      assertEquals(rootTree.status, 200);
+      assertEquals(
+        (await rootTree.json()).find((entry: { name: string }) =>
+          entry.name === "blocked"
+        )?.accessDenied,
+        true,
+      );
       assertEquals(
         (await h(
           new Request("http://x/__markdown_serve__/files?search=hidden"),
@@ -62,11 +79,22 @@ Deno.test({
       );
       assertEquals(
         (await h(new Request("http://x/blocked/hidden.ts"))).status,
-        404,
+        403,
+      );
+      assertEquals((await h(new Request("http://x/blocked/"))).status, 403);
+      assertEquals(
+        (await h(new Request("http://x/__markdown_serve__/tree?path=blocked")))
+          .status,
+        403,
+      );
+      assertEquals(
+        (await h(new Request("http://x/__markdown_serve__/site/blocked/")))
+          .status,
+        403,
       );
       assertEquals(
         (await h(new Request("http://x/blocked/hidden.ts"))).status,
-        404,
+        403,
       );
       assertEquals((await h(new Request("http://x/visible.ts"))).status, 200);
       await Deno.chmod(blocked, 0o755);
@@ -106,18 +134,24 @@ Deno.test({
 
 Deno.test({
   name:
-    "unreadable files return 404 once while sibling symbols remain available",
+    "unreadable files return 403 once while sibling symbols remain available",
   ignore: Deno.build.os === "windows",
   fn: async () => {
     const f = await fixture({
       "hidden.ts": "export function hidden() {}",
+      "guide.md": "# hidden guide",
+      "manual.MD": "# hidden manual",
       "visible.ts": "export function visible() {}",
       "consumer.ts": "visible();",
     });
     const hidden = join(f.root, "hidden.ts");
+    const guide = join(f.root, "guide.md");
+    const manual = join(f.root, "manual.MD");
     const warnings: string[] = [];
     try {
       await Deno.chmod(hidden, 0o000);
+      await Deno.chmod(guide, 0o000);
+      await Deno.chmod(manual, 0o000);
       try {
         await Deno.readFile(hidden);
         return;
@@ -127,15 +161,23 @@ Deno.test({
       const h = await handler(f.root, {
         warn: (warning) => warnings.push(warning),
       });
-      assertEquals((await h(new Request("http://x/hidden.ts"))).status, 404);
-      assertEquals((await h(new Request("http://x/hidden.ts"))).status, 404);
+      assertEquals((await h(new Request("http://x/hidden.ts"))).status, 403);
+      assertEquals((await h(new Request("http://x/hidden.ts"))).status, 403);
+      assertEquals((await h(new Request("http://x/guide"))).status, 403);
+      assertEquals((await h(new Request("http://x/manual"))).status, 403);
       assertMatch(
         await (await h(new Request("http://x/consumer.ts"))).text(),
         /href="\/visible\.ts#symbol-visible">visible<\/a>/,
       );
-      assertEquals(warnings, ["Cannot access hidden.ts: permission denied"]);
+      assertEquals(warnings, [
+        "Cannot access hidden.ts: permission denied",
+        "Cannot access guide.md: permission denied",
+        "Cannot access manual.MD: permission denied",
+      ]);
     } finally {
       await Deno.chmod(hidden, 0o644);
+      await Deno.chmod(guide, 0o644);
+      await Deno.chmod(manual, 0o644);
       await f.cleanup();
     }
   },

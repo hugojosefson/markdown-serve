@@ -18,13 +18,22 @@ export async function treeResponse(
     return plain("Bad Request", 400, request.method);
   }
   const path = join(config.rootPath, ...parts);
+  if (config.access?.isDenied(path)) {
+    return plain("Forbidden", 403, request.method);
+  }
   if (!(await config.catalog.stat(path))?.isDirectory) {
+    if (config.access?.isDenied(path)) {
+      return plain("Forbidden", 403, request.method);
+    }
     return plain("Not Found", 404, request.method);
   }
   if (request.method === "HEAD") {
     return jsonResponse(null);
   }
   const entries = await config.catalog.entries(path);
+  if (config.access?.isDenied(path)) {
+    return plain("Forbidden", 403, request.method);
+  }
   const status = await config.git?.status();
   const json = entries.map((entry) => treeEntry(config, parts, entry, status))
     .sort(compareDirectoriesFirst);
@@ -54,6 +63,7 @@ function treeEntry(
   filesLabel?: string;
   queryRemove?: string[];
   kind: string;
+  accessDenied?: boolean;
   git?: { display: string; kind: string; tooltip: string };
 } {
   const child = [...parts, entry.name];
@@ -65,6 +75,9 @@ function treeEntry(
     }
     : {};
   if (entry.directory) {
+    const accessDenied = config.access?.isDenied(
+      join(config.rootPath, ...child),
+    );
     return {
       name: entry.name,
       path: child.join("/"),
@@ -76,6 +89,7 @@ function treeEntry(
       ),
       queryRemove: ["dir"],
       kind: entryKind(entry),
+      ...(accessDenied ? { accessDenied: true } : {}),
       ...metadata,
     };
   }

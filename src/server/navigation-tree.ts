@@ -104,6 +104,9 @@ async function treeItem(
     ? "active"
     : undefined;
   const git = gitStatusAt(status, path.join("/"), entry.directory);
+  const accessDenied = entry.directory && config.access?.isDenied(
+    join(config.rootPath, ...path),
+  );
   const marker = git
     ? `<span class="git-marker" data-git-kind="${git.kind}" title="${
       escapeHtml(git.tooltip)
@@ -117,7 +120,13 @@ async function treeItem(
     git?.kind === "ignored" ? ' data-git-ignored="true"' : ""
   } href="${href}"${
     entry.directory || isIndex ? ' data-query-remove="dir"' : ""
-  }>${escapeHtml(entry.name)}${entry.directory ? "/" : ""}</a>${marker}`;
+  }${
+    accessDenied
+      ? ` aria-label="${escapeHtml(entry.name)} directory, access denied"`
+      : ""
+  }>${escapeHtml(entry.name)}${entry.directory ? "/" : ""}${
+    accessDenied ? accessDeniedMarker() : ""
+  }</a>${marker}`;
   if (!entry.directory) {
     const files = isIndex
       ? filesLink(
@@ -156,6 +165,10 @@ function repoTitle(status: GitStatus): string {
 function filesLink(href: string, name: string): string {
   const label = escapeHtml(name);
   return `<a class="tree-files-link" href="${href}" data-query-scope="directory" title="Show files in ${label}" aria-label="Show files in ${label}">Files</a>`;
+}
+
+function accessDeniedMarker(): string {
+  return '<span class="tree-access-denied" title="Access denied" aria-hidden="true"> 🔒</span>';
 }
 
 function directoryFilesHref(href: string, indexState: IndexState): string {

@@ -30,8 +30,14 @@ export async function route(
   if (resolved.kind === "bad-request") {
     return plain("Bad Request", 400, request.method);
   }
+  if (resolved.kind === "forbidden") {
+    return plain("Forbidden", 403, request.method);
+  }
   if (resolved.kind === "not-found") {
     return plain("Not Found", 404, request.method);
+  }
+  if ("path" in resolved && config.access?.isDenied(resolved.path)) {
+    return plain("Forbidden", 403, request.method);
   }
   if (resolved.kind === "redirect") {
     return redirect(
@@ -46,13 +52,16 @@ export async function route(
       if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
         return methodNotAllowed();
       }
-      return await renderDirectory(
+      const response = await renderDirectory(
         config,
         request,
         resolved.url,
         resolved.path,
         resolved.parts,
       );
+      return config.access?.isDenied(resolved.path)
+        ? plain("Forbidden", 403, request.method)
+        : response;
     }
     if (resolved.kind === "markdown") {
       if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
@@ -105,7 +114,7 @@ export async function route(
       "path" in resolved &&
       config.access?.handlePermissionDenied(resolved.path, error)
     ) {
-      return plain("Not Found", 404, request.method);
+      return plain("Forbidden", 403, request.method);
     }
     throw error;
   }
@@ -119,7 +128,7 @@ function methodNotAllowed(): Response {
 }
 
 export type ResolvedRoute =
-  | { kind: "bad-request" | "not-found" }
+  | { kind: "bad-request" | "not-found" | "forbidden" }
   | { kind: "redirect"; url: URL; pathname: string }
   | {
     kind: "directory";
@@ -154,6 +163,7 @@ export async function resolveRoute(
   const parts = decodedParts;
   const target = filePath(config.rootPath, parts);
   const stat = await catalog.stat(target);
+  if (config.access?.isDenied(target)) return { kind: "forbidden" };
   if (url.pathname.endsWith("/")) {
     return stat?.isDirectory
       ? { kind: "directory", url, path: target, parts }
@@ -164,6 +174,12 @@ export async function resolveRoute(
   const sourceName = (!stat || stat.isDirectory)
     ? await catalog.markdown(parent, routeLeaf)
     : undefined;
+  if (
+    config.access?.isDenied(filePath(parent, [`${routeLeaf}.md`])) ||
+    (!sourceName && await catalog.markdownDenied(parent, routeLeaf))
+  ) {
+    return { kind: "forbidden" };
+  }
   if (sourceName) {
     return {
       kind: "markdown",

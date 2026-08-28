@@ -49,7 +49,7 @@ export async function createRequestHandler(
       symbols.clear();
     }
     warmQueue = warmQueue.catch(() => {}).then(() => {
-      if (clear) access.clearDeniedDirectories();
+      if (clear) access.clearDenied();
       return catalog.warmRoot(rootPath);
     });
     return warmQueue;

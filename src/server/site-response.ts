@@ -17,6 +17,9 @@ export async function siteResponse(
   }
   const path = filePath(config.rootPath, parts);
   const stat = await config.catalog.stat(path);
+  if (config.access?.isDenied(path)) {
+    return plain("Forbidden", 403, request.method);
+  }
   if (stat?.isDirectory) {
     if (!url.pathname.endsWith("/")) {
       return redirect(
@@ -27,8 +30,13 @@ export async function siteResponse(
       );
     }
     const index = filePath(path, ["index.html"]);
+    if (config.access?.isDenied(index)) {
+      return plain("Forbidden", 403, request.method);
+    }
     if (!(await config.catalog.stat(index))?.isFile) {
-      return plain("Not Found", 404, request.method);
+      return config.access?.isDenied(index)
+        ? plain("Forbidden", 403, request.method)
+        : plain("Not Found", 404, request.method);
     }
     return await previewFile(config, request, index);
   }
@@ -48,7 +56,7 @@ async function previewFile(
     response = await rawFile(request, path);
   } catch (error) {
     if (config.access?.handlePermissionDenied(path, error)) {
-      return plain("Not Found", 404, request.method);
+      return plain("Forbidden", 403, request.method);
     }
     throw error;
   }

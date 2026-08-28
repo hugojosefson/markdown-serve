@@ -41,7 +41,13 @@ export async function editMergeResponse(
     return new Response("Unsupported Media Type", { status: 415 });
   }
   const path = editablePath(config.rootPath, url.searchParams.get("path"));
-  if (!path || !await editableFile(config.rootPath, path)) {
+  if (
+    !path || config.access?.isDenied(path) ||
+    !await editableFile(config.rootPath, path, config.access)
+  ) {
+    if (path && config.access?.isDenied(path)) {
+      return new Response("Forbidden", { status: 403 });
+    }
     return new Response("Not Found", { status: 404 });
   }
   const body = await boundedBody(request, editLimit * 4 + 2048);
@@ -55,21 +61,29 @@ export async function editMergeResponse(
   if (request.signal.aborted) {
     return new Response(null, { status: 499 });
   }
-  if (!await editableFile(config.rootPath, path)) {
+  if (!await editableFile(config.rootPath, path, config.access)) {
+    if (config.access?.isDenied(path)) {
+      return new Response("Forbidden", { status: 403 });
+    }
     return new Response("Not Found", { status: 404 });
   }
   let current: Uint8Array;
   try {
     current = await Deno.readFile(path);
-  } catch {
+  } catch (error) {
+    if (config.access?.handlePermissionDenied(path, error)) {
+      return new Response("Forbidden", { status: 403 });
+    }
     return new Response("Not Found", { status: 404 });
   }
   if (
     request.signal.aborted ||
-    !await editableFile(config.rootPath, path)
+    !await editableFile(config.rootPath, path, config.access)
   ) {
     return request.signal.aborted
       ? new Response(null, { status: 499 })
+      : config.access?.isDenied(path)
+      ? new Response("Forbidden", { status: 403 })
       : new Response("Not Found", { status: 404 });
   }
   if (!validText(current)) {

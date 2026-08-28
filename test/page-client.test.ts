@@ -16,6 +16,12 @@ Deno.test("lazy tree entries construct Files controls without index discovery", 
   assert(!pageClient.includes("indexPending"));
   assertMatch(pageClient, /details\.dataset\.loading === 'true'/);
   assertMatch(pageClient, /delete details\.dataset\.loading/);
+  assertMatch(pageClient, /entry\.accessDenied/);
+  assertMatch(
+    pageClient,
+    /link\.ariaLabel = entry\.name \+ ' directory, access denied'/,
+  );
+  assertMatch(pageClient, /lock\.textContent = ' 🔒'/);
 });
 
 Deno.test("lazy tree expansion ignores duplicate requests while loading", async () => {

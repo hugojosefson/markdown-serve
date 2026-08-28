@@ -5,6 +5,7 @@ import {
 } from "./content-search.ts";
 import { plain } from "./responses.ts";
 import { splitPath } from "./paths.ts";
+import { join } from "@std/path";
 import type { ServerConfig } from "./types.ts";
 
 export async function contentSearchResponse(
@@ -15,6 +16,10 @@ export async function contentSearchResponse(
   const parts = splitPath(url.searchParams.get("path") ?? "");
   const options = contentSearchOptions(url.searchParams);
   if (!parts || !options) return plain("Bad Request", 400, request.method);
+  const scope = join(config.rootPath, ...parts);
+  if (config.access?.isDenied(scope)) {
+    return plain("Forbidden", 403, request.method);
+  }
   if (request.method === "HEAD") return response(null);
   try {
     const results = await searchContent(
@@ -25,6 +30,9 @@ export async function contentSearchResponse(
       request.signal,
       config.access,
     );
+    if (config.access?.isDenied(scope)) {
+      return plain("Forbidden", 403, request.method);
+    }
     return response(JSON.stringify(results));
   } catch {
     return plain("Repository search unavailable", 503, request.method);

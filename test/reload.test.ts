@@ -43,16 +43,11 @@ Deno.test("source changes close reload events before reloading the page", () => 
   assertEquals([reloads, closes], [2, 2]);
 });
 
-Deno.test("reload client defers one reload while the editor is open", () => {
+Deno.test("reload client notifies an edit page without discarding its draft", () => {
   const sourceListeners = new Map<string, () => void>();
-  const dialogListeners = new Map<string, () => void>();
   let notifications = 0;
   let reloads = 0;
-  const dialog = {
-    open: true,
-    addEventListener: (name: string, listener: () => void) =>
-      dialogListeners.set(name, listener),
-  };
+  const editor = {};
   class EventSource {
     constructor(_url: string) {}
     addEventListener(name: string, listener: () => void): void {
@@ -61,7 +56,8 @@ Deno.test("reload client defers one reload while the editor is open", () => {
     close(): void {}
   }
   const document = {
-    querySelector: () => dialog,
+    querySelector: (selector?: string) =>
+      selector === ".edit-page" ? editor : undefined,
     addEventListener: () => {},
     dispatchEvent: () => {
       notifications++;
@@ -82,12 +78,7 @@ Deno.test("reload client defers one reload while the editor is open", () => {
   );
   sourceListeners.get("reload")?.();
   sourceListeners.get("reload")?.();
-  assertEquals([notifications, reloads], [1, 0]);
-  dialog.open = false;
-  dialogListeners.get("close")?.();
-  assertEquals(reloads, 1);
-  dialogListeners.get("close")?.();
-  assertEquals(reloads, 1);
+  assertEquals([notifications, reloads], [2, 0]);
 });
 
 Deno.test("reload client releases navigation connections and reconnects after restoration", () => {

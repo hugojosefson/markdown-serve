@@ -10,6 +10,7 @@ import "prismjs/components/prism-json.js";
 import "prismjs/components/prism-json5.js";
 import "prismjs/components/prism-jsx.js";
 import "prismjs/components/prism-markup.js";
+import "prismjs/components/prism-markdown.js";
 import "prismjs/components/prism-python.js";
 import "prismjs/components/prism-rust.js";
 import "prismjs/components/prism-toml.js";

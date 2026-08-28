@@ -86,7 +86,10 @@ deno run --allow-read=. --allow-write=. --allow-net jsr:@hugojosefson/markdown-s
 
 The editor only changes existing regular UTF-8 text files below that root. It
 uses version checks and atomic replacement; it cannot create files or follow
-symlinks.
+symlinks. Dedicated edit pages and their Save forms work without JavaScript.
+When JavaScript and Git are available, the editor adds live highlighting and Git
+`HEAD` change markers. Reverting a marker only updates the draft; only Save
+writes to disk.
 
 ## URLs and pages
 

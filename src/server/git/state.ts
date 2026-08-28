@@ -18,6 +18,7 @@ export type GitState = {
     path: string,
     lineCount: number,
   ): Promise<ReadonlyMap<number, SourceLineAnnotation> | undefined>;
+  head(path: string): Promise<string | undefined>;
   refresh(): Promise<void>;
 };
 
@@ -108,6 +109,34 @@ class CachedGitState implements GitState {
         return undefined;
       }
       return mergeDiffAnnotations(staged?.stdout, unstaged?.stdout, lineCount);
+    } catch {
+      return undefined;
+    }
+  }
+  async head(path: string): Promise<string | undefined> {
+    const normalized = path.replaceAll("\\", "/");
+    if (
+      !normalized || normalized.startsWith("/") ||
+      normalized.split("/").includes("..")
+    ) {
+      return undefined;
+    }
+    const prefix = this.#servedRootPrefix.replaceAll("\\", "/");
+    const repositoryPath = prefix ? `${prefix}/${normalized}` : normalized;
+    try {
+      const result = await runGit(
+        this.repositoryRoot,
+        ["show", `HEAD:${repositoryPath}`],
+        {
+          maxOutputBytes: 1024 * 1024,
+        },
+      );
+      if (result.success) {
+        return result.stdout;
+      }
+      const located = gitStatusAt(await this.status(), normalized);
+      const file = located && "status" in located ? located.status : located;
+      return file?.index === "?" && file.worktree === "?" ? "" : undefined;
     } catch {
       return undefined;
     }

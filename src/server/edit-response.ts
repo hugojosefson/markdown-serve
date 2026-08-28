@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { dirname, isAbsolute, join, relative } from "@std/path";
+import { codeLanguageForPath } from "./code-language.ts";
+import { draftDiff } from "./draft-diff.ts";
 import { filePath, splitPath } from "./paths.ts";
+import { renderHighlightedCode } from "./render-code-markdown.ts";
 import { isTextFile, isUtf8Text } from "./text-file.ts";
 import type { ServerConfig } from "./types.ts";
 
@@ -102,18 +105,20 @@ export async function editResponse(
   ) return new Response("Unsupported Media Type", { status: 415 });
   const body = await boundedBody(request);
   if (!body) return new Response("Payload Too Large", { status: 413 });
-  if (!validText(body)) return new Response("Invalid UTF-8", { status: 400 });
+  if (!validText(body)) {
+    return new Response("Invalid UTF-8", { status: 400 });
+  }
   const coordinator = config.editCoordinator ?? new EditCoordinator();
   let result: Response = new Response("Not Found", { status: 404 });
   await coordinator.write(path, async () => {
     if (!await editableFile(config.rootPath, path)) return;
     const current = await Deno.readFile(path);
-    if (ifMatch !== tag(current)) {
+    if (ifMatch !== editTag(current)) {
       result = new Response("Precondition Failed", { status: 412 });
       return;
     }
     try {
-      await atomicReplace(path, body, coordinator.fs, tag(current));
+      await atomicReplace(path, body, coordinator.fs, editTag(current));
     } catch (error) {
       if (error instanceof EditConflict) {
         result = new Response("Precondition Failed", { status: 412 });
@@ -126,13 +131,86 @@ export async function editResponse(
     result = new Response(null, {
       status: 204,
       headers: {
-        ETag: tag(body),
+        ETag: editTag(body),
         "cache-control": "no-store",
         "x-content-type-options": "nosniff",
       },
     });
   });
   return result;
+}
+
+/** Same-origin, bounded progressive enhancement endpoint; it never writes. */
+export async function editHighlightResponse(
+  config: ServerConfig,
+  request: Request,
+  url: URL,
+): Promise<Response> {
+  if (!config.edit) {
+    return new Response("Not Found", { status: 404 });
+  }
+  if (request.method !== "POST") {
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: { Allow: "POST" },
+    });
+  }
+  if (!sameOrigin(request, url)) {
+    return new Response("Forbidden", { status: 403 });
+  }
+  if (
+    !/^text\/plain\s*;\s*charset=utf-8\s*$/i.test(
+      request.headers.get("content-type") ?? "",
+    )
+  ) {
+    return new Response("Unsupported Media Type", { status: 415 });
+  }
+  const path = editablePath(config.rootPath, url.searchParams.get("path"));
+  if (!path || !await editableFile(config.rootPath, path)) {
+    return new Response("Not Found", { status: 404 });
+  }
+  const body = await boundedBody(request);
+  if (!body) {
+    return new Response("Payload Too Large", { status: 413 });
+  }
+  if (!validText(body)) {
+    return new Response("Invalid UTF-8", { status: 400 });
+  }
+  const text = new TextDecoder().decode(body);
+  const gitPath = relative(config.rootPath, path).replaceAll("\\", "/");
+  const head = config.git && gitPath
+    ? await config.git.head(gitPath)
+    : undefined;
+  if (request.signal.aborted) {
+    return new Response(null, { status: 499 });
+  }
+  const rawRevert = url.searchParams.get("revert");
+  const revert = rawRevert === null ? undefined : Number(rawRevert);
+  if (
+    rawRevert !== null &&
+    (!/^\d+$/.test(rawRevert) || !Number.isSafeInteger(revert))
+  ) {
+    return new Response("Bad Request", { status: 400 });
+  }
+  const diff = head === undefined
+    ? { draft: text, hunks: [], limited: false }
+    : draftDiff(head, text, revert);
+  if (!diff) {
+    return new Response("Conflict", { status: 409 });
+  }
+  return Response.json({
+    html: renderHighlightedCode(
+      diff.draft,
+      codeLanguageForPath(path, diff.draft),
+    ),
+    ...diff,
+    git: head !== undefined,
+  }, {
+    headers: {
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
+  });
 }
 
 function editablePath(root: string, value: string | null): string | undefined {
@@ -146,7 +224,7 @@ async function readResponse(path: string, method: string): Promise<Response> {
   if (!validText(bytes)) return new Response("Not Found", { status: 404 });
   return new Response(method === "HEAD" ? null : bytes, {
     headers: {
-      ETag: tag(bytes),
+      ETag: editTag(bytes),
       "content-type": "text/plain; charset=UTF-8",
       "content-length": String(bytes.byteLength),
       "cache-control": "no-store",
@@ -159,11 +237,14 @@ function sameOrigin(request: Request, url: URL): boolean {
   return request.headers.get("origin") === url.origin;
 }
 
-async function boundedBody(request: Request): Promise<Uint8Array | undefined> {
+async function boundedBody(
+  request: Request,
+  limit = editLimit,
+): Promise<Uint8Array | undefined> {
   const declared = request.headers.get("content-length");
   if (
     declared !== null &&
-    (!/^\d+$/.test(declared) || Number(declared) > editLimit)
+    (!/^\d+$/.test(declared) || Number(declared) > limit)
   ) return undefined;
   const reader = request.body?.getReader();
   if (!reader) return new Uint8Array();
@@ -174,7 +255,7 @@ async function boundedBody(request: Request): Promise<Uint8Array | undefined> {
       const part = await reader.read();
       if (part.done) break;
       size += part.value.byteLength;
-      if (size > editLimit) {
+      if (size > limit) {
         await reader.cancel();
         return undefined;
       }
@@ -195,7 +276,7 @@ async function boundedBody(request: Request): Promise<Uint8Array | undefined> {
 function validText(bytes: Uint8Array): boolean {
   return bytes.byteLength <= editLimit && isUtf8Text(bytes, false);
 }
-function tag(bytes: Uint8Array): string {
+export function editTag(bytes: Uint8Array): string {
   return `"${createHash("sha256").update(bytes).digest("hex")}"`;
 }
 
@@ -230,7 +311,7 @@ export async function atomicReplace(
       const current = await fs.lstat(path);
       if (
         !current.isFile || current.isSymlink ||
-        tag(await fs.readFile(path)) !== expectedTag
+        editTag(await fs.readFile(path)) !== expectedTag
       ) {
         throw new EditConflict("file changed during save");
       }
@@ -255,4 +336,173 @@ export async function atomicReplace(
       await fs.remove(temp);
     } catch { /* renamed or absent */ }
   }
+}
+
+export type FormEditResult =
+  | { kind: "saved" }
+  | { kind: "conflict"; text: string; tag: string; currentText: string }
+  | { kind: "invalid"; status: number; message: string };
+
+/** Handles the deliberately narrow, no-JavaScript editor form protocol. */
+export async function formEdit(
+  config: ServerConfig,
+  request: Request,
+  url: URL,
+  path: string,
+): Promise<FormEditResult> {
+  if (!sameOrigin(request, url)) {
+    return { kind: "invalid", status: 403, message: "Forbidden" };
+  }
+  if (
+    !/^application\/x-www-form-urlencoded(?:\s*;\s*charset=utf-8)?\s*$/i.test(
+      request.headers.get("content-type") ?? "",
+    )
+  ) {
+    return { kind: "invalid", status: 415, message: "Unsupported Media Type" };
+  }
+  const encoded = await boundedBody(request, editLimit * 3 + 1024);
+  if (!encoded) {
+    return { kind: "invalid", status: 413, message: "Payload Too Large" };
+  }
+  const form = parseForm(encoded);
+  if (!form) {
+    return { kind: "invalid", status: 400, message: "Invalid form" };
+  }
+  const etag = form.get("etag");
+  const content = form.get("content");
+  if (!etag || content === undefined || !/^"[0-9a-f]{64}"$/.test(etag)) {
+    return { kind: "invalid", status: 400, message: "Invalid form" };
+  }
+  const submitted = new TextEncoder().encode(content);
+  if (!validText(submitted)) {
+    return {
+      kind: "invalid",
+      status: submitted.byteLength > editLimit ? 413 : 400,
+      message: submitted.byteLength > editLimit
+        ? "Payload Too Large"
+        : "Invalid UTF-8",
+    };
+  }
+  if (!await editableFile(config.rootPath, path)) {
+    return { kind: "invalid", status: 404, message: "Not Found" };
+  }
+  const coordinator = config.editCoordinator ?? new EditCoordinator();
+  let result: FormEditResult = {
+    kind: "invalid",
+    status: 404,
+    message: "Not Found",
+  };
+  await coordinator.write(path, async () => {
+    if (!await editableFile(config.rootPath, path)) return;
+    const current = await Deno.readFile(path);
+    const currentText = new TextDecoder().decode(current);
+    if (etag !== editTag(current)) {
+      result = {
+        kind: "conflict",
+        text: content,
+        tag: editTag(current),
+        currentText,
+      };
+      return;
+    }
+    const body = encodeSubmitted(content, current, currentText);
+    if (!validText(body)) {
+      result = {
+        kind: "invalid",
+        status: body.byteLength > editLimit ? 413 : 400,
+        message: body.byteLength > editLimit
+          ? "Payload Too Large"
+          : "Invalid UTF-8",
+      };
+      return;
+    }
+    try {
+      await atomicReplace(path, body, coordinator.fs, editTag(current));
+    } catch (error) {
+      if (!(error instanceof EditConflict)) {
+        throw error;
+      }
+      if (!await editableFile(config.rootPath, path)) {
+        result = { kind: "invalid", status: 404, message: "Not Found" };
+        return;
+      }
+      let latest: Uint8Array;
+      try {
+        latest = await Deno.readFile(path);
+      } catch {
+        result = { kind: "invalid", status: 404, message: "Not Found" };
+        return;
+      }
+      result = {
+        kind: "conflict",
+        text: content,
+        tag: editTag(latest),
+        currentText: new TextDecoder().decode(latest),
+      };
+      return;
+    }
+    config.catalog.clear();
+    config.symbols?.clear();
+    result = { kind: "saved" };
+  });
+  return result;
+}
+
+function parseForm(bytes: Uint8Array): Map<string, string> | undefined {
+  let encoded: string;
+  try {
+    encoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return undefined;
+  }
+  const fields = new Map<string, string>();
+  try {
+    for (const pair of encoded.split("&")) {
+      if (!pair) {
+        continue;
+      }
+      const equals = pair.indexOf("=");
+      const key = decodeForm(equals < 0 ? pair : pair.slice(0, equals));
+      const value = decodeForm(equals < 0 ? "" : pair.slice(equals + 1));
+      if ((key !== "etag" && key !== "content") || fields.has(key)) {
+        return undefined;
+      }
+      fields.set(key, value);
+    }
+  } catch {
+    return undefined;
+  }
+  return fields.size === 2 ? fields : undefined;
+}
+
+function decodeForm(value: string): string {
+  return decodeURIComponent(value.replaceAll("+", " "));
+}
+
+function encodeSubmitted(
+  content: string,
+  current: Uint8Array,
+  currentText: string,
+): Uint8Array {
+  const withoutCrlf = currentText.replaceAll("\r\n", "");
+  const lineEnding = currentText.includes("\r\n") &&
+      !withoutCrlf.includes("\r") && !withoutCrlf.includes("\n")
+    ? "\r\n"
+    : !currentText.includes("\r")
+    ? "\n"
+    : undefined;
+  const normalized = lineEnding
+    ? content.replace(/\r\n|\r|\n/g, lineEnding)
+    : content;
+  const body = new TextEncoder().encode(normalized);
+  const bom = current.length >= 3 && current[0] === 0xef &&
+    current[1] === 0xbb &&
+    current[2] === 0xbf;
+  if (!bom) {
+    return body;
+  }
+  const withBom = new Uint8Array(body.length + 3);
+  withBom.set([0xef, 0xbb, 0xbf]);
+  withBom.set(body, 3);
+  return withBom;
 }

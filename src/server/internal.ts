@@ -5,7 +5,7 @@ import { treeResponse } from "./tree-response.ts";
 import { siteResponse } from "./site-response.ts";
 import { fileSearchResponse } from "./file-search-response.ts";
 import { contentSearchResponse } from "./content-search-response.ts";
-import { editResponse } from "./edit-response.ts";
+import { editHighlightResponse, editResponse } from "./edit-response.ts";
 import type { ServerConfig } from "./types.ts";
 
 export async function internalResponse(
@@ -15,6 +15,9 @@ export async function internalResponse(
   const url = new URL(request.url);
   if (url.pathname === "/__markdown_serve__/edit") {
     return await editResponse(config, request, url);
+  }
+  if (url.pathname === "/__markdown_serve__/highlight") {
+    return await editHighlightResponse(config, request, url);
   }
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response("Method Not Allowed", {

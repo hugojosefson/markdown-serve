@@ -8,6 +8,7 @@
     "jsr:@std/internal@^1.0.14": "1.0.14",
     "jsr:@std/media-types@^1.1.0": "1.1.0",
     "jsr:@std/path@^1.1.6": "1.1.6",
+    "npm:diff@9": "9.0.0",
     "npm:file-lang-map@^1.1.11": "1.1.11",
     "npm:fork-version@5.2.0": "5.2.0",
     "npm:github-slugger@2": "2.0.0",
@@ -396,6 +397,9 @@
     },
     "deepmerge@4.3.1": {
       "integrity": "sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A=="
+    },
+    "diff@9.0.0": {
+      "integrity": "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw=="
     },
     "dom-serializer@2.0.0": {
       "integrity": "sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==",
@@ -913,6 +917,7 @@
       "jsr:@std/assert@^1.0.19",
       "jsr:@std/media-types@^1.1.0",
       "jsr:@std/path@^1.1.6",
+      "npm:diff@9",
       "npm:file-lang-map@^1.1.11",
       "npm:prismjs@^1.30.0",
       "npm:tree-sitter-wasms@0.1.13",

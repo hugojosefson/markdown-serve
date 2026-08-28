@@ -1,11 +1,12 @@
 export const editCss = `
-.edit-page { display: grid; gap: 10px; padding: 12px; }
+.edit-page { --edit-font-size: 13px; display: grid; gap: 10px; padding: 12px; }
 .edit-status { color: var(--code-muted); font: 13px ui-monospace, monospace; margin: 0; }
 .edit-workspace.is-markdown { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) minmax(18rem, .8fr); }
 .edit-surface { display: grid; min-height: 65vh; overflow: hidden; position: relative; }
-.edit-highlight, .edit-text { box-sizing: border-box; font: 13px/1.45 ui-monospace, monospace; font-kerning: none; font-variant-ligatures: none; grid-area: 1 / 1; letter-spacing: 0; margin: 0; min-height: 65vh; overflow: auto; padding: 12px 12px 12px 28px; tab-size: 2; white-space: pre; width: 100%; }
-.edit-highlight, .edit-highlight.code-block { background: var(--code-bg); border: 0; border-radius: 0; margin: 0; pointer-events: none; }
-.edit-highlight code { background: transparent; display: block; font: inherit; padding: 0; }
+.edit-highlight, .edit-text { box-sizing: border-box; font: var(--edit-font-size)/1.45 ui-monospace, monospace; font-kerning: none; font-variant-ligatures: none; grid-area: 1 / 1; letter-spacing: 0; margin: 0; min-height: 65vh; overflow: auto; padding: 12px 12px 12px 28px; tab-size: 2; white-space: pre; width: 100%; }
+.edit-highlight, .edit-highlight.code-block { background: var(--code-bg); border: 0; border-radius: 0; font-size: var(--edit-font-size); margin: 0; pointer-events: none; }
+.edit-highlight.code-block { padding: 12px 12px 12px 28px; }
+.edit-highlight code, .edit-highlight.code-block > code { background: transparent; display: block; font: inherit; font-size: var(--edit-font-size); padding: 0; }
 .edit-text { appearance: none; background: var(--code-bg); border: 0; color: var(--code-text); resize: vertical; z-index: 1; }
 .edit-surface.is-enhanced .edit-text { background: transparent; caret-color: var(--code-text); color: transparent; }
 .edit-surface.is-enhanced .edit-text::selection { background: color-mix(in srgb, var(--focus-color) 35%, transparent); color: transparent; }

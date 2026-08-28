@@ -47,6 +47,7 @@
     "prismjs/components/prism-csharp.js": "npm:prismjs@^1.30.0/components/prism-csharp.js",
     "prismjs/components/prism-css.js": "npm:prismjs@^1.30.0/components/prism-css.js",
     "prismjs/components/prism-go.js": "npm:prismjs@^1.30.0/components/prism-go.js",
+    "prismjs/components/prism-hcl.js": "npm:prismjs@^1.30.0/components/prism-hcl.js",
     "prismjs/components/prism-ini.js": "npm:prismjs@^1.30.0/components/prism-ini.js",
     "prismjs/components/prism-java.js": "npm:prismjs@^1.30.0/components/prism-java.js",
     "prismjs/components/prism-json5.js": "npm:prismjs@^1.30.0/components/prism-json5.js",

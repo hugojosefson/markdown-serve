@@ -70,6 +70,31 @@ Deno.test("RouterOS and PlantUML fences render Prism tokens", () => {
   assertMatch(plantUml, /class="token arrow operator">-&gt;/);
 });
 
+Deno.test("Terraform and OpenTofu fences render HCL tokens", () => {
+  for (
+    const alias of [
+      "hcl",
+      "terraform",
+      "terraform-template",
+      "tf",
+      "tftpl",
+      "tfvars",
+      "opentofu",
+      "tofu",
+    ]
+  ) {
+    const html = renderCodeMarkdown(
+      `\`\`\`${alias}\nresource "aws_instance" "web" {\n  enabled = true\n  name = "web-${"${var.environment}"}"\n}\n\`\`\``,
+      "http://x/",
+    );
+    assertMatch(html, /class="code-language">hcl/);
+    assertMatch(html, /highlight-source-hcl/);
+    assertMatch(html, /class="token keyword">resource/);
+    assertMatch(html, /class="token property">enabled/);
+    assertMatch(html, /class="token interpolation">/);
+  }
+});
+
 Deno.test("unlabelled fences use text and copy client targets code", () => {
   const html = renderCodeMarkdown("```\nplain\n```", "http://x/");
   assertMatch(html, /class="code-language">text/);

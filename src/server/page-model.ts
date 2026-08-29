@@ -24,4 +24,5 @@ export type PageModel = {
   editHighlight?: string;
   editPreview?: string;
   editCurrentText?: string;
+  reloadTarget?: { path: string; revision: string };
 };

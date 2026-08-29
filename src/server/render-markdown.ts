@@ -14,6 +14,8 @@ import type { ServerConfig } from "./types.ts";
 import { renderMarkdownToc } from "./markdown-toc.ts";
 import { editableFile, formEdit } from "./edit-response.ts";
 import { editorModel, relativeEditPath } from "./editor-model.ts";
+import { viewedFileTarget } from "./active-file-poller.ts";
+import { renderEmptyFile } from "./render-empty-file.ts";
 
 export async function renderMarkdown(
   config: ServerConfig,
@@ -59,7 +61,9 @@ export async function renderMarkdown(
     : url.searchParams.has("source")
     ? "source"
     : "rendered";
-  const content = view === "edit"
+  const content = view !== "edit" && bytes.length === 0
+    ? renderEmptyFile()
+    : view === "edit"
     ? ""
     : view === "source"
     ? await renderSourceCodeBlockWithSymbols(
@@ -85,6 +89,7 @@ export async function renderMarkdown(
       directoryView: options.directoryView,
       sourceName: options.sourceName,
       editPath,
+      reloadTarget: viewedFileTarget(config.rootPath, file, info),
       ...(view === "edit"
         ? editorModel(
           config,
@@ -168,6 +173,7 @@ async function markdownEditPage(
     markdownView: "edit",
     directoryView: options.directoryView,
     sourceName: options.sourceName,
+    reloadTarget: viewedFileTarget(config.rootPath, file, info),
     ...editorModel(
       config,
       file,

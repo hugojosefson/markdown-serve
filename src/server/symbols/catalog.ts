@@ -53,9 +53,7 @@ export class SymbolCatalog {
     for await (
       const path of sourceFiles(this.rootPath, state, this.#limits, this.access)
     ) {
-      const info = this.access
-        ? await this.access.stat(path)
-        : await statOrUndefined(path);
+      const info = await statOrUndefined(path, this.access);
       if (!info?.isFile) {
         continue;
       }
@@ -63,9 +61,7 @@ export class SymbolCatalog {
       const pathLanguage = codeLanguageForPath(path);
       // Known unsupported formats need no content sniffing.
       if (pathLanguage !== "text" && !declarationTypes(pathLanguage)) continue;
-      const text = this.access
-        ? await this.access.readTextFile(path)
-        : await readTextOrUndefined(path);
+      const text = await readTextOrUndefined(path, this.access);
       if (text === undefined) {
         continue;
       }
@@ -109,9 +105,10 @@ export class SymbolCatalog {
 
 async function statOrUndefined(
   path: string,
+  access?: FileAccess,
 ): Promise<Deno.FileInfo | undefined> {
   try {
-    return await Deno.stat(path);
+    return access ? await access.stat(path) : await Deno.stat(path);
   } catch {
     return undefined;
   }
@@ -148,14 +145,19 @@ async function* sourceFiles(
       }
     }
   } catch (error) {
-    if (access?.handlePermissionDenied(path, error, true)) return;
-    throw error;
+    access?.handlePermissionDenied(path, error, true);
+    return;
   }
 }
 
-async function readTextOrUndefined(path: string): Promise<string | undefined> {
+async function readTextOrUndefined(
+  path: string,
+  access?: FileAccess,
+): Promise<string | undefined> {
   try {
-    return await Deno.readTextFile(path);
+    return access
+      ? await access.readTextFile(path)
+      : await Deno.readTextFile(path);
   } catch {
     return undefined;
   }

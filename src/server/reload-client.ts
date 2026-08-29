@@ -1,7 +1,13 @@
 export const reloadClientScript = `
 let reloadEvents;
 let reloadConnected = false;
-const disconnectReload = () => reloadEvents?.close();
+let reloadGeneration = 0;
+const disconnectReload = () => {
+  reloadGeneration++;
+  reloadEvents?.close();
+  reloadEvents = undefined;
+  reloadConnected = false;
+};
 const reloadPage = () => {
   if (document.querySelector?.('.edit-page')) {
     document.dispatchEvent?.(new Event('markdown-serve:reload'));
@@ -10,13 +16,23 @@ const reloadPage = () => {
   disconnectReload(); location.reload();
 };
 const connectReload = () => {
+  const generation = ++reloadGeneration;
   reloadConnected = false;
-  reloadEvents = new EventSource('/__markdown_serve__/events');
-  reloadEvents.addEventListener('open', () => {
+  const reloadPath = document.body?.dataset?.reloadPath;
+  const reloadRevision = document.body?.dataset?.reloadRevision;
+  const reloadUrl = reloadPath && reloadRevision
+    ? '/__markdown_serve__/events?path=' + encodeURIComponent(reloadPath) + '&revision=' + encodeURIComponent(reloadRevision)
+    : '/__markdown_serve__/events';
+  const events = new EventSource(reloadUrl);
+  reloadEvents = events;
+  events.addEventListener('open', () => {
+    if (generation !== reloadGeneration || reloadEvents !== events) { return; }
     if (reloadConnected) { reloadPage(); return; }
     reloadConnected = true;
   });
-  reloadEvents.addEventListener('reload', reloadPage);
+  events.addEventListener('reload', () => {
+    if (generation === reloadGeneration && reloadEvents === events) { reloadPage(); }
+  });
 };
 connectReload();
 document.addEventListener('click', (event) => {

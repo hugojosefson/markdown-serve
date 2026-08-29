@@ -16,6 +16,8 @@ import {
   editorModel,
   relativeEditPath,
 } from "./editor-model.ts";
+import { viewedFileTarget } from "./active-file-poller.ts";
+import { renderEmptyFile } from "./render-empty-file.ts";
 
 export async function renderText(
   config: ServerConfig,
@@ -37,14 +39,19 @@ export async function renderText(
   if (request.method === "HEAD") {
     return htmlResponse(request, "");
   }
+  const info = await Deno.stat(file);
   const bytes = await Deno.readFile(file);
   const text = new TextDecoder().decode(bytes);
-  const content = editing ? "" : await renderSourceCodeBlockWithSymbols(
-    text,
-    codeLanguageForPath(file, text),
-    await sourceAnnotations(config, file, text),
-    await config.symbols?.targets(),
-  );
+  const content = editing
+    ? ""
+    : bytes.length === 0
+    ? renderEmptyFile()
+    : await renderSourceCodeBlockWithSymbols(
+      text,
+      codeLanguageForPath(file, text),
+      await sourceAnnotations(config, file, text),
+      await config.symbols?.targets(),
+    );
   const editor = editing
     ? editorModel(
       config,
@@ -54,7 +61,17 @@ export async function renderText(
       { status: url.searchParams.has("saved") ? "Saved" : undefined },
     )
     : undefined;
-  return await textPage(config, request, url, file, parts, content, editor);
+  return await textPage(
+    config,
+    request,
+    url,
+    file,
+    parts,
+    content,
+    editor,
+    200,
+    info,
+  );
 }
 
 async function textPage(
@@ -66,8 +83,9 @@ async function textPage(
   content: string,
   editor?: EditorModel,
   status = 200,
+  renderedInfo?: Deno.FileInfo,
 ): Promise<Response> {
-  const info = await Deno.stat(file);
+  const info = renderedInfo ?? await Deno.stat(file);
   const editable = config.edit && await editableFile(config.rootPath, file);
   return htmlResponse(
     request,
@@ -85,6 +103,7 @@ async function textPage(
       metadata: { ...metadataForFile(file, info), mime: textFileMime(file) },
       editPath: editable ? relativeEditPath(config, file) : undefined,
       editView: Boolean(editor),
+      reloadTarget: viewedFileTarget(config.rootPath, file, info),
       ...editor,
     }),
     status,

@@ -554,6 +554,9 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     "vector.svg": '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
     "script.ts": "const value = 1;",
     "empty.bin": "",
+    "empty.txt": "",
+    "empty.md": "",
+    "empty.png": "",
     "café.bin": "x",
   });
   try {
@@ -686,6 +689,12 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
       "0",
     ]);
     assertEquals((await empty.arrayBuffer()).byteLength, 0);
+    for (const path of ["/empty.bin", "/empty.txt", "/empty", "/empty.png"]) {
+      assertMatch(
+        await (await h(new Request(`http://x${path}`))).text(),
+        /<p class="empty-file">Empty file<\/p>/,
+      );
+    }
     const download = await h(new Request("http://x/photo.png?download"));
     assertMatch(
       download.headers.get("content-disposition")!,

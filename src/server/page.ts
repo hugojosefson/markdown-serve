@@ -53,9 +53,13 @@ function renderBody(
     : model.url.searchParams.has("metadata");
   const scope = model.directory ? model.parts : model.parts.slice(0, -1);
   const prefix = scope.length ? `${scope.join("/")}/` : "";
-  return `<body data-go-to-file-prefix="${
-    escapeHtml(prefix)
-  }" data-content-search-scope="${
+  return `<body${
+    model.reloadTarget
+      ? ` data-reload-path="${
+        escapeHtml(model.reloadTarget.path)
+      }" data-reload-revision="${escapeHtml(model.reloadTarget.revision)}"`
+      : ""
+  } data-go-to-file-prefix="${escapeHtml(prefix)}" data-content-search-scope="${
     escapeHtml(scope.join("/"))
   }"><div class="layout"><aside class="tree"><details class="tree-disclosure" open><summary>Files</summary>${navigation}</details></aside><main class="content markdown-body">${
     repoContext(status)

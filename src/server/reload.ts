@@ -12,7 +12,19 @@ export function createReloadWatcher(
   signal?: AbortSignal,
   ignorePaths: string[] = [],
 ): WatchedReloadSource {
-  return new ReloadHub(Deno.watchFs(resolve(root)), signal, ignorePaths);
+  const rootPath = resolve(root);
+  try {
+    return new ReloadHub(Deno.watchFs(rootPath), signal, ignorePaths);
+  } catch (error) {
+    if (!(error instanceof Deno.errors.PermissionDenied)) throw error;
+    // Recursive setup traverses every descendant. Fall back to the root watch
+    // when an unreadable child prevents that setup; a denied root still fails.
+    return new ReloadHub(
+      Deno.watchFs(rootPath, { recursive: false }),
+      signal,
+      ignorePaths,
+    );
+  }
 }
 
 export class ReloadHub implements WatchedReloadSource {

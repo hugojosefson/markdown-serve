@@ -53,12 +53,12 @@ occupied explicitly selected `--port` fails instead.
 The [suggested installation](#installation) uses narrowly scoped runtime
 permissions:
 
-| Permission                                                                                  | Purpose                                                                          |
-| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `--allow-read=.`                                                                            | Read the current directory tree without granting access to the whole filesystem. |
-| `--allow-net`                                                                               | Serve HTTP and listen for browser connections.                                   |
-| `--allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED`                             | Read terminal and CI settings and retain browser state across watched restarts.  |
-| `--allow-run=xdg-open,git,fd,fdfind,rg`, `open,git,fd,fdfind,rg`, or `cmd,git,fd,fdfind,rg` | Open the browser, read Git status, and use optional searches.                    |
+| Permission                                                      | Purpose                                                                          |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `--allow-read=.`                                                | Read the current directory tree without granting access to the whole filesystem. |
+| `--allow-net`                                                   | Serve HTTP and listen for browser connections.                                   |
+| `--allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED` | Read terminal and CI settings and retain browser state across watched restarts.  |
+| `--allow-run=<available commands>`                              | Open the browser, read Git status, and use optional searches.                    |
 
 Broader read grants can expose more files.
 

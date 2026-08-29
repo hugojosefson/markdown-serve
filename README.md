@@ -21,7 +21,17 @@ case "$(uname -s)" in
   MINGW* | MSYS* | CYGWIN*) browser_opener=cmd ;;
   *) browser_opener=xdg-open ;;
 esac
-deno install --global --force --minimum-dependency-age=0 --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED "--allow-run=${browser_opener},git,fd,fdfind,rg" jsr:@hugojosefson/markdown-serve
+run_commands=()
+for executable in "${browser_opener}" git fd fdfind rg; do
+  if command -v "${executable}" >/dev/null 2>&1; then
+    run_commands+=("${executable}")
+  fi
+done
+run_args=()
+if ((${#run_commands[@]})); then
+  run_args+=("--allow-run=$(IFS=,; printf '%s' "${run_commands[*]}")")
+fi
+deno install --global --force --minimum-dependency-age=0 --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED "${run_args[@]}" jsr:@hugojosefson/markdown-serve
 ```
 
 ## Usage
@@ -66,12 +76,12 @@ occupied explicitly selected `--port` fails instead.
 The [suggested installation](#installation) uses narrowly scoped runtime
 permissions:
 
-| Permission                                                                                  | Purpose                                                                          |
-| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `--allow-read=.`                                                                            | Read the current directory tree without granting access to the whole filesystem. |
-| `--allow-net`                                                                               | Serve HTTP and listen for browser connections.                                   |
-| `--allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED`                             | Read terminal and CI settings and retain browser state across watched restarts.  |
-| `--allow-run=xdg-open,git,fd,fdfind,rg`, `open,git,fd,fdfind,rg`, or `cmd,git,fd,fdfind,rg` | Open the browser, read Git status, and use optional searches.                    |
+| Permission                                                      | Purpose                                                                          |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `--allow-read=.`                                                | Read the current directory tree without granting access to the whole filesystem. |
+| `--allow-net`                                                   | Serve HTTP and listen for browser connections.                                   |
+| `--allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED` | Read terminal and CI settings and retain browser state across watched restarts.  |
+| `--allow-run=<available commands>`                              | Open the browser, read Git status, and use optional searches.                    |
 
 Broader read grants can expose more files.
 

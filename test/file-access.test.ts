@@ -18,6 +18,19 @@ Deno.test("file access rejects root permission denial", () => {
   assertEquals(access.handlePermissionDenied("/root", denied, true), false);
 });
 
+Deno.test("file access handles capability denial like permission denial", () => {
+  const warnings: string[] = [];
+  const access = new FileAccess("/root", (warning) => warnings.push(warning));
+  assert(
+    access.handlePermissionDenied(
+      "/root/private",
+      new Deno.errors.NotCapable("denied"),
+      true,
+    ),
+  );
+  assertEquals(warnings, ["Cannot access private: permission denied"]);
+});
+
 Deno.test("file access short-circuits descendants after a denied directory read", async () => {
   let reads = 0;
   const access = new FileAccess("/root", () => {}, {
@@ -96,4 +109,12 @@ Deno.test("active file denials clear independently of warning history", () => {
   assertEquals(access.isDenied("/root/private.txt"), false);
   assert(access.handlePermissionDenied("/root/private.txt", denied));
   assertEquals(warnings, ["Cannot access private.txt: permission denied"]);
+});
+
+Deno.test("filesystem loops are skipped without marking paths forbidden", async () => {
+  const access = new FileAccess("/root", () => {}, {
+    stat: () => Promise.reject(new Deno.errors.FilesystemLoop("loop")),
+  });
+  assertEquals(await access.stat("/root/loop"), undefined);
+  assertEquals(access.isDenied("/root/loop"), false);
 });

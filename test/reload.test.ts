@@ -177,6 +177,48 @@ Deno.test("source paths do not race content reload notifications", () => {
   );
 });
 
+Deno.test("live reload starts despite inaccessible descendants", async () => {
+  const f = await fixture({
+    "visible.txt": "visible",
+    "blocked/hidden.txt": "hidden",
+  });
+  const blocked = join(f.root, "blocked");
+  const warnings: string[] = [];
+  try {
+    await Deno.chmod(blocked, 0o000);
+    try {
+      for await (const _entry of Deno.readDir(blocked)) break;
+    } catch (error) {
+      if (error instanceof Deno.errors.PermissionDenied) {
+        const server = await serve({
+          root: f.root,
+          hostname: "127.0.0.1",
+          port: 0,
+          liveReload: true,
+          warn: (warning) => warnings.push(warning),
+          onListen: () => {},
+        });
+        try {
+          const address = server.addr as Deno.NetAddr;
+          assertEquals(
+            (await fetch(
+              `http://${address.hostname}:${address.port}/visible.txt`,
+            )).status,
+            200,
+          );
+          assertEquals(warnings, ["Cannot access blocked: permission denied"]);
+        } finally {
+          await server.shutdown();
+          await server.finished;
+        }
+      }
+    }
+  } finally {
+    await Deno.chmod(blocked, 0o755);
+    await f.cleanup();
+  }
+});
+
 Deno.test("watcher iteration failures close subscribers and the watcher once", async () => {
   const closed = Promise.withResolvers<void>();
   let closes = 0;

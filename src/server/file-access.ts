@@ -32,7 +32,10 @@ export class FileAccess {
     const normalized = resolve(path);
     if (
       !this.#withinRoot(normalized) ||
-      !(error instanceof Deno.errors.PermissionDenied) ||
+      !(
+        error instanceof Deno.errors.PermissionDenied ||
+        error instanceof Deno.errors.NotCapable
+      ) ||
       normalized === this.#root
     ) {
       return false;
@@ -106,7 +109,8 @@ export class FileAccess {
       if (this.handlePermissionDenied(path, error, true)) return false;
       if (
         error instanceof Deno.errors.NotFound ||
-        error instanceof Deno.errors.NotADirectory
+        error instanceof Deno.errors.NotADirectory ||
+        error instanceof Deno.errors.FilesystemLoop
       ) return false;
       throw error;
     }
@@ -149,7 +153,8 @@ export class FileAccess {
       }
       if (
         error instanceof Deno.errors.NotFound ||
-        error instanceof Deno.errors.NotADirectory
+        error instanceof Deno.errors.NotADirectory ||
+        error instanceof Deno.errors.FilesystemLoop
       ) {
         return undefined;
       }

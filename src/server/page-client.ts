@@ -37,8 +37,9 @@ const addEntries = (list, entries) => entries.forEach((entry) => {
   const item = document.createElement('li');
   const link = document.createElement('a');
   if (entry.directory) { link.className = 'tree-folder-link'; }
-   link.href = entry.href;
-   link.dataset.kind = entry.kind;
+    link.href = entry.href;
+    link.dataset.kind = entry.kind;
+    if (entry.target !== undefined) { link.title = '→ ' + entry.target; }
    if (entry.git?.kind === 'ignored') { link.dataset.gitIgnored = 'true'; }
   if (entry.queryRemove) { link.dataset.queryRemove = entry.queryRemove.join(' '); }
    link.textContent = entry.name + (entry.directory ? '/' : '');

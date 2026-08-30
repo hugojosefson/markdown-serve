@@ -102,11 +102,24 @@ export class ActiveFilePoller {
     try {
       return fileRevision(await this.stat(path));
     } catch (error) {
-      if (error instanceof Deno.errors.NotFound) return "missing";
+      if (error instanceof Deno.errors.NotFound) {
+        return await this.#lstatRevision(path) ?? "missing";
+      }
+      if (error instanceof Deno.errors.FilesystemLoop) {
+        return await this.#lstatRevision(path);
+      }
       if (
         error instanceof Deno.errors.PermissionDenied ||
         error instanceof Deno.errors.NotCapable
       ) return "denied";
+      return undefined;
+    }
+  }
+
+  async #lstatRevision(path: string): Promise<string | undefined> {
+    try {
+      return fileRevision(await Deno.lstat(path));
+    } catch {
       return undefined;
     }
   }

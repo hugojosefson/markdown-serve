@@ -103,10 +103,18 @@ function row(
   return `<tr><td class="directory-name"><a href="${
     escapeHtml(href)
   }" data-kind="${entryKind(entry)}"${
-    entry.directory ? ' data-query-scope="directory"' : ""
-  }${git?.kind === "ignored" ? ' data-git-ignored="true"' : ""}${
-    index ? ' data-query-remove="dir"' : ""
-  }>${escapeHtml(entry.name + suffix)}</a></td>${
+    entry.target === undefined ? "" : ` title="→ ${escapeHtml(entry.target)}"`
+  }${entry.directory ? ' data-query-scope="directory"' : ""}${
+    git?.kind === "ignored" ? ' data-git-ignored="true"' : ""
+  }${index ? ' data-query-remove="dir"' : ""}>${
+    escapeHtml(entry.name + suffix)
+  }</a>${
+    entry.target === undefined
+      ? ""
+      : `<span class="symlink-target"> → ${escapeHtml(entry.target)}${
+        entry.broken ? " (broken)" : ""
+      }</span>`
+  }</td>${
     status
       ? `<td class="directory-git"><span data-git-kind="${
         git?.kind ?? ""

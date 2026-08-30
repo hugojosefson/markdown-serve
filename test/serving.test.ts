@@ -771,7 +771,47 @@ Deno.test("symlink targets are followed for files, directories, indexes, and lis
     const linkedIndex = await h(new Request("http://x/index-links/"));
     assertMatch(await linkedIndex.text(), /linked index/);
     const root = await h(new Request("http://x/"));
-    assertMatch(await root.text(), /index-dir\//);
+    const rootBody = await root.text();
+    assertMatch(rootBody, /index-dir\//);
+    assertMatch(
+      rootBody,
+      new RegExp(`title="→ ${f.root}/target/file\\.txt"`),
+    );
+    assertMatch(rootBody, new RegExp(`title="→ ${f.root}/target"`));
+    assertMatch(
+      rootBody,
+      new RegExp(
+        `<a href="linked\\.txt" data-kind="symlink" title="→ ${f.root}/target/file\\.txt">linked\\.txt</a><span class="symlink-target"> → ${f.root}/target/file\\.txt</span>`,
+      ),
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("broken symlinks render escaped target pages and reject POST", async () => {
+  if (Deno.build.os === "windows") return;
+  const f = await fixture({});
+  try {
+    await Deno.symlink("missing<&", `${f.root}/broken`);
+    await Deno.symlink("missing-markdown", `${f.root}/broken.md`);
+    await Deno.symlink("init", `${f.root}/init`);
+    const h = await handler(f.root);
+    const listing = await (await h(new Request("http://x/"))).text();
+    assertMatch(listing, /title="→ missing&lt;&amp;"/);
+    assertMatch(listing, /→ missing&lt;&amp; \(broken\)/);
+    assertMatch(listing, /href="broken\.md" data-kind="broken-symlink"/);
+    for (const path of ["/broken", "/broken.md", "/init"]) {
+      const response = await h(new Request(`http://x${path}`));
+      assertEquals(response.status, 200);
+      assertMatch(await response.text(), /Broken symlink:/);
+    }
+    const broken = await (await h(new Request("http://x/broken"))).text();
+    assertMatch(broken, /<code>missing&lt;&amp;<\/code>/);
+    const head = await h(new Request("http://x/broken", { method: "HEAD" }));
+    assertEquals([head.status, await head.text()], [200, ""]);
+    const post = await h(new Request("http://x/broken", { method: "POST" }));
+    assertEquals([post.status, post.headers.get("allow")], [405, "GET, HEAD"]);
   } finally {
     await f.cleanup();
   }

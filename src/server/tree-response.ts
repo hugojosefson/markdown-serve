@@ -63,6 +63,8 @@ function treeEntry(
   filesLabel?: string;
   queryRemove?: string[];
   kind: string;
+  target?: string;
+  broken?: boolean;
   accessDenied?: boolean;
   git?: { display: string; kind: string; tooltip: string };
 } {
@@ -89,6 +91,8 @@ function treeEntry(
       ),
       queryRemove: ["dir"],
       kind: entryKind(entry),
+      ...(entry.target === undefined ? {} : { target: entry.target }),
+      ...(entry.broken ? { broken: true } : {}),
       ...(accessDenied ? { accessDenied: true } : {}),
       ...metadata,
     };
@@ -105,6 +109,8 @@ function treeEntry(
       : undefined,
     queryRemove: resolved.trailing ? ["dir"] : undefined,
     kind: entryKind(entry),
+    ...(entry.target === undefined ? {} : { target: entry.target }),
+    ...(entry.broken ? { broken: true } : {}),
     ...metadata,
   };
 }

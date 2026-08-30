@@ -102,7 +102,7 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
       const rows = body.match(/<tbody>([\s\S]*?)<\/tbody>/)?.[1] ?? "";
       return [
         ...rows.matchAll(
-          /<td class="directory-name"><a href="[^"]+"[^>]*>([^<]+)<\/a><\/td>/g,
+          /<td class="directory-name"><a href="[^"]+"[^>]*>([^<]+)<\/a>(?:<span[^>]*>[^<]*<\/span>)?<\/td>/g,
         ),
       ]
         .map((match) => match[1]);
@@ -192,7 +192,7 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
       ]);
       assertMatch(
         body,
-        /<td class="directory-name"><a href="y-broken"[^>]*>y-broken<\/a><\/td><td class="directory-permissions">\?{10}<\/td><td class="directory-size">—<\/td><td class="directory-user">—<\/td><td class="directory-modified">—<\/td>/,
+        /<td class="directory-name"><a href="y-broken" data-kind="broken-symlink" title="→ missing">y-broken<\/a><span class="symlink-target"> → missing \(broken\)<\/span><\/td><td class="directory-permissions">\?{10}<\/td><td class="directory-size">—<\/td><td class="directory-user">—<\/td><td class="directory-modified">—<\/td>/,
       );
     }
   } finally {

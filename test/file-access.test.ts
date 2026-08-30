@@ -118,3 +118,10 @@ Deno.test("filesystem loops are skipped without marking paths forbidden", async 
   assertEquals(await access.stat("/root/loop"), undefined);
   assertEquals(access.isDenied("/root/loop"), false);
 });
+
+Deno.test("file access reads raw symlink targets", async () => {
+  const access = new FileAccess("/root", () => {}, {
+    readLink: () => Promise.resolve("../target"),
+  });
+  assertEquals(await access.readLink("/root/link"), "../target");
+});

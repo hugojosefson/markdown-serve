@@ -4,6 +4,7 @@ import { renderDirectory } from "./render-directory.ts";
 import { renderMarkdown } from "./render-markdown.ts";
 import { renderText } from "./render-text.ts";
 import { renderFile } from "./render-file.ts";
+import { renderBrokenSymlink } from "./render-broken-symlink.ts";
 import { downloadFile, plain, rawFile, redirect } from "./responses.ts";
 import { previewableFile } from "./file-metadata.ts";
 import { isTextFile } from "./text-file.ts";
@@ -62,6 +63,18 @@ export async function route(
       return config.access?.isDenied(resolved.path)
         ? plain("Forbidden", 403, request.method)
         : response;
+    }
+    if (resolved.kind === "broken-symlink") {
+      if (request.method === "POST") return methodNotAllowed();
+      return await renderBrokenSymlink(
+        config,
+        request,
+        resolved.url,
+        resolved.path,
+        resolved.parts,
+        resolved.target,
+        resolved.info,
+      );
     }
     if (resolved.kind === "markdown") {
       if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
@@ -131,6 +144,14 @@ export type ResolvedRoute =
   | { kind: "bad-request" | "not-found" | "forbidden" }
   | { kind: "redirect"; url: URL; pathname: string }
   | {
+    kind: "broken-symlink";
+    url: URL;
+    path: string;
+    parts: string[];
+    target: string;
+    info: Deno.FileInfo;
+  }
+  | {
     kind: "directory";
     url: URL;
     path: string;
@@ -168,6 +189,19 @@ export async function resolveRoute(
     return stat?.isDirectory
       ? { kind: "directory", url, path: target, parts }
       : { kind: "not-found" };
+  }
+  if (!stat) {
+    const link = await catalog.symlink(target);
+    if (link) {
+      return {
+        kind: "broken-symlink",
+        url,
+        path: target,
+        parts,
+        target: link.target,
+        info: link.info,
+      };
+    }
   }
   const routeLeaf = parts.at(-1)!;
   const parent = filePath(config.rootPath, parts.slice(0, -1));

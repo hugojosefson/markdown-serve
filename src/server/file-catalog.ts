@@ -1,6 +1,12 @@
 import { join } from "@std/path";
 import { AsyncLimiter } from "./async-limiter.ts";
-import { type DirectoryEntry, readDirectory, statOrUndefined } from "./fs.ts";
+import {
+  type DirectoryEntry,
+  lstatOrUndefined,
+  readDirectory,
+  readLinkOrUndefined,
+  statOrUndefined,
+} from "./fs.ts";
 import type { FileAccess } from "./file-access.ts";
 import {
   indexCandidates,
@@ -13,10 +19,13 @@ export type IndexState =
   | { known: false }
   | { known: true; index: string | undefined };
 
+export type SymlinkInfo = { info: Deno.FileInfo; target: string };
+
 export class FileCatalog {
   #directories = new Map<string, Promise<DirectoryEntry[]>>();
   #names = new Map<string, Promise<Deno.DirEntry[]>>();
   #stats = new Map<string, Promise<Deno.FileInfo | undefined>>();
+  #symlinks = new Map<string, Promise<SymlinkInfo | undefined>>();
   #indexes = new Map<string, Promise<string | undefined>>();
   #indexStates = new Map<string, string | undefined>();
   #markdown = new Map<string, Promise<string | undefined>>();
@@ -39,6 +48,10 @@ export class FileCatalog {
     directoryHint = false,
   ): Promise<Deno.FileInfo | undefined> {
     return this.#stats.get(path) ?? this.#setStat(path, directoryHint);
+  }
+
+  symlink(path: string): Promise<SymlinkInfo | undefined> {
+    return this.#symlinks.get(path) ?? this.#setSymlink(path);
   }
 
   index(path: string): Promise<string | undefined> {
@@ -82,6 +95,7 @@ export class FileCatalog {
     this.#directories.clear();
     this.#names.clear();
     this.#stats.clear();
+    this.#symlinks.clear();
     this.#indexes.clear();
     this.#indexStates.clear();
     this.#markdown.clear();
@@ -142,7 +156,10 @@ export class FileCatalog {
     const value = this.names(path).then(async (names) => {
       const entries = await Promise.all(names.map(async (entry) => {
         const child = join(path, entry.name);
-        const info = await this.stat(child, entry.isDirectory);
+        const [info, symlink] = await Promise.all([
+          this.stat(child, entry.isDirectory),
+          entry.isSymlink ? this.symlink(child) : undefined,
+        ]);
         if (entry.isDirectory && access) {
           await this.#readLimiter.run(() => access.probeDirectory(child));
         }
@@ -150,6 +167,10 @@ export class FileCatalog {
           name: entry.name,
           directory: info?.isDirectory ?? entry.isDirectory,
           symlink: entry.isSymlink,
+          ...(symlink ? { target: symlink.target } : {}),
+          ...(entry.isSymlink && !info && !access?.isDenied(child)
+            ? { broken: true }
+            : {}),
           info,
         };
       }));
@@ -176,6 +197,13 @@ export class FileCatalog {
         : statOrUndefined(path)
     );
     this.#stats.set(path, value);
+    return value;
+  }
+  #setSymlink(path: string): Promise<SymlinkInfo | undefined> {
+    const value = this.#readLimiter.run(() =>
+      resolveSymlink(this.access, path)
+    );
+    this.#symlinks.set(path, value);
     return value;
   }
   #setIndex(path: string): Promise<string | undefined> {
@@ -211,5 +239,19 @@ export class FileCatalog {
 
   #setIndexState(path: string, index: string | undefined): void {
     this.#indexStates.set(path, index);
+  }
+}
+
+async function resolveSymlink(
+  access: FileAccess | undefined,
+  path: string,
+): Promise<SymlinkInfo | undefined> {
+  try {
+    const info = await (access?.lstat(path) ?? lstatOrUndefined(path));
+    if (!info?.isSymlink) return undefined;
+    const target = await (access?.readLink(path) ?? readLinkOrUndefined(path));
+    return target === undefined ? undefined : { info, target };
+  } catch {
+    return undefined;
   }
 }

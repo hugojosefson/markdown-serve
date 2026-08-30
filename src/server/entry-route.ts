@@ -8,9 +8,12 @@ export type EntryClassification = {
 };
 
 export function classifyEntry(
-  entry: Pick<DirectoryEntry, "name" | "directory">,
+  entry:
+    & Pick<DirectoryEntry, "name" | "directory">
+    & Partial<Pick<DirectoryEntry, "broken">>,
 ): EntryClassification {
-  const markdown = !entry.directory && entry.name.toLowerCase().endsWith(".md");
+  const markdown = !entry.broken && !entry.directory &&
+    entry.name.toLowerCase().endsWith(".md");
   return {
     directory: entry.directory,
     markdown,
@@ -20,7 +23,9 @@ export function classifyEntry(
 
 export function entryRoute(
   parts: string[],
-  entry: Pick<DirectoryEntry, "name" | "directory">,
+  entry:
+    & Pick<DirectoryEntry, "name" | "directory">
+    & Partial<Pick<DirectoryEntry, "broken">>,
 ): { parts: string[]; trailing: boolean } {
   const classification = classifyEntry(entry);
   if (classification.index) {

@@ -3,6 +3,7 @@ import { isAbsolute, relative, resolve, SEPARATOR } from "@std/path";
 export type FileAccessOperations = {
   stat: (path: string) => Promise<Deno.FileInfo>;
   lstat: (path: string) => Promise<Deno.FileInfo>;
+  readLink: (path: string) => Promise<string>;
   readDirectory: (path: string) => Promise<Deno.DirEntry[]>;
   readFile: (path: string) => Promise<Uint8Array>;
   readTextFile: (path: string) => Promise<string>;
@@ -82,6 +83,13 @@ export class FileAccess {
     return await this.#undefined(
       path,
       () => (this.operations.lstat ?? Deno.lstat)(path),
+    );
+  }
+
+  async readLink(path: string): Promise<string | undefined> {
+    return await this.#undefined(
+      path,
+      () => (this.operations.readLink ?? Deno.readLink)(path),
     );
   }
 

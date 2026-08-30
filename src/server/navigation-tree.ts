@@ -117,8 +117,8 @@ async function treeItem(
   const link = `<a${linkClass ? ` class="${linkClass}"` : ""} data-kind="${
     entryKind(entry)
   }"${
-    git?.kind === "ignored" ? ' data-git-ignored="true"' : ""
-  } href="${href}"${
+    entry.target === undefined ? "" : ` title="→ ${escapeHtml(entry.target)}"`
+  }${git?.kind === "ignored" ? ' data-git-ignored="true"' : ""} href="${href}"${
     entry.directory || isIndex ? ' data-query-remove="dir"' : ""
   }${
     accessDenied

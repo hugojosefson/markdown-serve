@@ -437,3 +437,63 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
     await f.cleanup();
   }
 });
+
+Deno.test("navigation preserves symlink targets and broken status", async () => {
+  if (Deno.build.os === "windows") return;
+  const f = await fixture({ "target/file.md": "target" });
+  try {
+    await Deno.symlink("target/file.md", `${f.root}/linked.md`);
+    await Deno.symlink("target", `${f.root}/linked-dir`);
+    await Deno.symlink("missing", `${f.root}/broken`);
+    const h = await handler(f.root);
+    const body = await (await h(new Request("http://x/"))).text();
+    assertMatch(body, /data-kind="symlink" title="→ target\/file\.md"/);
+    assertMatch(
+      body,
+      /class="tree-folder-link" data-kind="symlink" title="→ target" href="\/linked-dir\/"/,
+    );
+    assertMatch(
+      body,
+      /data-kind="broken-symlink" title="→ missing" href="\/broken"/,
+    );
+    const entries = await (
+      await h(new Request("http://x/__markdown_serve__/tree"))
+    ).json() as Array<{
+      name: string;
+      path: string;
+      directory: boolean;
+      href: string;
+      kind: string;
+      target?: string;
+      broken?: boolean;
+    }>;
+    assertEquals(entries.find((entry) => entry.name === "linked.md"), {
+      name: "linked.md",
+      path: "linked.md",
+      directory: false,
+      href: "/linked",
+      kind: "symlink",
+      target: "target/file.md",
+    });
+    assertEquals(
+      entries.find((entry) => entry.name === "linked-dir")?.directory,
+      true,
+    );
+    assertEquals(
+      entries.find((entry) => entry.name === "linked-dir")?.target,
+      "target",
+    );
+    assertEquals(
+      entries.find((entry) => entry.name === "broken")?.broken,
+      true,
+    );
+    assertMatch(pageClient, /entry\.target !== undefined/);
+    assertMatch(pageCss, /data-kind="symlink"\]::before \{ content: "↗ "/);
+    assertMatch(
+      pageCss,
+      /data-kind="broken-symlink"\]::before \{ content: "⚠ "/,
+    );
+  } finally {
+    await f.cleanup();
+  }
+});

@@ -26,6 +26,7 @@ export async function createGitState(
   root: string,
   reloadSource?: ReloadSource,
   ttlMs = 1_000,
+  servedRoot = root,
 ): Promise<GitState | undefined> {
   if (
     Deno.permissions.querySync({ name: "run", command: "git" }).state !==
@@ -41,9 +42,9 @@ export async function createGitState(
     }
     const repositoryRoot = top.stdout.trim();
     const state = new CachedGitState(
-      root,
+      servedRoot,
       repositoryRoot,
-      relative(repositoryRoot, root),
+      relative(repositoryRoot, servedRoot),
       ttlMs,
     );
     reloadSource?.subscribe(() => state.refresh());
@@ -63,6 +64,9 @@ class CachedGitState implements GitState {
   readonly repositoryRoot: string;
   readonly subdirectory: string;
   readonly #servedRootPrefix: string;
+  readonly #nestedPrefix: string;
+  readonly #scope: string;
+  readonly #repositoryPrefix: string;
   readonly #ttlMs: number;
   constructor(
     root: string,
@@ -73,7 +77,15 @@ class CachedGitState implements GitState {
     this.root = root;
     this.repositoryRoot = repositoryRoot;
     this.subdirectory = servedRootPrefix;
-    this.#servedRootPrefix = servedRootPrefix;
+    this.#repositoryPrefix = repositoryPrefix(root, repositoryRoot);
+    this.#servedRootPrefix = this.#repositoryPrefix.startsWith("../") ||
+        this.#repositoryPrefix === ".."
+      ? ""
+      : this.#repositoryPrefix;
+    this.#nestedPrefix = this.#servedRootPrefix
+      ? ""
+      : relative(root, repositoryRoot).replaceAll("\\", "/");
+    this.#scope = this.#servedRootPrefix;
     this.#ttlMs = ttlMs;
   }
   async status(): Promise<GitStatus | undefined> {
@@ -121,8 +133,10 @@ class CachedGitState implements GitState {
     ) {
       return undefined;
     }
-    const prefix = this.#servedRootPrefix.replaceAll("\\", "/");
-    const repositoryPath = prefix ? `${prefix}/${normalized}` : normalized;
+    const repositoryPath = this.repositoryPath(normalized);
+    if (!repositoryPath) {
+      return undefined;
+    }
     try {
       const result = await runGit(
         this.repositoryRoot,
@@ -142,7 +156,11 @@ class CachedGitState implements GitState {
     }
   }
   async runDiff(path: string, cached: boolean) {
-    return await runGit(this.root, [
+    const repositoryPath = this.repositoryPath(path);
+    if (!repositoryPath) {
+      return { success: false, stdout: "", stderr: "" };
+    }
+    return await runGit(this.repositoryRoot, [
       "diff",
       ...(cached ? ["--cached"] : []),
       "--no-ext-diff",
@@ -150,11 +168,11 @@ class CachedGitState implements GitState {
       "--no-color",
       "--unified=0",
       "--",
-      path,
+      repositoryPath,
     ]);
   }
   async load(): Promise<void> {
-    const result = await runGit(this.root, [
+    const result = await runGit(this.repositoryRoot, [
       "status",
       "--porcelain=v1",
       "-z",
@@ -162,10 +180,43 @@ class CachedGitState implements GitState {
       "--untracked-files=normal",
       "--ignored=matching",
       "--",
-      ".",
+      this.#scope || ".",
     ]);
-    if (!result.success) return;
-    this.#cached = parseGitStatus(result.stdout, this.#servedRootPrefix);
+    if (!result.success) {
+      this.#cached = undefined;
+      this.#updated = Date.now();
+      return;
+    }
+    this.#cached = parseGitStatus(
+      result.stdout,
+      this.#servedRootPrefix,
+      this.#nestedPrefix,
+    );
     this.#updated = Date.now();
   }
+
+  repositoryPath(path: string): string | undefined {
+    const normalized = path.replaceAll("\\", "/");
+    if (
+      !normalized || normalized.startsWith("/") ||
+      normalized.split("/").includes("..")
+    ) {
+      return undefined;
+    }
+    if (this.#nestedPrefix) {
+      return normalized === this.#nestedPrefix
+        ? "."
+        : normalized.startsWith(`${this.#nestedPrefix}/`)
+        ? normalized.slice(this.#nestedPrefix.length + 1)
+        : undefined;
+    }
+    return this.#servedRootPrefix
+      ? `${this.#servedRootPrefix.replaceAll("\\", "/")}/${normalized}`
+      : normalized;
+  }
+}
+
+function repositoryPrefix(root: string, repositoryRoot: string): string {
+  const relation = relative(repositoryRoot, root).replaceAll("\\", "/");
+  return relation === "" ? "" : relation;
 }

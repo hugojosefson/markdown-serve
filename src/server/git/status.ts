@@ -77,6 +77,7 @@ export function gitDirtyCount(status: GitStatus): number {
 export function parseGitStatus(
   output: string,
   servedRootPrefix = "",
+  nestedPrefix = "",
 ): GitStatus {
   const records = output.split("\0");
   const branch = parseBranch(records[0] ?? "");
@@ -91,10 +92,10 @@ export function parseGitStatus(
     const rawOriginalPath = rename ? records[++index] : undefined;
     const rawPath = record.slice(3);
     const directory = rawPath.endsWith("/");
-    const path = stripServedRootPrefix(rawPath, servedRootPrefix);
+    const path = mapGitPath(rawPath, servedRootPrefix, nestedPrefix);
     const originalPath = rawOriginalPath === undefined
       ? undefined
-      : stripServedRootPrefix(rawOriginalPath, servedRootPrefix);
+      : mapGitPath(rawOriginalPath, servedRootPrefix, nestedPrefix);
     if (path === undefined) {
       continue;
     }
@@ -115,6 +116,16 @@ export function parseGitStatus(
     directories: aggregateGitDirectories(files),
     byPath: new Map(files.map((file) => [file.path, file])),
   };
+}
+
+function mapGitPath(
+  path: string,
+  servedRootPrefix: string,
+  nestedPrefix: string,
+): string | undefined {
+  const stripped = stripServedRootPrefix(path, servedRootPrefix);
+  if (stripped === undefined) return undefined;
+  return nestedPrefix ? `${nestedPrefix}/${stripped}` : stripped;
 }
 
 export function stripServedRootPrefix(

@@ -16,12 +16,19 @@ import type { ServerConfig } from "./types.ts";
 import { gitDirtyCount, type GitStatus } from "./git/status.ts";
 import { markdownViewHref } from "./page-action.ts";
 import { queryHref, retainQuery, setQuery } from "./query.ts";
+import { join } from "@std/path";
+import { gitStateAt } from "./git/resolver.ts";
 
 export async function page(
   config: ServerConfig,
   model: PageModel,
 ): Promise<string> {
-  const status = model.gitStatus ?? await config.git?.status();
+  const directory = join(
+    config.rootPath,
+    ...(model.directory ? model.parts : model.parts.slice(0, -1)),
+  );
+  const status = model.gitStatus ?? await (await gitStateAt(config, directory))
+    ?.status();
   const navigation = await navigationTree(
     config,
     model.parts,

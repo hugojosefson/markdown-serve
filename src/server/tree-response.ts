@@ -7,6 +7,7 @@ import { plain } from "./responses.ts";
 import type { ServerConfig } from "./types.ts";
 import { entryKind } from "./entry-kind.ts";
 import { gitDisplay, gitStatusAt } from "./git/status.ts";
+import { gitStateAt, gitStateAtChild } from "./git/resolver.ts";
 
 export async function treeResponse(
   config: ServerConfig,
@@ -34,8 +35,10 @@ export async function treeResponse(
   if (config.access?.isDenied(path)) {
     return plain("Forbidden", 403, request.method);
   }
-  const status = await config.git?.status();
-  const json = entries.map((entry) => treeEntry(config, parts, entry, status))
+  const status = await (await gitStateAt(config, path))?.status();
+  const json = (await Promise.all(
+    entries.map((entry) => treeEntry(config, parts, entry, status)),
+  ))
     .sort(compareDirectoriesFirst);
   return jsonResponse(JSON.stringify(json));
 }
@@ -49,12 +52,12 @@ function jsonResponse(body: string | null): Response {
   });
 }
 
-function treeEntry(
+async function treeEntry(
   config: ServerConfig,
   parts: string[],
   entry: import("./fs.ts").DirectoryEntry,
   status: import("./git/status.ts").GitStatus | undefined,
-): {
+): Promise<{
   name: string;
   path: string;
   directory: boolean;
@@ -67,10 +70,15 @@ function treeEntry(
   broken?: boolean;
   accessDenied?: boolean;
   git?: { display: string; kind: string; tooltip: string };
-} {
+}> {
   const child = [...parts, entry.name];
   const resolved = entryRoute(parts, entry);
-  const git = gitStatusAt(status, child.join("/"), entry.directory);
+  const parent = join(config.rootPath, ...parts);
+  const state = entry.directory
+    ? await gitStateAtChild(config, parent, join(parent, entry.name))
+    : await gitStateAt(config, parent);
+  const entryStatus = await state?.status() ?? status;
+  const git = gitStatusAt(entryStatus, child.join("/"), entry.directory);
   const metadata = git
     ? {
       git: { display: gitDisplay(git), kind: git.kind, tooltip: git.tooltip },

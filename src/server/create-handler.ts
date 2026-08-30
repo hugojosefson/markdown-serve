@@ -5,7 +5,7 @@ import { route } from "./route.ts";
 import { plain } from "./responses.ts";
 import type { HandlerOptions, RequestHandler } from "./server-options.ts";
 import type { ServerConfig } from "./types.ts";
-import { createGitState } from "./git/state.ts";
+import { GitResolver } from "./git/resolver.ts";
 import { SymbolCatalog } from "./symbols/catalog.ts";
 import { EditCoordinator } from "./edit-response.ts";
 import { FileAccess } from "./file-access.ts";
@@ -38,6 +38,9 @@ export async function createRequestHandler(
     );
   }
   const access = new FileAccess(rootPath, options.warn);
+  const gitResolver = options.git === false
+    ? undefined
+    : new GitResolver(rootPath, options.reloadSource);
   const catalog = new FileCatalog(access);
   const symbols = new SymbolCatalog(rootPath, {}, access);
   let warmRevision = 0;
@@ -81,9 +84,7 @@ export async function createRequestHandler(
     catalog,
     access,
     symbols,
-    git: options.git === false
-      ? undefined
-      : await createGitState(rootPath, options.reloadSource),
+    gitResolver,
     finders: options.finders,
     finderRunner: options.finderRunner,
     contentSearchRunner: options.contentSearchRunner,

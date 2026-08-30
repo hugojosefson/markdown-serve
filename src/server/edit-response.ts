@@ -10,6 +10,7 @@ import {
 import { isTextFile, isUtf8Text } from "./text-file.ts";
 import type { ServerConfig } from "./types.ts";
 import type { FileAccess } from "./file-access.ts";
+import { gitStateAt } from "./git/resolver.ts";
 
 export const editLimit = 1024 * 1024;
 
@@ -214,9 +215,8 @@ export async function editHighlightResponse(
   }
   const text = new TextDecoder().decode(body);
   const gitPath = relative(config.rootPath, path).replaceAll("\\", "/");
-  const head = config.git && gitPath
-    ? await config.git.head(gitPath)
-    : undefined;
+  const git = gitPath ? await gitStateAt(config, dirname(path)) : undefined;
+  const head = gitPath ? await git?.head(gitPath) : undefined;
   if (request.signal.aborted) {
     return new Response(null, { status: 499 });
   }

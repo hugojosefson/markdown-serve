@@ -52,6 +52,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .tree .active[data-kind] { color: #fff; }
 .tree a[data-git-ignored="true"], .directory-table a[data-git-ignored="true"] { opacity: .65; }
 .git-marker, .directory-git span { color: var(--git-modified); font-size: .9em; margin-left: 4px; }
+.tree .git-marker { flex: 0 0 auto; margin-right: 6px; white-space: nowrap; }
 [data-git-kind="conflict"] { color: var(--git-conflict); } [data-git-kind="renamed"] { color: var(--git-renamed); } [data-git-kind="deleted"] { color: var(--git-deleted); } [data-git-kind="modified"] { color: var(--git-modified); } [data-git-kind="added"] { color: var(--git-added); } [data-git-kind="untracked"] { color: var(--git-untracked); } [data-git-kind="ignored"] { color: var(--git-ignored); opacity: .65; }
 .tree-repo-context { color: var(--tree-muted); font-size: 11px; margin-left: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.tree-repo-context b { color: var(--git-modified); }.repo-context { display: none; }
  .tree summary, .tree .tree-root-row, .tree .tree-entry-row { align-items: center; border-radius: 4px; display: flex; min-width: 0; position: relative; }

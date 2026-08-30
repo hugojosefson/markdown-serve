@@ -7,6 +7,7 @@ import type { IndexState } from "./file-catalog.ts";
 import type { DirectoryEntry } from "./fs.ts";
 import { canonicalPath } from "./paths.ts";
 import type { ServerConfig } from "./types.ts";
+import { gitStateAt, gitStateAtChild } from "./git/resolver.ts";
 import {
   gitDirtyCount,
   gitDisplay,
@@ -103,7 +104,12 @@ async function treeItem(
     : activeItem
     ? "active"
     : undefined;
-  const git = gitStatusAt(status, path.join("/"), entry.directory);
+  const parent = join(config.rootPath, ...path.slice(0, -1));
+  const state = entry.directory
+    ? await gitStateAtChild(config, parent, join(parent, entry.name))
+    : await gitStateAt(config, parent);
+  const entryStatus = await state?.status() ?? status;
+  const git = gitStatusAt(entryStatus, path.join("/"), entry.directory);
   const accessDenied = entry.directory && config.access?.isDenied(
     join(config.rootPath, ...path),
   );
@@ -134,9 +140,7 @@ async function treeItem(
         path.length === 1 ? config.rootLabel : path.at(-2)!,
       )
       : "";
-    return files
-      ? `<li class="tree-entry-row">${link}${files}</li>`
-      : `<li>${link}</li>`;
+    return `<li class="tree-entry-row">${link}${files}</li>`;
   }
   const descendants = activeDirectory
     ? await treeList(config, path, active, directoryView, sourceName, status)

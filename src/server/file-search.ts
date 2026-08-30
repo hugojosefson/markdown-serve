@@ -6,6 +6,7 @@ import { childTerminator } from "./terminate-child.ts";
 import { FileAccess } from "./file-access.ts";
 import { type GitStatus, gitStatusAt } from "./git/status.ts";
 import type { ServerConfig } from "./types.ts";
+import { gitStateAt } from "./git/resolver.ts";
 
 const maximumResults = 200;
 const maximumCandidates = 10_000;
@@ -37,7 +38,9 @@ export async function searchFiles(
   signal?: AbortSignal,
 ): Promise<FileSearchResult[]> {
   if (signal?.aborted) return [];
-  const statusPromise = config.git?.status().catch(() => undefined);
+  const statusPromise = gitStateAt(config, config.rootPath).then((state) =>
+    state?.status().catch(() => undefined)
+  );
   const paths = config.finders?.length
     ? await (config.finderRunner ?? searchedByFinder)(
       config.finders,

@@ -36,6 +36,7 @@ tree?.addEventListener('click', (event) => {
 const addEntries = (list, entries) => entries.forEach((entry) => {
   const item = document.createElement('li');
   const link = document.createElement('a');
+  if (!entry.directory) { item.className = 'tree-entry-row'; }
   if (entry.directory) { link.className = 'tree-folder-link'; }
     link.href = entry.href;
     link.dataset.kind = entry.kind;
@@ -48,7 +49,6 @@ const addEntries = (list, entries) => entries.forEach((entry) => {
    if (marker) { marker.className = 'git-marker'; marker.dataset.gitKind = entry.git.kind; marker.title = marker.ariaLabel = entry.git.tooltip; marker.textContent = entry.git.display; }
   if (!entry.directory) {
     if (entry.filesHref) {
-      item.className = 'tree-entry-row';
       const files = filesLink(entry.filesHref, entry.filesLabel ?? entry.name);
       syncNavigationLinks([link, files]);
        item.append(link, ...(marker ? [marker] : []), files);

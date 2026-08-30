@@ -7,6 +7,7 @@ import { filesPageAction, indexPageAction } from "./page-action.ts";
 import { renderMarkdown } from "./render-markdown.ts";
 import { redirect } from "./responses.ts";
 import type { ServerConfig } from "./types.ts";
+import { gitStateAt, gitStateAtChild } from "./git/resolver.ts";
 
 export async function renderDirectory(
   config: ServerConfig,
@@ -46,13 +47,29 @@ export async function renderDirectory(
   if (request.method === "HEAD") {
     return htmlResponse(request, "");
   }
-  const gitStatus = await config.git?.status();
+  const gitStatus = await (await gitStateAt(config, path))?.status();
+  const entries = await config.catalog.entries(path);
+  const entryStatuses = new Map(
+    await Promise.all(
+      entries.filter((entry) => entry.directory).map(async (entry) =>
+        [
+          entry.name,
+          await (await gitStateAtChild(
+            config,
+            path,
+            join(path, entry.name),
+          ))?.status(),
+        ] as const
+      ),
+    ),
+  );
   const content = directoryIndex(
-    await config.catalog.entries(path),
+    entries,
     url,
     breadcrumbPath(config.rootLabel, parts),
     gitStatus,
     parts.join("/"),
+    entryStatuses,
   );
   return htmlResponse(
     request,

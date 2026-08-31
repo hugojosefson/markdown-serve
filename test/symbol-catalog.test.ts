@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { join } from "@std/path";
 import { SymbolCatalog } from "../src/server/symbols/catalog.ts";
+import { FileAccess } from "../src/server/file-access.ts";
 import { fixture } from "./fixture.ts";
 
 Deno.test("symbol catalog excludes duplicates and drops stale targets after invalidation", async () => {
@@ -60,6 +61,37 @@ Deno.test("symbol catalog excludes VCS metadata directories", async () => {
     assertEquals(
       await new SymbolCatalog(f.root).targets(),
       new Map([["visible", "/one.ts#symbol-visible"]]),
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("symbol catalog skips filesystem-specific read failures", async () => {
+  const f = await fixture({
+    "visible.ts": "export function visible() {}\n",
+    "broken.ts": "export function broken() {}\n",
+    "unreadable.ts": "export function unreadable() {}\n",
+    "blocked/hidden.ts": "export function hidden() {}\n",
+  });
+  const access = new FileAccess(f.root, () => {}, {
+    stat: (path) =>
+      path === join(f.root, "broken.ts")
+        ? Promise.reject(new TypeError("Invalid argument (os error 22)"))
+        : Deno.stat(path),
+    readDirectory: (path) =>
+      path === join(f.root, "blocked")
+        ? Promise.reject(new TypeError("Invalid argument (os error 22)"))
+        : Array.fromAsync(Deno.readDir(path)),
+    readTextFile: (path) =>
+      path === join(f.root, "unreadable.ts")
+        ? Promise.reject(new TypeError("Invalid argument (os error 22)"))
+        : Deno.readTextFile(path),
+  });
+  try {
+    assertEquals(
+      await new SymbolCatalog(f.root, {}, access).targets(),
+      new Map([["visible", "/visible.ts#symbol-visible"]]),
     );
   } finally {
     await f.cleanup();

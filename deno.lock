@@ -8,6 +8,8 @@
     "jsr:@std/internal@^1.0.14": "1.0.14",
     "jsr:@std/media-types@^1.1.0": "1.1.0",
     "jsr:@std/path@^1.1.6": "1.1.6",
+    "npm:@hotwired/turbo@^8.0.23": "8.0.23",
+    "npm:diff@9": "9.0.0",
     "npm:file-lang-map@^1.1.11": "1.1.11",
     "npm:fork-version@5.2.0": "5.2.0",
     "npm:github-slugger@2": "2.0.0",
@@ -17,6 +19,7 @@
     "npm:marked-footnote@^1.4.0": "1.4.0_marked@17.0.6",
     "npm:marked-gfm-heading-id@^4.1.3": "4.1.4_marked@17.0.6",
     "npm:marked@^17.0.1": "17.0.6",
+    "npm:node-diff3@^3.2.1": "3.2.1",
     "npm:prismjs@^1.30.0": "1.30.0",
     "npm:sanitize-html@^2.17.0": "2.17.7",
     "npm:tree-sitter-wasms@0.1.13": "0.1.13",
@@ -201,6 +204,9 @@
       "integrity": "sha512-pEl1bO9mfAmIC+tW5btTmrKaujg3zGtUmWNdCw/xs70FBjwAL3o9OEKNHvNmnyylD6ubxUERiEhdsL0xBQ9efw==",
       "os": ["win32"],
       "cpu": ["x64"]
+    },
+    "@hotwired/turbo@8.0.23": {
+      "integrity": "sha512-GZ7cijxEZ6Ig71u7rD6LHaRv/wcE/hNsc+nEfiWOkLNqUgLOwo5MNGWOy5ZV9ZUDSiQx1no7YxjTNnT4O6//cQ=="
     },
     "@hutson/parse-repository-url@5.0.0": {
       "integrity": "sha512-e5+YUKENATs1JgYHMzTr2MW/NDcXGfYFAuOQU8gJgF/kEh4EqKgfGrfLI67bMD4tbhZVlkigz/9YYwWcbOFthg=="
@@ -396,6 +402,9 @@
     },
     "deepmerge@4.3.1": {
       "integrity": "sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A=="
+    },
+    "diff@9.0.0": {
+      "integrity": "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw=="
     },
     "dom-serializer@2.0.0": {
       "integrity": "sha512-wIkAryiqt/nV5EQKqQpo3SToSOV9J0DnbJqwK7Wv/Trc92zIAYZ4FlMu+JPFW1DfGFt81ZTCGgDEabffXeLyJg==",
@@ -711,6 +720,9 @@
     "neo-async@2.6.2": {
       "integrity": "sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw=="
     },
+    "node-diff3@3.2.1": {
+      "integrity": "sha512-eKZcJ8RtMQ3cIaA15EgmtwG927fYnRlhtdA4Q9HAcCpAZPQhhU2XptnTH9GeAkMiX2bAXxlJSAFa9shFbztPgw=="
+    },
     "normalize-package-data@6.0.2": {
       "integrity": "sha512-V6gygoYb/5EmNI+MEGrWkC+e6+Rr7mTmfHrxDbLzxQogBkgzo76rkok0Am6thgSF7Mv2nLOajAJj5vDJZEFn7g==",
       "dependencies": [
@@ -913,7 +925,10 @@
       "jsr:@std/assert@^1.0.19",
       "jsr:@std/media-types@^1.1.0",
       "jsr:@std/path@^1.1.6",
+      "npm:@hotwired/turbo@^8.0.23",
+      "npm:diff@9",
       "npm:file-lang-map@^1.1.11",
+      "npm:node-diff3@^3.2.1",
       "npm:prismjs@^1.30.0",
       "npm:tree-sitter-wasms@0.1.13",
       "npm:web-tree-sitter@0.25.10"

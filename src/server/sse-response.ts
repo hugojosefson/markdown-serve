@@ -1,14 +1,30 @@
 import type { ReloadSource } from "./reload-source.ts";
 
-export function sseResponse(source: ReloadSource): Response {
+export function sseResponse(
+  source: ReloadSource,
+  viewedFile?: { path: string; revision: string },
+): Response {
   let unsubscribe: (() => void) | undefined;
+  let untrack: (() => void) | undefined;
   let disposed = false;
+  const run = (operation: (() => void) | undefined) => {
+    try {
+      operation?.();
+    } catch {
+      // Cleanup must continue when a custom reload source fails.
+    }
+  };
   const dispose = () => {
     if (disposed) {
       return;
     }
     disposed = true;
-    unsubscribe?.();
+    const stopSubscription = unsubscribe;
+    const stopTracking = untrack;
+    unsubscribe = undefined;
+    untrack = undefined;
+    run(stopSubscription);
+    run(stopTracking);
   };
   const body = new ReadableStream({
     start(controller) {
@@ -20,12 +36,31 @@ export function sseResponse(source: ReloadSource): Response {
         if (disposed) {
           return;
         }
-        controller.close();
-        dispose();
+        try {
+          controller.close();
+        } finally {
+          dispose();
+        }
       };
-      unsubscribe = source.subscribe(send, close);
-      if (disposed) {
-        unsubscribe();
+      try {
+        unsubscribe = source.subscribe(send, close);
+        if (disposed) {
+          const stop = unsubscribe;
+          unsubscribe = undefined;
+          return run(stop);
+        }
+        untrack = viewedFile && source.trackViewedFile?.(
+          viewedFile.path,
+          viewedFile.revision,
+        );
+        if (disposed) {
+          const stop = untrack;
+          untrack = undefined;
+          run(stop);
+        }
+      } catch (error) {
+        dispose();
+        controller.error(error);
       }
     },
     cancel() {

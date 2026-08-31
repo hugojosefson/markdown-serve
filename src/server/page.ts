@@ -9,18 +9,25 @@ import {
   renderFileMetadataSummary,
 } from "./file-metadata.ts";
 import type { FileAction, HeaderAction } from "./page-action.ts";
-import { pageScript, pageStylesheet } from "./page-assets.ts";
+import { pageScript, pageStylesheet, turboScript } from "./page-assets.ts";
 import type { PageModel } from "./page-model.ts";
-import { reloadClientScript } from "./reload-client.ts";
 import type { ServerConfig } from "./types.ts";
 import { gitDirtyCount, type GitStatus } from "./git/status.ts";
-import { markdownSourceHref } from "./page-action.ts";
+import { markdownViewHref } from "./page-action.ts";
+import { queryHref, retainQuery, setQuery } from "./query.ts";
+import { join } from "@std/path";
+import { gitStateAt } from "./git/resolver.ts";
 
 export async function page(
   config: ServerConfig,
   model: PageModel,
 ): Promise<string> {
-  const status = model.gitStatus ?? await config.git?.status();
+  const directory = join(
+    config.rootPath,
+    ...(model.directory ? model.parts : model.parts.slice(0, -1)),
+  );
+  const status = model.gitStatus ?? await (await gitStateAt(config, directory))
+    ?.status();
   const navigation = await navigationTree(
     config,
     model.parts,
@@ -38,7 +45,7 @@ export async function page(
 function renderHead(model: PageModel): string {
   return `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${
     escapeHtml(model.title)
-  }</title><script>${displayInitialClient}</script>${navigationSpeculation}<link rel="stylesheet" href="${pageStylesheet.url}"></head>`;
+  }</title><script>${displayInitialClient}</script>${navigationSpeculation}<link rel="stylesheet" href="${pageStylesheet.url}" data-turbo-track="reload"><script src="${turboScript.url}" defer data-turbo-track="reload"></script><script src="${pageScript.url}" defer data-turbo-track="reload"></script></head>`;
 }
 
 function renderBody(
@@ -47,24 +54,38 @@ function renderBody(
   navigation: string,
   status?: GitStatus,
 ): string {
-  const metadataExpanded = model.url.searchParams.has("metadata");
-  const sourceExpanded = model.sourceExpanded ?? false;
+  const metadataExpanded = model.markdownView === "edit" || model.editView
+    ? false
+    : model.url.searchParams.has("metadata");
   const scope = model.directory ? model.parts : model.parts.slice(0, -1);
-  return `<body data-go-to-file-scope="${
-    escapeHtml(scope.join("/"))
+  const prefix = scope.length ? `${scope.join("/")}/` : "";
+  return `<body${
+    model.markdownView === "edit" || model.editView ? ' data-turbo="false"' : ""
+  }${config.reloadSource ? ' data-reload-enabled="true"' : ""}${
+    model.reloadTarget
+      ? ` data-reload-path="${
+        escapeHtml(model.reloadTarget.path)
+      }" data-reload-revision="${escapeHtml(model.reloadTarget.revision)}"`
+      : ""
+  } data-directory-view="${
+    model.directoryView ? "true" : "false"
+  }" data-go-to-file-prefix="${
+    escapeHtml(prefix)
   }" data-content-search-scope="${
     escapeHtml(scope.join("/"))
   }"><div class="layout"><aside class="tree"><details class="tree-disclosure" open><summary>Files</summary>${navigation}</details></aside><main class="content markdown-body">${
     repoContext(status)
-  }${renderContentHeader(config, model, metadataExpanded, sourceExpanded)}${
+  }${renderContentHeader(config, model, metadataExpanded)}${
     model.metadata && metadataExpanded
       ? renderFileMetadataDetails(model.metadata, model.url)
       : ""
   }${
-    sourceExpanded ? renderSourcePanel(model) : renderPageContent(model)
-  }</main></div><script src="${pageScript.url}"></script>${
-    reloadClient(config)
-  }</body>`;
+    model.markdownView === "source"
+      ? renderSourcePanel(model)
+      : model.markdownView === "edit" || model.editView
+      ? renderEditPage(model)
+      : renderPageContent(model)
+  }</main></div></body>`;
 }
 
 function repoContext(status?: GitStatus): string {
@@ -90,7 +111,6 @@ function renderContentHeader(
   config: ServerConfig,
   model: PageModel,
   metadataExpanded: boolean,
-  sourceExpanded: boolean,
 ): string {
   const breadcrumb = breadcrumbs(
     config.rootLabel,
@@ -105,11 +125,17 @@ function renderContentHeader(
   return `<header class="content-header${
     model.metadata && metadataExpanded ? " metadata-expanded" : ""
   }">${breadcrumb}${actions}<div class="content-controls">${
-    model.sourceExpanded === undefined
-      ? ""
-      : renderMarkdownViewToggle(model.url, sourceExpanded)
+    model.markdownView === undefined
+      ? model.editPath
+        ? renderTextViewToggle(model.url, Boolean(model.editView))
+        : ""
+      : renderMarkdownViewToggle(
+        model.url,
+        model.markdownView,
+        Boolean(model.editPath),
+      )
   }${
-    model.sourceExpanded === undefined
+    model.markdownView === undefined
       ? ""
       : `<div class="file-actions">${
         renderFileActions(
@@ -122,33 +148,128 @@ function renderContentHeader(
     model.metadata
       ? renderFileMetadataSummary(model.metadata, model.url, metadataExpanded)
       : ""
-  }${model.editPath ? editControl(model.editPath) : ""}${
-    displayLinks(model.url, model.directoryView ?? false)
-  }</div></header>`;
+  }${displayLinks(model.url, model.directoryView ?? false)}</div></header>`;
 }
 
-function editControl(path: string): string {
-  return `<button class="file-action edit-file" type="button" data-edit-path="${
-    escapeHtml(path)
-  }">Edit</button><dialog class="edit-dialog"><form method="dialog"><p class="edit-status" role="status">Loading…</p><textarea class="edit-text" spellcheck="false" aria-label="File contents"></textarea><div><button class="edit-cancel" value="cancel" type="button">Cancel</button><button class="edit-reload" type="button" hidden>Reload</button><button class="edit-save" type="button">Save</button></div></form></dialog>`;
+function renderMarkdownViewToggle(
+  url: URL,
+  view: "rendered" | "source" | "edit",
+  editable: boolean,
+): string {
+  const link = (target: "rendered" | "source" | "edit", label: string) =>
+    `<a class="${view === target ? "is-selected" : ""}" href="${
+      escapeHtml(markdownViewHref(url, target))
+    }"${view === target ? ' aria-current="true"' : ""}${
+      target === "edit" ? ' data-turbo="false"' : ""
+    }>${label}</a>`;
+  return `<nav class="markdown-view-toggle" aria-label="Markdown view">${
+    link("rendered", "Rendered")
+  }${link("source", "Source")}${editable ? link("edit", "Edit") : ""}</nav>`;
 }
 
-function renderMarkdownViewToggle(url: URL, source: boolean): string {
-  return `<nav class="markdown-view-toggle" aria-label="Markdown view"><a class="${
-    source ? "" : "is-selected"
-  }" href="${escapeHtml(markdownSourceHref(url, true))}"${
-    source ? "" : ' aria-current="true"'
-  }>Rendered</a><a class="${source ? "is-selected" : ""}" href="${
-    escapeHtml(markdownSourceHref(url, false))
-  }"${source ? ' aria-current="true"' : ""}>Source</a></nav>`;
+function renderTextViewToggle(url: URL, edit: boolean): string {
+  const link = (target: "rendered" | "edit", label: string) =>
+    `<a class="${edit === (target === "edit") ? "is-selected" : ""}" href="${
+      escapeHtml(markdownViewHref(url, target))
+    }"${edit === (target === "edit") ? ' aria-current="true"' : ""}${
+      target === "edit" ? ' data-turbo="false"' : ""
+    }>${label}</a>`;
+  return `<nav class="markdown-view-toggle" aria-label="Text view">${
+    link("rendered", "Source")
+  }${link("edit", "Edit")}</nav>`;
 }
 
 function renderSourcePanel(model: PageModel): string {
   return `<section class="markdown-source-panel" aria-label="Markdown source">${model.content}</section>`;
 }
 
+function renderEditPage(model: PageModel): string {
+  const layout = editLayout(model.url);
+  return `<section class="markdown-source-panel markdown-edit-panel" aria-label="File editor"><form class="edit-page" method="post" action="${
+    escapeHtml(
+      queryHref(
+        model.url.pathname,
+        retainQuery(model.url.search, ["edit", "theme", "wide"]),
+      ),
+    )
+  }" data-edit-path="${
+    escapeHtml(model.editPath ?? "")
+  }" data-turbo="false"><input type="hidden" name="etag" value="${
+    escapeHtml(model.editTag ?? "")
+  }"><p class="edit-status" role="status">${
+    escapeHtml(model.editStatus ?? "Editing")
+  }</p>${
+    model.editPreview === undefined ? "" : renderEditLayouts(layout, model.url)
+  }<div class="edit-workspace${
+    model.editPreview === undefined ? "" : " is-markdown"
+  }" data-edit-layout="${layout}"><div class="edit-surface"><pre class="edit-highlight code-block gfm-highlight" aria-hidden="true"><code>${
+    model.editHighlight ?? ""
+  }</code></pre><div class="edit-gutter" aria-label="Git changes"></div><textarea class="edit-text" name="content" spellcheck="false" aria-label="File contents">${
+    escapeHtml(model.editText ?? "")
+  }</textarea></div>${
+    model.editPreview === undefined
+      ? ""
+      : `<aside class="edit-markdown-preview" aria-label="Rendered Markdown preview">${model.editPreview}</aside>`
+  }</div><section class="edit-hunk-details" aria-label="Git change" hidden><pre></pre><div><button class="edit-hunk-close" type="button">Close diff</button><button class="edit-hunk-revert" type="button">Revert change in editor</button></div></section>${
+    model.editCurrentText === undefined
+      ? ""
+      : `<details class="edit-current"><summary>Current file on disk</summary><pre>${
+        escapeHtml(model.editCurrentText)
+      }</pre></details>`
+  }<div class="edit-buttons"><button type="submit">Save</button></div></form></section>`;
+}
+
+function editLayout(
+  url: URL,
+): "editor" | "split-horizontal" | "split-vertical" | "preview" {
+  return ({
+    "preview-stacked": "split-horizontal",
+    "preview-side-by-side": "split-vertical",
+    preview: "preview",
+  } as const)[url.searchParams.get("edit") ?? ""] ?? "editor";
+}
+
+function renderEditLayouts(
+  layout: ReturnType<typeof editLayout>,
+  url: URL,
+): string {
+  const retained = retainQuery(url.search, ["theme", "wide"]);
+  const href = (mode: string | null) =>
+    queryHref("", setQuery(retained, "edit", mode));
+  const controls = [[
+    "editor",
+    href(null),
+    "Write only",
+    '<path d="m3 13 1-4 7-7 3 3-7 7-4 1Z M9.5 3.5l3 3"/>',
+  ], [
+    "split-horizontal",
+    href("preview-stacked"),
+    "Stacked editor and preview",
+    '<rect x="2" y="2" width="12" height="12" rx="1"/><path d="M2 8h12"/>',
+  ], [
+    "split-vertical",
+    href("preview-side-by-side"),
+    "Editor and preview side by side",
+    '<rect x="2" y="2" width="12" height="12" rx="1"/><path d="M8 2v12"/>',
+  ], [
+    "preview",
+    href("preview"),
+    "Preview only",
+    '<path d="M1 8s2.5-4 7-4 7 4 7 4-2.5 4-7 4-7-4-7-4Z"/><circle cx="8" cy="8" r="2"/>',
+  ]] as const;
+  return `<nav class="edit-layout-controls" aria-label="Editor layout">${
+    controls.map(([name, href, label, icon]) =>
+      `<a href="${escapeHtml(href)}" data-edit-layout="${name}" class="${
+        layout === name ? "is-selected" : ""
+      }" aria-label="${label}" title="${label}"${
+        layout === name ? ' aria-current="true"' : ""
+      }><svg viewBox="0 0 16 16" aria-hidden="true">${icon}</svg></a>`
+    ).join("")
+  }</nav>`;
+}
+
 function renderPageContent(model: PageModel): string {
-  if (model.sourceExpanded !== undefined) {
+  if (model.markdownView !== undefined) {
     return `<div class="page-content page-content-markdown">${model.content}</div>`;
   }
   if (!model.fileActions?.length) {
@@ -179,10 +300,6 @@ function renderPageContent(model: PageModel): string {
   }</div>${model.content}</div>`;
 }
 
-function reloadClient(config: ServerConfig): string {
-  return config.reloadSource ? `<script>${reloadClientScript}</script>` : "";
-}
-
 function renderFileActions(actions: FileAction[]): string {
   return actions.map((action) =>
     renderPageAction(
@@ -206,7 +323,13 @@ function renderPageAction(
   const target = "target" in action
     ? ` target="${action.target}" rel="noopener"`
     : "";
-  return `<a class="${className}" href="${escapeHtml(action.href)}"${target}${
+  const turbo = "kind" in action &&
+      (action.kind === "raw" || action.kind === "download")
+    ? ' data-turbo="false"'
+    : "";
+  return `<a class="${className}" href="${
+    escapeHtml(action.href)
+  }"${target}${turbo}${
     queryRemove?.length
       ? ` data-query-remove="${escapeHtml(queryRemove.join(" "))}"`
       : ""

@@ -7,7 +7,8 @@ document.documentElement.dataset.width = displayWidth;`;
 
 import { navigationQueryClient } from "./client-query.ts";
 
-export const displayControlsClient = `${navigationQueryClient}
+export const displayControlsBehaviorClient = `
+const displayListenerOptions = typeof pageSignal === 'undefined' ? {} : { signal: pageSignal };
 const setDisplay = (theme, width) => {
   document.documentElement.dataset.colorMode = theme;
   document.documentElement.dataset.width = width;
@@ -25,11 +26,14 @@ setDisplay(initialDisplay.theme, initialDisplay.width);
 addEventListener('popstate', () => {
   const { theme, width } = readDisplay();
   setDisplay(theme, width);
-});
+}, displayListenerOptions);
 addEventListener('keydown', (event) => {
   if (!['t', 'w'].includes(event.key) || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.defaultPrevented ||
     event.target?.closest?.('a, button, input, select, textarea, [contenteditable]')) { return; }
   const group = document.querySelector(event.key === 't' ? '.display-theme' : '.display-width');
   const selected = group?.querySelector?.('[aria-current="true"]');
   (selected?.nextElementSibling ?? group?.querySelector?.('a'))?.click();
-});`;
+}, displayListenerOptions);`;
+
+export const displayControlsClient =
+  `${navigationQueryClient}${displayControlsBehaviorClient}`;

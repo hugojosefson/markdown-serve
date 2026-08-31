@@ -1,197 +1,547 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertMatch } from "@std/assert";
 import { installEdit } from "../src/server/edit-client.ts";
 
-type Listener = (event: { preventDefault(): void }) => void;
+type Event = {
+  defaultPrevented?: boolean;
+  preventDefault?(): void;
+  returnValue?: string;
+  target?: Element;
+};
 
 class Element {
+  classList = {
+    add: (name: string) => this.classes.add(name),
+    remove: (name: string) => this.classes.delete(name),
+  };
+  classes = new Set<string>();
   dataset: Record<string, string | undefined> = {};
-  value = "";
-  textContent: string | null = "";
+  disabled = false;
   hidden = false;
-  open = false;
-  showCalls = 0;
-  readonly listeners = new Map<string, Listener[]>();
-  readonly children = new Map<string, Element>();
-  close(): void {
-    this.open = false;
-    this.fire("close");
-  }
-  showModal(): void {
-    if (this.open) throw new Error("already open");
-    this.showCalls++;
-    this.open = true;
-  }
-  addEventListener(type: string, listener: Listener): void {
+  innerHTML = "";
+  scrollLeft = 0;
+  scrollTop = 0;
+  scrollHeight = 0;
+  selectionEnd = 0;
+  selectionStart = 0;
+  clientHeight = 0;
+  style = { transform: "" };
+  attributes = new Map<string, string>();
+  textContent: string | null = "";
+  value = "";
+  readonly listeners = new Map<string, ((event: Event) => void)[]>();
+  addEventListener(type: string, listener: (event: Event) => void): void {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
   }
-  querySelector<T extends Element>(selector: string): T | null {
-    return (this.children.get(selector) ?? null) as T | null;
+  setAttribute(name: string, value: string): void {
+    this.attributes.set(name, value);
   }
-  fire(type: string): void {
+  closest<T>(_selector: string): T | null {
+    return this as unknown as T;
+  }
+  fire(type: string, target: Element = this, event: Event = {}): Event {
+    event.target = target;
     for (const listener of this.listeners.get(type) ?? []) {
-      listener({ preventDefault() {} });
+      listener(event);
     }
+    return event;
   }
 }
 
 function editor() {
-  const button = new Element();
-  button.dataset.editPath = "note.txt";
-  const dialog = new Element();
-  const text = new Element();
-  const status = new Element();
-  const cancel = new Element();
-  const save = new Element();
-  const reload = new Element();
-  for (
-    const [name, value] of Object.entries({
-      ".edit-text": text,
-      ".edit-status": status,
-      ".edit-cancel": cancel,
-      ".edit-save": save,
-      ".edit-reload": reload,
-    })
-  ) dialog.children.set(name, value);
+  const elements = {
+    form: new Element(),
+    tag: new Element(),
+    text: new Element(),
+    surface: new Element(),
+    pre: new Element(),
+    code: new Element(),
+    gutter: new Element(),
+    details: new Element(),
+    diff: new Element(),
+    close: new Element(),
+    revert: new Element(),
+    status: new Element(),
+    preview: new Element(),
+    workspace: new Element(),
+    editorLayout: new Element(),
+    horizontalLayout: new Element(),
+    verticalLayout: new Element(),
+    previewLayout: new Element(),
+  };
+  elements.form.dataset.editPath = "guide.md";
+  elements.tag.value =
+    '"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"';
+  elements.text.value = "# draft\n";
+  elements.details.hidden = true;
+  const selectors = new Map<string, Element>([
+    [".edit-page", elements.form],
+    ['.edit-page input[name="etag"]', elements.tag],
+    [".edit-text", elements.text],
+    [".edit-surface", elements.surface],
+    [".edit-highlight", elements.pre],
+    [".edit-highlight code", elements.code],
+    [".edit-gutter", elements.gutter],
+    [".edit-hunk-details", elements.details],
+    [".edit-hunk-details pre", elements.diff],
+    [".edit-hunk-close", elements.close],
+    [".edit-hunk-revert", elements.revert],
+    [".edit-status", elements.status],
+    [".edit-markdown-preview", elements.preview],
+    [".edit-workspace", elements.workspace],
+    [
+      '.edit-layout-controls [data-edit-layout="editor"]',
+      elements.editorLayout,
+    ],
+    [
+      '.edit-layout-controls [data-edit-layout="split-horizontal"]',
+      elements.horizontalLayout,
+    ],
+    [
+      '.edit-layout-controls [data-edit-layout="split-vertical"]',
+      elements.verticalLayout,
+    ],
+    [
+      '.edit-layout-controls [data-edit-layout="preview"]',
+      elements.previewLayout,
+    ],
+  ]);
+  const listeners = new Map<string, (event: Event) => void>();
+  const lifecycleListeners = new Map<string, (event: Event) => void>();
   const document = {
-    querySelector<T extends Element>(selector: string): T | null {
-      return (selector === ".edit-file"
-        ? button
-        : selector === ".edit-dialog"
-        ? dialog
-        : null) as T | null;
+    querySelector: (selector: string) => selectors.get(selector) ?? null,
+    addEventListener: (type: string, listener: (event: Event) => void) =>
+      listeners.set(type, listener),
+    dispatchEvent: () => true,
+    createRange: () => {
+      const range = {
+        end: 0,
+        start: 0,
+        setEnd: (_node: unknown, offset: number) => range.end = offset,
+        setStart: (_node: unknown, offset: number) => range.start = offset,
+      };
+      return range;
     },
-    addEventListener() {},
+    createTreeWalker: (root: Element) => {
+      let pending = true;
+      return {
+        nextNode: () => {
+          if (!pending) {
+            return null;
+          }
+          pending = false;
+          return { nodeValue: root.textContent };
+        },
+      };
+    },
+  };
+  const lifecycle = {
+    addEventListener: (type: string, listener: (event: Event) => void) =>
+      lifecycleListeners.set(type, listener),
   };
   return {
-    button,
-    dialog,
-    text,
-    status,
-    cancel,
-    save,
-    reload,
+    ...elements,
     document: document as unknown as Parameters<typeof installEdit>[0],
+    lifecycle: lifecycle as unknown as Parameters<typeof installEdit>[2],
+    fireDocument: (type: string) => listeners.get(type)?.({}),
+    fireLifecycle: (type: string, event: Event) =>
+      lifecycleListeners.get(type)?.(event),
   };
 }
 
-const response = (
-  status: number,
-  text = "",
-  etag: string | null = '"tag"',
+const payload = (
+  draft: string,
+  hunks: Array<{ start: number; count: number; text: string }> = [],
 ) => ({
-  ok: status >= 200 && status < 300,
-  status,
-  headers: { get: (name: string) => name === "etag" ? etag : null },
-  text: () => Promise.resolve(text),
+  draft,
+  git: true,
+  html: `<span class="token">${draft.trim()}</span>`,
+  hunks,
+  limited: false,
 });
 
-Deno.test("edit client is a no-op when editor UI is absent", () => {
-  installEdit({ querySelector: () => null, addEventListener() {} }, () => {
+Deno.test("edit enhancement is absent without an edit page", () => {
+  installEdit({
+    querySelector: () => null,
+    addEventListener() {},
+    dispatchEvent: () => true,
+  }, () => {
     throw new Error("must not fetch");
   });
 });
 
-Deno.test("edit client loads, saves, and reloads a conflict without reopening", async () => {
+Deno.test("edit enhancement highlights, inspects, and reverts a Git hunk in memory", async () => {
   const ui = editor();
-  const calls: Array<
-    { method?: string; body?: string; headers?: Record<string, string> }
-  > = [];
-  let saves = 0;
-  installEdit(ui.document, (_url, options) => {
-    calls.push(options);
-    if (options.method !== "PUT") {
-      return Promise.resolve(response(200, "safe text", '"one"'));
-    }
-    return Promise.resolve(
-      ++saves === 1 ? response(412) : response(204, "", '"two"'),
-    );
-  });
-  ui.button.fire("click");
+  const calls: Array<{ url: string; body: string }> = [];
+  installEdit(ui.document, (url, options) => {
+    calls.push({ url, body: options.body });
+    const response = url.includes("revert=0")
+      ? payload("# head\n")
+      : payload("# draft\n", [{
+        start: 1,
+        count: 1,
+        text: "@@ -1 +1 @@\n-# head\n+# draft",
+      }]);
+    return Promise.resolve({ ok: true, json: () => Promise.resolve(response) });
+  }, ui.lifecycle);
   await Promise.resolve();
   await Promise.resolve();
-  assertEquals([ui.text.value, ui.status.textContent, ui.dialog.open], [
-    "safe text",
-    "Ready",
-    true,
-  ]);
-  ui.text.value = "local edit";
-  ui.save.fire("click");
-  await Promise.resolve();
-  assertEquals([ui.text.value, ui.status.textContent, ui.reload.hidden], [
-    "local edit",
-    "Conflict: reload before retrying",
+
+  assertEquals(ui.surface.classes.has("is-enhanced"), true);
+  assertMatch(ui.code.innerHTML, /token/);
+  assertMatch(ui.gutter.innerHTML, /data-edit-hunk="0"/);
+  const marker = new Element();
+  marker.dataset.editHunk = "0";
+  ui.gutter.fire("click", marker);
+  assertEquals([ui.details.hidden, ui.diff.textContent], [
     false,
+    "@@ -1 +1 @@\n-# head\n+# draft",
   ]);
-  ui.reload.fire("click");
+
+  ui.revert.fire("click");
   await Promise.resolve();
   await Promise.resolve();
-  assertEquals(ui.dialog.showCalls, 1);
-  ui.text.value = "replacement";
-  ui.save.fire("click");
-  await Promise.resolve();
+  assertEquals(ui.text.value, "# head\n");
+  assertEquals(calls.at(-1), {
+    url: "/__markdown_serve__/highlight?path=guide.md&revert=0",
+    body: "# draft\n",
+  });
+  assertEquals(ui.gutter.innerHTML, "");
+});
+
+Deno.test("edit enhancement keeps native text current and reports disk changes", async () => {
+  const ui = editor();
+  installEdit(ui.document, () =>
+    Promise.resolve({
+      ok: false,
+      json: () => Promise.resolve(payload("")),
+    }), ui.lifecycle);
+  assertEquals(ui.surface.classes.has("is-enhanced"), false);
+  ui.text.value = "new & visible";
+  ui.text.fire("input");
+  assertEquals(ui.code.textContent, "new & visible");
+  ui.text.scrollTop = 30;
+  ui.text.scrollLeft = 12;
+  ui.text.fire("scroll");
   assertEquals(
-    calls.filter((call) => call.method === "PUT").map((
-      call,
-    ) => [call.headers?.["If-Match"], call.body]),
-    [['"one"', "local edit"], ['"one"', "replacement"]],
+    [
+      ui.code.style.transform,
+      ui.pre.scrollTop,
+      ui.pre.scrollLeft,
+      ui.gutter.style.transform,
+    ],
+    ["translate(-12px, -30px)", 0, 0, "translateY(-30px)"],
   );
-  assertEquals(ui.dialog.open, false);
+  ui.fireDocument("markdown-serve:reload");
+  assertMatch(ui.status.textContent!, /Loading changes/);
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  assertMatch(ui.status.textContent!, /draft is preserved/);
+  assertEquals(ui.surface.classes.has("is-enhanced"), false);
 });
 
-Deno.test("edit client discards stale load and save results", async () => {
+Deno.test("Markdown layouts switch without hiding the native editor by default and synchronize scroll ranges", () => {
   const ui = editor();
-  const first = Promise.withResolvers<ReturnType<typeof response>>();
-  let gets = 0;
-  installEdit(ui.document, (_url, options) => {
-    if (options.method === "PUT") return Promise.resolve(response(500));
-    return ++gets === 1
-      ? first.promise
-      : Promise.resolve(response(200, "new", '"new"'));
-  });
-  ui.button.fire("click");
-  ui.button.fire("click");
-  first.resolve(response(200, "old", '"old"'));
-  await Promise.resolve();
-  await Promise.resolve();
-  assertEquals([ui.text.value, ui.status.textContent], ["new", "Ready"]);
+  ui.text.scrollHeight = 1_000;
+  ui.text.clientHeight = 200;
+  ui.preview.scrollHeight = 600;
+  ui.preview.clientHeight = 100;
+  installEdit(ui.document, () =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(payload("# draft\n")),
+    }), ui.lifecycle);
+  ui.workspace.dataset.editLayout = "split-horizontal";
+  ui.fireDocument("markdown-serve:editor-layout");
+  assertEquals(ui.workspace.dataset.editLayout, "split-horizontal");
+  ui.text.scrollTop = 400;
+  ui.text.fire("scroll");
+  assertEquals(ui.preview.scrollTop, 250);
+  ui.preview.scrollTop = 125;
+  ui.preview.fire("scroll");
+  assertEquals(ui.text.scrollTop, 200);
+  ui.workspace.dataset.editLayout = "preview";
+  ui.fireDocument("markdown-serve:editor-layout");
+  assertEquals(ui.workspace.dataset.editLayout, "preview");
+  ui.workspace.dataset.editLayout = "editor";
+  ui.fireDocument("markdown-serve:editor-layout");
+  assertEquals(ui.workspace.dataset.editLayout, "editor");
 });
 
-Deno.test("edit client cancels requests and reports unknown HTTP failures", async () => {
-  const ui = editor();
-  let signal: AbortSignal | undefined;
-  installEdit(ui.document, (_url, options) => {
-    signal = options.signal;
-    return Promise.resolve(response(500));
-  });
-  ui.button.fire("click");
-  await Promise.resolve();
-  assertEquals(ui.status.textContent, "Could not load file");
-  ui.button.fire("click");
-  ui.cancel.fire("click");
-  assertEquals([signal?.aborted, ui.dialog.open], [true, false]);
-  ui.dialog.open = true;
-  ui.dialog.fire("cancel");
-  assertEquals(ui.dialog.open, false);
-});
+Deno.test("Markdown split preview follows the editor caret and selection", () => {
+  const cssDescriptor = Object.getOwnPropertyDescriptor(globalThis, "CSS");
+  const highlightDescriptor = Object.getOwnPropertyDescriptor(
+    globalThis,
+    "Highlight",
+  );
+  const highlights = new Map<string, { ranges: unknown[] }>();
+  try {
+    Object.defineProperty(globalThis, "CSS", {
+      configurable: true,
+      value: {
+        highlights: {
+          delete: (name: string) => highlights.delete(name),
+          set: (name: string, highlight: { ranges: unknown[] }) =>
+            highlights.set(name, highlight),
+        },
+      },
+    });
+    Object.defineProperty(globalThis, "Highlight", {
+      configurable: true,
+      value: class {
+        ranges: unknown[];
+        constructor(...ranges: unknown[]) {
+          this.ranges = ranges;
+        }
+      },
+    });
+    const ui = editor();
+    ui.text.value = "# Title\n\nA paragraph with selected words.";
+    ui.preview.textContent = "TitleA paragraph with selected words.";
+    installEdit(ui.document, () =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(payload(ui.text.value)),
+      }), ui.lifecycle);
+    ui.workspace.dataset.editLayout = "split-vertical";
+    ui.fireDocument("markdown-serve:editor-layout");
+    const word = ui.text.value.indexOf("paragraph");
+    ui.text.selectionStart = word + 2;
+    ui.text.selectionEnd = word + 2;
+    ui.text.fire("select");
+    assertEquals(highlights.has("edit-preview-caret"), true);
+    const caretRange = highlights.get("edit-preview-caret")?.ranges[0] as {
+      end: number;
+      start: number;
+    };
+    assertEquals([caretRange.start, caretRange.end], [7, 16]);
 
-Deno.test("edit client ignores a completed save after cancellation", async () => {
-  const ui = editor();
-  const pending = Promise.withResolvers<ReturnType<typeof response>>();
-  let loaded = false;
-  installEdit(ui.document, (_url, options) => {
-    if (!options.method) {
-      return Promise.resolve(response(200, "original", '"one"'));
+    ui.text.selectionStart = ui.text.value.indexOf("selected");
+    ui.text.selectionEnd = ui.text.value.indexOf("words") + "words".length;
+    ui.text.fire("select");
+    assertEquals(highlights.has("edit-preview-caret"), false);
+    assertEquals(highlights.has("edit-preview-selection"), true);
+    const selectionRange = highlights.get("edit-preview-selection")
+      ?.ranges[0] as { end: number; start: number };
+    assertEquals([selectionRange.start, selectionRange.end], [22, 36]);
+    ui.workspace.dataset.editLayout = "editor";
+    ui.fireDocument("markdown-serve:editor-layout");
+    assertEquals(highlights.size, 0);
+  } finally {
+    if (cssDescriptor) {
+      Object.defineProperty(globalThis, "CSS", cssDescriptor);
+    } else {
+      Reflect.deleteProperty(globalThis, "CSS");
     }
-    if (!loaded) throw new Error("load did not finish");
-    return pending.promise;
-  });
-  ui.button.fire("click");
-  await Promise.resolve();
-  await Promise.resolve();
-  loaded = true;
-  ui.save.fire("click");
-  ui.cancel.fire("click");
-  pending.resolve(response(204, "", '"two"'));
-  await Promise.resolve();
-  assertEquals([ui.dialog.open, ui.status.textContent], [false, "Saving…"]);
+    if (highlightDescriptor) {
+      Object.defineProperty(globalThis, "Highlight", highlightDescriptor);
+    } else {
+      Reflect.deleteProperty(globalThis, "Highlight");
+    }
+  }
 });
+
+Deno.test("edit enhancement does not overwrite typing during hunk revert", async () => {
+  const ui = editor();
+  let finishRevert:
+    | ((
+      value: { ok: boolean; json(): Promise<ReturnType<typeof payload>> },
+    ) => void)
+    | undefined;
+  installEdit(ui.document, (url) => {
+    if (url.includes("revert=0")) {
+      return new Promise((resolve) => finishRevert = resolve);
+    }
+    return Promise.resolve({
+      ok: true,
+      json: () =>
+        Promise.resolve(payload("# draft\n", [{
+          start: 1,
+          count: 1,
+          text: "@@ -1 +1 @@\n-# head\n+# draft",
+        }])),
+    });
+  }, ui.lifecycle);
+  await Promise.resolve();
+  await Promise.resolve();
+  const marker = new Element();
+  marker.dataset.editHunk = "0";
+  ui.gutter.fire("click", marker);
+  ui.revert.fire("click");
+  ui.text.value = "typed while reverting";
+  ui.text.fire("input");
+  finishRevert?.({
+    ok: true,
+    json: () => Promise.resolve(payload("# head\n")),
+  });
+  await Promise.resolve();
+  await Promise.resolve();
+  assertEquals(ui.text.value, "typed while reverting");
+});
+
+Deno.test("edit enhancement warns before leaving only with unsaved changes", async () => {
+  const ui = editor();
+  installEdit(ui.document, () =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve(payload("# draft\n")),
+    }), ui.lifecycle);
+  await Promise.resolve();
+  await Promise.resolve();
+
+  const clean = unloadEvent();
+  ui.fireLifecycle("beforeunload", clean);
+  assertEquals(clean.defaultPrevented, false);
+  ui.text.value = "changed";
+  ui.text.fire("input");
+  const dirty = unloadEvent();
+  ui.fireLifecycle("beforeunload", dirty);
+  assertEquals([dirty.defaultPrevented, dirty.returnValue], [true, ""]);
+  ui.form.fire("submit");
+  const saving = unloadEvent();
+  ui.fireLifecycle("beforeunload", saving);
+  assertEquals(saving.defaultPrevented, false);
+});
+
+Deno.test("edit enhancement loads and merges external disk changes", async () => {
+  const ui = editor();
+  const calls: string[] = [];
+  installEdit(ui.document, (url) => {
+    calls.push(url);
+    return Promise.resolve({
+      ok: true,
+      json: () =>
+        Promise.resolve(
+          url.includes("/merge?")
+            ? {
+              changed: true,
+              limited: false,
+              base: "# disk\n",
+              draft: "# disk\n",
+              tag:
+                '"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"',
+              conflicted: false,
+            }
+            : { ...payload(ui.text.value), preview: "<h1>disk</h1>" },
+        ),
+    });
+  }, ui.lifecycle);
+  await Promise.resolve();
+  await Promise.resolve();
+  ui.fireDocument("markdown-serve:reload");
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  await Promise.resolve();
+  await Promise.resolve();
+
+  assertEquals(ui.text.value, "# disk\n");
+  assertMatch(ui.tag.value, /^"b+"$/);
+  assertMatch(ui.status.textContent!, /Loaded changes/);
+  assertEquals(ui.preview.innerHTML, "<h1>disk</h1>");
+  assertEquals(calls.some((url) => url.includes("/merge?")), true);
+  const clean = unloadEvent();
+  ui.fireLifecycle("beforeunload", clean);
+  assertEquals(clean.defaultPrevented, false);
+});
+
+Deno.test("edit enhancement exposes merge conflicts and blocks save", async () => {
+  const ui = editor();
+  installEdit(ui.document, (url) =>
+    Promise.resolve({
+      ok: true,
+      json: () =>
+        Promise.resolve(
+          url.includes("/merge?")
+            ? {
+              changed: true,
+              limited: false,
+              base: "disk\n",
+              draft:
+                "<<<<<<< draft\nmine\n||||||| previous disk version\nold\n=======\ndisk\n>>>>>>> current disk version\n",
+              tag:
+                '"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"',
+              conflicted: true,
+            }
+            : payload(ui.text.value),
+        ),
+    }), ui.lifecycle);
+  ui.text.value = "mine\n";
+  ui.text.fire("input");
+  ui.fireDocument("markdown-serve:reload");
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  await Promise.resolve();
+
+  assertMatch(ui.text.value, /<<<<<<< draft/);
+  const submit = preventedEvent();
+  ui.form.fire("submit", ui.form, submit);
+  assertEquals(submit.defaultPrevented, true);
+  assertMatch(ui.status.textContent!, /Resolve/);
+});
+
+Deno.test("edit enhancement retries a stale disk merge after typing", async () => {
+  const ui = editor();
+  let mergeCalls = 0;
+  let finishFirst:
+    | ((value: { ok: boolean; json(): Promise<unknown> }) => void)
+    | undefined;
+  installEdit(ui.document, (url) => {
+    if (!url.includes("/merge?")) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(payload(ui.text.value)),
+      });
+    }
+    mergeCalls++;
+    if (mergeCalls === 1) {
+      return new Promise((resolve) => finishFirst = resolve);
+    }
+    return Promise.resolve({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          changed: true,
+          limited: false,
+          base: "# disk\n",
+          draft: "typed\n# disk\n",
+          tag:
+            '"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"',
+          conflicted: false,
+        }),
+    });
+  }, ui.lifecycle);
+  await Promise.resolve();
+  await Promise.resolve();
+  ui.fireDocument("markdown-serve:reload");
+  await new Promise((resolve) => setTimeout(resolve, 170));
+  ui.text.value = "typed\n# draft\n";
+  ui.text.fire("input");
+  finishFirst?.({
+    ok: true,
+    json: () =>
+      Promise.resolve({
+        changed: true,
+        limited: false,
+        base: "# disk\n",
+        draft: "stale\n",
+        tag:
+          '"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"',
+        conflicted: false,
+      }),
+  });
+  await new Promise((resolve) => setTimeout(resolve, 180));
+  await Promise.resolve();
+
+  assertEquals(mergeCalls, 2);
+  assertEquals(ui.text.value, "typed\n# disk\n");
+  assertMatch(ui.tag.value, /^"d+"$/);
+});
+
+function preventedEvent(): Event {
+  return {
+    defaultPrevented: false,
+    preventDefault() {
+      this.defaultPrevented = true;
+    },
+  };
+}
+
+function unloadEvent(): Event {
+  return preventedEvent();
+}

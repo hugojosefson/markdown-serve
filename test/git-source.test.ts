@@ -28,6 +28,7 @@ Deno.test("text and Markdown source views use served-root-relative Git paths", a
         paths.push(path);
         return Promise.resolve(new Map([[1, { unstaged: true }]]));
       },
+      head: () => Promise.resolve(undefined),
       refresh: () => Promise.resolve(),
     },
   };

@@ -17,6 +17,9 @@ export async function siteResponse(
   }
   const path = filePath(config.rootPath, parts);
   const stat = await config.catalog.stat(path);
+  if (config.access?.isDenied(path)) {
+    return plain("Forbidden", 403, request.method);
+  }
   if (stat?.isDirectory) {
     if (!url.pathname.endsWith("/")) {
       return redirect(
@@ -27,19 +30,36 @@ export async function siteResponse(
       );
     }
     const index = filePath(path, ["index.html"]);
-    if (!(await config.catalog.stat(index))?.isFile) {
-      return plain("Not Found", 404, request.method);
+    if (config.access?.isDenied(index)) {
+      return plain("Forbidden", 403, request.method);
     }
-    return await previewFile(request, index);
+    if (!(await config.catalog.stat(index))?.isFile) {
+      return config.access?.isDenied(index)
+        ? plain("Forbidden", 403, request.method)
+        : plain("Not Found", 404, request.method);
+    }
+    return await previewFile(config, request, index);
   }
   if (!stat?.isFile) {
     return plain("Not Found", 404, request.method);
   }
-  return await previewFile(request, path);
+  return await previewFile(config, request, path);
 }
 
-async function previewFile(request: Request, path: string): Promise<Response> {
-  const response = await rawFile(request, path);
+async function previewFile(
+  config: ServerConfig,
+  request: Request,
+  path: string,
+): Promise<Response> {
+  let response: Response;
+  try {
+    response = await rawFile(request, path);
+  } catch (error) {
+    if (config.access?.handlePermissionDenied(path, error)) {
+      return plain("Forbidden", 403, request.method);
+    }
+    throw error;
+  }
   if (response.headers.get("content-type")?.startsWith("text/html")) {
     response.headers.set("Content-Security-Policy", htmlPreviewCsp);
   }

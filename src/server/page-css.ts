@@ -7,12 +7,12 @@ import { foldCss } from "./fold-css.ts";
 import { editCss } from "./edit-css.ts";
 
 export const pageCss = `${CSS}\n${editCss}
-:root { color-scheme: light dark; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; --kind-directory: #8250df; --kind-symlink: #0969da; --kind-executable: #1a7f37; --kind-archive: #bf8700; --kind-image: #cf222e; --kind-media: #0550ae; --kind-file: var(--code-text); --git-conflict: #cf222e; --git-renamed: #8250df; --git-deleted: #cf222e; --git-modified: #bf8700; --git-added: #1a7f37; --git-untracked: #0969da; --git-ignored: var(--code-muted); }
+:root { color-scheme: light dark; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; --kind-directory: #8250df; --kind-symlink: #0969da; --kind-broken-symlink: #cf222e; --kind-executable: #1a7f37; --kind-archive: #bf8700; --kind-image: #cf222e; --kind-media: #0550ae; --kind-file: var(--code-text); --git-conflict: #cf222e; --git-renamed: #8250df; --git-deleted: #cf222e; --git-modified: #bf8700; --git-added: #1a7f37; --git-untracked: #0969da; --git-ignored: var(--code-muted); }
 html { scrollbar-gutter: stable; }
 @media (prefers-reduced-motion: no-preference) {
   @view-transition { navigation: auto; }
   .content-header .file-metadata { view-transition-name: file-metadata; }
-  .content:has(.file-metadata) .page-content { view-transition-name: file-content; }
+  .layout > .content:has(.file-metadata) .page-content { view-transition-name: file-content; }
   .file-metadata-details { view-transition-name: file-metadata-details; }
    .content-header .markdown-view-toggle { view-transition-name: markdown-view-toggle; }
   .markdown-source-panel { view-transition-name: markdown-source-panel; }
@@ -25,9 +25,9 @@ html { scrollbar-gutter: stable; }
 }
 @keyframes metadata-details-in { from { opacity: 0; transform: scaleY(.96); } }
 @keyframes metadata-details-out { to { opacity: 0; transform: scaleY(.96); } }
-@media (prefers-color-scheme: dark) { :root { --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; --kind-directory: #d2a8ff; --kind-symlink: #58a6ff; --kind-executable: #7ee787; --kind-archive: #e3b341; --kind-image: #ff7b72; --kind-media: #79c0ff; --kind-file: var(--code-text); --git-conflict: #ff7b72; --git-renamed: #d2a8ff; --git-deleted: #ff7b72; --git-modified: #e3b341; --git-added: #7ee787; --git-untracked: #58a6ff; --git-ignored: var(--code-muted); } }
+@media (prefers-color-scheme: dark) { :root { --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; --kind-directory: #d2a8ff; --kind-symlink: #58a6ff; --kind-broken-symlink: #ff7b72; --kind-executable: #7ee787; --kind-archive: #e3b341; --kind-image: #ff7b72; --kind-media: #79c0ff; --kind-file: var(--code-text); --git-conflict: #ff7b72; --git-renamed: #d2a8ff; --git-deleted: #ff7b72; --git-modified: #e3b341; --git-added: #7ee787; --git-untracked: #58a6ff; --git-ignored: var(--code-muted); } }
 html[data-color-mode="light"] { color-scheme: light; --code-bg: #f6f8fa; --code-border: #d0d7de; --code-hover: #eaeef2; --code-muted: #57606a; --code-text: #24292f; --focus-color: #0969da; --tree-active: #0969da; --tree-bg: #f6f8fa; --tree-border: #d0d7de; --tree-hover: #eaeef2; --tree-muted: #57606a; --tree-text: #24292f; }
-html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; --kind-directory: #d2a8ff; --kind-symlink: #58a6ff; --kind-executable: #7ee787; --kind-archive: #e3b341; --kind-image: #ff7b72; --kind-media: #79c0ff; --kind-file: var(--code-text); --git-conflict: #ff7b72; --git-renamed: #d2a8ff; --git-deleted: #ff7b72; --git-modified: #e3b341; --git-added: #7ee787; --git-untracked: #58a6ff; --git-ignored: var(--code-muted); }
+html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-border: #30363d; --code-hover: #21262d; --code-muted: #8b949e; --code-text: #c9d1d9; --focus-color: #58a6ff; --tree-active: #1f6feb; --tree-bg: #161b22; --tree-border: #30363d; --tree-hover: #21262d; --tree-muted: #8b949e; --tree-text: #f0f6fc; --kind-directory: #d2a8ff; --kind-symlink: #58a6ff; --kind-broken-symlink: #ff7b72; --kind-executable: #7ee787; --kind-archive: #e3b341; --kind-image: #ff7b72; --kind-media: #79c0ff; --kind-file: var(--code-text); --git-conflict: #ff7b72; --git-renamed: #d2a8ff; --git-deleted: #ff7b72; --git-modified: #e3b341; --git-added: #7ee787; --git-untracked: #58a6ff; --git-ignored: var(--code-muted); }
 .layout { display: grid; grid-template-columns: 17rem minmax(0, 1fr); gap: 24px; margin: 0 auto; max-width: 1280px; padding: 16px; }
 .tree { align-self: start; background: var(--tree-bg); border: 1px solid var(--tree-border); border-radius: 6px; box-sizing: border-box; color: var(--tree-text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.45; max-height: calc(100vh - 32px); overflow: auto; padding: 8px; position: sticky; top: 16px; }
 .tree nav > ul, .tree ul { list-style: none; margin: 4px 0; padding: 0; }
@@ -42,6 +42,9 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .tree a[data-kind], .directory-table a[data-kind] { color: var(--kind-file); }
 .tree a[data-kind="directory"], .directory-table a[data-kind="directory"] { color: var(--kind-directory); }
 .tree a[data-kind="symlink"], .directory-table a[data-kind="symlink"] { color: var(--kind-symlink); }
+.tree a[data-kind="broken-symlink"], .directory-table a[data-kind="broken-symlink"] { color: var(--kind-broken-symlink); }
+.tree a[data-kind="symlink"]::before, .directory-table a[data-kind="symlink"]::before { content: "↗ "; }
+.tree a[data-kind="broken-symlink"]::before, .directory-table a[data-kind="broken-symlink"]::before { content: "⚠ "; }
 .tree a[data-kind="executable"], .directory-table a[data-kind="executable"] { color: var(--kind-executable); }
 .tree a[data-kind="archive"], .directory-table a[data-kind="archive"] { color: var(--kind-archive); }
 .tree a[data-kind="image"], .directory-table a[data-kind="image"] { color: var(--kind-image); }
@@ -49,6 +52,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .tree .active[data-kind] { color: #fff; }
 .tree a[data-git-ignored="true"], .directory-table a[data-git-ignored="true"] { opacity: .65; }
 .git-marker, .directory-git span { color: var(--git-modified); font-size: .9em; margin-left: 4px; }
+.tree .git-marker { flex: 0 0 auto; margin-right: 6px; white-space: nowrap; }
 [data-git-kind="conflict"] { color: var(--git-conflict); } [data-git-kind="renamed"] { color: var(--git-renamed); } [data-git-kind="deleted"] { color: var(--git-deleted); } [data-git-kind="modified"] { color: var(--git-modified); } [data-git-kind="added"] { color: var(--git-added); } [data-git-kind="untracked"] { color: var(--git-untracked); } [data-git-kind="ignored"] { color: var(--git-ignored); opacity: .65; }
 .tree-repo-context { color: var(--tree-muted); font-size: 11px; margin-left: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.tree-repo-context b { color: var(--git-modified); }.repo-context { display: none; }
  .tree summary, .tree .tree-root-row, .tree .tree-entry-row { align-items: center; border-radius: 4px; display: flex; min-width: 0; position: relative; }
@@ -61,7 +65,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .tree .tree-files-link { align-items: center; background: var(--tree-hover); bottom: 0; color: var(--tree-muted); display: flex; font-size: 11px; opacity: 0; padding: 0 5px; pointer-events: none; position: absolute; right: 0; top: 0; }
  .tree summary:hover .tree-files-link, .tree summary:focus-within .tree-files-link, .tree .tree-root-row:hover .tree-files-link, .tree .tree-root-row:focus-within .tree-files-link, .tree .tree-entry-row:hover .tree-files-link, .tree .tree-entry-row:focus-within .tree-files-link, .tree .tree-files-link:focus-visible { opacity: 1; pointer-events: auto; }
 .tree-root { font-weight: 600; }
-.content { min-width: 0; padding: 8px 16px 32px; }
+.layout > .content { min-width: 0; padding: 8px 16px 32px; }
 .page-content { position: relative; }
 .page-content-top { padding-top: 30px; }
 .file-actions { align-items: center; display: flex; gap: 4px; }
@@ -109,7 +113,7 @@ html[data-color-mode="dark"] { color-scheme: dark; --code-bg: #161b22; --code-bo
 .media-preview { display: block; max-width: 100%; }
 .media-preview.image { height: auto; max-height: none; max-width: var(--image-max-width, 100%); width: 100%; }
 .media-preview.audio, .media-preview.video { max-width: 100%; width: min(100%, 720px); }
-.media-preview.pdf { border: 1px solid var(--code-border); height: min(75vh, 900px); width: 100%; }
+.media-preview.pdf { border: 1px solid var(--code-border); height: calc(100vh - 8rem); height: calc(100dvh - 8rem); min-height: 20rem; width: 100%; }
 .binary-sample { overflow-x: auto; }
 .binary-sample pre { white-space: pre; }
 .sr-only { height: 1px; margin: -1px; overflow: hidden; position: absolute; width: 1px; clip: rect(0, 0, 0, 0); }
@@ -152,7 +156,7 @@ ${foldCss}
 }
 @media (max-width: 560px) {
   .layout { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
-  .content { order: 1; padding: 0; }
+  .layout > .content { order: 1; padding: 0; }
    .tree { max-height: none; order: 0; overflow: visible; padding: 0; position: static; width: 100%; }
   .tree-disclosure > summary { align-items: center; display: flex; font-weight: 600; min-height: 34px; padding: 0 8px; }
   .tree-disclosure > nav { border-top: 1px solid var(--tree-border); max-height: 40vh; overflow: auto; padding: 8px; }

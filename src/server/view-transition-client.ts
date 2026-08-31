@@ -18,5 +18,8 @@ addEventListener('pageswap', (event) => {
   const onlyFlagChanged = (flag) => {
     return current.searchParams.has(flag) !== target.searchParams.has(flag) && withoutFlag(current, flag) === withoutFlag(target, flag);
   };
-  if (!onlyFlagChanged('metadata') && !onlyFlagChanged('source')) { transition.skipTransition(); }
+  const view = (url) => url.searchParams.has('edit') ? 'edit' : url.searchParams.has('source') ? 'source' : 'rendered';
+  const withoutView = (url) => withoutFlag(new URL(withoutFlag(url, 'source')), 'edit');
+  const onlyViewChanged = view(current) !== view(target) && withoutView(current) === withoutView(target);
+  if (!onlyFlagChanged('metadata') && !onlyViewChanged) { transition.skipTransition(); }
 });`;

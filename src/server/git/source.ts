@@ -1,6 +1,7 @@
-import { relative } from "@std/path";
+import { dirname, relative } from "@std/path";
 import type { ServerConfig } from "../types.ts";
 import type { SourceLineAnnotation } from "./diff.ts";
+import { gitStateAt } from "./resolver.ts";
 
 export async function sourceAnnotations(
   config: ServerConfig,
@@ -8,8 +9,9 @@ export async function sourceAnnotations(
   text: string,
 ): Promise<ReadonlyMap<number, SourceLineAnnotation> | undefined> {
   const path = relative(config.rootPath, file).replaceAll("\\", "/");
-  if (!config.git || !path || path === ".." || path.startsWith("../")) {
+  if (!path || path === ".." || path.startsWith("../")) {
     return undefined;
   }
-  return await config.git.diff(path, text.split("\n").length);
+  const git = await gitStateAt(config, dirname(file));
+  return await git?.diff(path, text.split("\n").length);
 }

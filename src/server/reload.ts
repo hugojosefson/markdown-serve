@@ -1,18 +1,53 @@
 import { isAbsolute, relative, resolve } from "@std/path";
 import type { ReloadSource } from "./reload-source.ts";
+import { ActiveFilePoller } from "./active-file-poller.ts";
 
 type WatchedReloadSource = ReloadSource & { close(): void };
 type ReloadSubscriber = {
   notify: () => void | Promise<void>;
   close?: () => void;
 };
+type WatchOperation = (
+  path: string,
+  options?: { recursive?: boolean },
+) => Deno.FsWatcher;
 
 export function createReloadWatcher(
   root: string,
   signal?: AbortSignal,
   ignorePaths: string[] = [],
+  watchFs: WatchOperation = Deno.watchFs,
+  pollIntervalMs = 1_000,
 ): WatchedReloadSource {
-  return new ReloadHub(Deno.watchFs(resolve(root)), signal, ignorePaths);
+  const rootPath = resolve(root);
+  try {
+    return new ReloadHub(
+      watchFs(rootPath),
+      signal,
+      ignorePaths,
+      pollIntervalMs,
+    );
+  } catch (error) {
+    if (error instanceof Deno.errors.PermissionDenied) {
+      try {
+        // Recursive setup traverses every descendant. Fall back to the root
+        // watch when an unreadable child prevents that setup.
+        return new ReloadHub(
+          watchFs(rootPath, { recursive: false }),
+          signal,
+          ignorePaths,
+          pollIntervalMs,
+        );
+      } catch (fallbackError) {
+        // A denied root remains fatal. Other watcher failures retain active
+        // file polling; createRequestHandler validates the root separately.
+        if (fallbackError instanceof Deno.errors.PermissionDenied) {
+          throw fallbackError;
+        }
+      }
+    }
+    return new ReloadHub(undefined, signal, ignorePaths, pollIntervalMs);
+  }
 }
 
 export class ReloadHub implements WatchedReloadSource {
@@ -20,16 +55,23 @@ export class ReloadHub implements WatchedReloadSource {
   #subscribers = new Set<ReloadSubscriber>();
   #timer?: ReturnType<typeof setTimeout>;
   #notifications = Promise.resolve();
-  readonly #watcher: Deno.FsWatcher;
+  #watcher?: Deno.FsWatcher;
+  readonly #poller: ActiveFilePoller;
   readonly #signal?: AbortSignal;
   readonly #ignorePaths: string[];
 
   constructor(
-    watcher: Deno.FsWatcher,
+    watcher: Deno.FsWatcher | undefined,
     signal?: AbortSignal,
     ignorePaths: string[] = [],
+    pollIntervalMs = 1_000,
   ) {
     this.#watcher = watcher;
+    this.#poller = new ActiveFilePoller(
+      () => this.scheduleReload(),
+      Deno.stat,
+      pollIntervalMs,
+    );
     this.#signal = signal;
     this.#ignorePaths = ignorePaths.map((path) => resolve(path));
     if (this.#signal?.aborted) {
@@ -54,6 +96,10 @@ export class ReloadHub implements WatchedReloadSource {
     return () => this.#subscribers.delete(subscriber);
   }
 
+  trackViewedFile(path: string, renderedRevision: string): () => void {
+    return this.#poller.track(path, renderedRevision);
+  }
+
   close = (): void => {
     if (this.#closed) {
       return;
@@ -61,7 +107,9 @@ export class ReloadHub implements WatchedReloadSource {
 
     this.#closed = true;
     this.#signal?.removeEventListener("abort", this.close);
-    this.#watcher.close();
+    this.#watcher?.close();
+    this.#watcher = undefined;
+    this.#poller.close();
     if (this.#timer !== undefined) {
       clearTimeout(this.#timer);
       this.#timer = undefined;
@@ -79,7 +127,9 @@ export class ReloadHub implements WatchedReloadSource {
 
   async watch(): Promise<void> {
     try {
-      for await (const event of this.#watcher) {
+      const watcher = this.#watcher;
+      if (!watcher) return;
+      for await (const event of watcher) {
         if (reloadEventRelevant(event, this.#ignorePaths)) {
           this.scheduleReload();
         } else {
@@ -87,9 +137,13 @@ export class ReloadHub implements WatchedReloadSource {
         }
       }
     } catch {
-      // Closing the watcher also ends iteration; subscribers must still close.
+      // A failed recursive watcher (for example exhausted inotify watches) must
+      // not disconnect clients: their displayed files remain polled.
     } finally {
-      this.close();
+      if (!this.#closed && this.#watcher) {
+        this.#watcher.close();
+        this.#watcher = undefined;
+      }
     }
   }
 

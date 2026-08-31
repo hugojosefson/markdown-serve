@@ -1,4 +1,5 @@
 export const markdownTocClient = `
+const markdownTocListenerOptions = typeof pageSignal === 'undefined' ? {} : { signal: pageSignal };
 const markdownTocFragment = (value) => {
   if (!value) { return ''; }
   const fragment = value.startsWith('#') ? value.slice(1) : new URL(value, location.href).hash.slice(1);
@@ -16,4 +17,4 @@ const syncMarkdownTocLocation = () => {
   });
 };
 syncMarkdownTocLocation();
-addEventListener('hashchange', syncMarkdownTocLocation);`;
+addEventListener('hashchange', syncMarkdownTocLocation, markdownTocListenerOptions);`;

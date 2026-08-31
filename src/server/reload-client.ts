@@ -1,4 +1,4 @@
-export const reloadClientScript = `
+export const reloadClient = `
 let reloadEvents;
 let reloadConnected = false;
 let reloadGeneration = 0;
@@ -16,6 +16,7 @@ const reloadPage = () => {
   disconnectReload(); location.reload();
 };
 const connectReload = () => {
+  if (globalThis.markdownServeRegisterPageInitializer && !document.body?.dataset?.reloadEnabled) return;
   const generation = ++reloadGeneration;
   reloadConnected = false;
   const reloadPath = document.body?.dataset?.reloadPath;
@@ -34,7 +35,6 @@ const connectReload = () => {
     if (generation === reloadGeneration && reloadEvents === events) { reloadPage(); }
   });
 };
-connectReload();
 document.addEventListener('click', (event) => {
   const link = event.target?.closest?.('a[href]');
   if (!link || event.defaultPrevented || event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
@@ -50,4 +50,9 @@ globalThis.navigation?.addEventListener('navigate', (event) => {
 globalThis.addEventListener('pagehide', disconnectReload);
 globalThis.addEventListener('pageshow', (event) => {
   if (event.persisted) { connectReload(); }
-});`;
+});
+const registerReloadPageInitializer = globalThis.markdownServeRegisterPageInitializer ?? ((initializer) => initializer());
+registerReloadPageInitializer(() => { connectReload(); return disconnectReload; });`;
+
+/** Compatibility export for tests and consumers of the former inline script. */
+export const reloadClientScript = reloadClient;

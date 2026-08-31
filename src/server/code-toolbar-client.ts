@@ -1,4 +1,5 @@
 export const codeToolbarClient = `
+const codeToolbarListenerOptions = typeof pageSignal === 'undefined' ? {} : { signal: pageSignal };
 document.addEventListener('click', async (event) => {
   if (!(event.target instanceof Element)) { return; }
   const button = event.target.closest('[data-copy]');
@@ -19,4 +20,4 @@ document.addEventListener('click', async (event) => {
     if (status) { status.textContent = 'Copy failed'; }
   }
   setTimeout(reset, 1500);
-});`;
+}, codeToolbarListenerOptions);`;

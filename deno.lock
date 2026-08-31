@@ -8,6 +8,7 @@
     "jsr:@std/internal@^1.0.14": "1.0.14",
     "jsr:@std/media-types@^1.1.0": "1.1.0",
     "jsr:@std/path@^1.1.6": "1.1.6",
+    "npm:@hotwired/turbo@^8.0.23": "8.0.23",
     "npm:diff@9": "9.0.0",
     "npm:file-lang-map@^1.1.11": "1.1.11",
     "npm:fork-version@5.2.0": "5.2.0",
@@ -203,6 +204,9 @@
       "integrity": "sha512-pEl1bO9mfAmIC+tW5btTmrKaujg3zGtUmWNdCw/xs70FBjwAL3o9OEKNHvNmnyylD6ubxUERiEhdsL0xBQ9efw==",
       "os": ["win32"],
       "cpu": ["x64"]
+    },
+    "@hotwired/turbo@8.0.23": {
+      "integrity": "sha512-GZ7cijxEZ6Ig71u7rD6LHaRv/wcE/hNsc+nEfiWOkLNqUgLOwo5MNGWOy5ZV9ZUDSiQx1no7YxjTNnT4O6//cQ=="
     },
     "@hutson/parse-repository-url@5.0.0": {
       "integrity": "sha512-e5+YUKENATs1JgYHMzTr2MW/NDcXGfYFAuOQU8gJgF/kEh4EqKgfGrfLI67bMD4tbhZVlkigz/9YYwWcbOFthg=="
@@ -921,6 +925,7 @@
       "jsr:@std/assert@^1.0.19",
       "jsr:@std/media-types@^1.1.0",
       "jsr:@std/path@^1.1.6",
+      "npm:@hotwired/turbo@^8.0.23",
       "npm:diff@9",
       "npm:file-lang-map@^1.1.11",
       "npm:node-diff3@^3.2.1",

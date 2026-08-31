@@ -32,6 +32,7 @@
     ]
   },
   "imports": {
+    "@hotwired/turbo": "npm:@hotwired/turbo@^8.0.23",
     "@std/assert": "jsr:@std/assert@^1.0.19",
     "@std/path": "jsr:@std/path@^1.1.6",
     "@std/media-types": "jsr:@std/media-types@^1.1.0",

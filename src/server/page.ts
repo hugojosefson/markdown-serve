@@ -9,9 +9,8 @@ import {
   renderFileMetadataSummary,
 } from "./file-metadata.ts";
 import type { FileAction, HeaderAction } from "./page-action.ts";
-import { pageScript, pageStylesheet } from "./page-assets.ts";
+import { pageScript, pageStylesheet, turboScript } from "./page-assets.ts";
 import type { PageModel } from "./page-model.ts";
-import { reloadClientScript } from "./reload-client.ts";
 import type { ServerConfig } from "./types.ts";
 import { gitDirtyCount, type GitStatus } from "./git/status.ts";
 import { markdownViewHref } from "./page-action.ts";
@@ -46,7 +45,7 @@ export async function page(
 function renderHead(model: PageModel): string {
   return `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${
     escapeHtml(model.title)
-  }</title><script>${displayInitialClient}</script>${navigationSpeculation}<link rel="stylesheet" href="${pageStylesheet.url}"></head>`;
+  }</title><script>${displayInitialClient}</script>${navigationSpeculation}<link rel="stylesheet" href="${pageStylesheet.url}" data-turbo-track="reload"><script src="${turboScript.url}" defer data-turbo-track="reload"></script><script src="${pageScript.url}" defer data-turbo-track="reload"></script></head>`;
 }
 
 function renderBody(
@@ -61,12 +60,18 @@ function renderBody(
   const scope = model.directory ? model.parts : model.parts.slice(0, -1);
   const prefix = scope.length ? `${scope.join("/")}/` : "";
   return `<body${
+    model.markdownView === "edit" || model.editView ? ' data-turbo="false"' : ""
+  }${config.reloadSource ? ' data-reload-enabled="true"' : ""}${
     model.reloadTarget
       ? ` data-reload-path="${
         escapeHtml(model.reloadTarget.path)
       }" data-reload-revision="${escapeHtml(model.reloadTarget.revision)}"`
       : ""
-  } data-go-to-file-prefix="${escapeHtml(prefix)}" data-content-search-scope="${
+  } data-directory-view="${
+    model.directoryView ? "true" : "false"
+  }" data-go-to-file-prefix="${
+    escapeHtml(prefix)
+  }" data-content-search-scope="${
     escapeHtml(scope.join("/"))
   }"><div class="layout"><aside class="tree"><details class="tree-disclosure" open><summary>Files</summary>${navigation}</details></aside><main class="content markdown-body">${
     repoContext(status)
@@ -80,9 +85,7 @@ function renderBody(
       : model.markdownView === "edit" || model.editView
       ? renderEditPage(model)
       : renderPageContent(model)
-  }</main></div><script src="${pageScript.url}"></script>${
-    reloadClient(config)
-  }</body>`;
+  }</main></div></body>`;
 }
 
 function repoContext(status?: GitStatus): string {
@@ -156,7 +159,9 @@ function renderMarkdownViewToggle(
   const link = (target: "rendered" | "source" | "edit", label: string) =>
     `<a class="${view === target ? "is-selected" : ""}" href="${
       escapeHtml(markdownViewHref(url, target))
-    }"${view === target ? ' aria-current="true"' : ""}>${label}</a>`;
+    }"${view === target ? ' aria-current="true"' : ""}${
+      target === "edit" ? ' data-turbo="false"' : ""
+    }>${label}</a>`;
   return `<nav class="markdown-view-toggle" aria-label="Markdown view">${
     link("rendered", "Rendered")
   }${link("source", "Source")}${editable ? link("edit", "Edit") : ""}</nav>`;
@@ -166,8 +171,8 @@ function renderTextViewToggle(url: URL, edit: boolean): string {
   const link = (target: "rendered" | "edit", label: string) =>
     `<a class="${edit === (target === "edit") ? "is-selected" : ""}" href="${
       escapeHtml(markdownViewHref(url, target))
-    }"${
-      edit === (target === "edit") ? ' aria-current="true"' : ""
+    }"${edit === (target === "edit") ? ' aria-current="true"' : ""}${
+      target === "edit" ? ' data-turbo="false"' : ""
     }>${label}</a>`;
   return `<nav class="markdown-view-toggle" aria-label="Text view">${
     link("rendered", "Source")
@@ -189,7 +194,7 @@ function renderEditPage(model: PageModel): string {
     )
   }" data-edit-path="${
     escapeHtml(model.editPath ?? "")
-  }"><input type="hidden" name="etag" value="${
+  }" data-turbo="false"><input type="hidden" name="etag" value="${
     escapeHtml(model.editTag ?? "")
   }"><p class="edit-status" role="status">${
     escapeHtml(model.editStatus ?? "Editing")
@@ -295,10 +300,6 @@ function renderPageContent(model: PageModel): string {
   }</div>${model.content}</div>`;
 }
 
-function reloadClient(config: ServerConfig): string {
-  return config.reloadSource ? `<script>${reloadClientScript}</script>` : "";
-}
-
 function renderFileActions(actions: FileAction[]): string {
   return actions.map((action) =>
     renderPageAction(
@@ -322,7 +323,13 @@ function renderPageAction(
   const target = "target" in action
     ? ` target="${action.target}" rel="noopener"`
     : "";
-  return `<a class="${className}" href="${escapeHtml(action.href)}"${target}${
+  const turbo = "kind" in action &&
+      (action.kind === "raw" || action.kind === "download")
+    ? ' data-turbo="false"'
+    : "";
+  return `<a class="${className}" href="${
+    escapeHtml(action.href)
+  }"${target}${turbo}${
     queryRemove?.length
       ? ` data-query-remove="${escapeHtml(queryRemove.join(" "))}"`
       : ""

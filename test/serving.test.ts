@@ -600,7 +600,7 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     );
     assertMatch(
       image,
-      /<a class="file-action raw-link" href="\?raw" title="View raw content \(image\/png\)" aria-label="View raw content \(image\/png\)">Raw<\/a><a class="file-action download-link" href="\?download" title="Download file \(image\/png\)" aria-label="Download file \(image\/png\)">Download<\/a>/,
+      /<a class="file-action raw-link" href="\?raw" data-turbo="false" title="View raw content \(image\/png\)" aria-label="View raw content \(image\/png\)">Raw<\/a><a class="file-action download-link" href="\?download" data-turbo="false" title="Download file \(image\/png\)" aria-label="Download file \(image\/png\)">Download<\/a>/,
     );
     assertMatch(
       image,

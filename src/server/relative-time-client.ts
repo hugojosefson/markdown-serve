@@ -1,4 +1,5 @@
 export const relativeTimeClient = `
+const relativeTimeListenerOptions = typeof pageSignal === 'undefined' ? {} : { signal: pageSignal };
 const relativeTimeFormatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
 const relativeTimePart = (difference) => {
   const ranges = [[60, 'second'], [60, 'minute'], [24, 'hour'], [7, 'day'], [4.345, 'week'], [12, 'month'], [Infinity, 'year']];
@@ -32,5 +33,5 @@ const refreshRelativeTimes = () => {
   clearTimeout(relativeTimeTimer);
   if (!document.hidden) { updateRelativeTimes(); }
 };
-document.addEventListener('visibilitychange', refreshRelativeTimes);
+document.addEventListener('visibilitychange', refreshRelativeTimes, relativeTimeListenerOptions);
 updateRelativeTimes();`;

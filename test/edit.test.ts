@@ -543,11 +543,11 @@ Deno.test("edit controls expose only eligible files and preserve index paths", a
     );
     assertMatch(
       await (await on(new Request("http://x/note.txt?edit"))).text(),
-      /<form class="edit-page" method="post" action="\?edit" data-edit-path="note\.txt">/,
+      /<form class="edit-page" method="post" action="\?edit" data-edit-path="note\.txt" data-turbo="false">/,
     );
     assertMatch(
       await (await on(new Request("http://x/docs/?edit"))).text(),
-      /<form class="edit-page" method="post" action="\?edit" data-edit-path="docs\/README\.md">/,
+      /<form class="edit-page" method="post" action="\?edit" data-edit-path="docs\/README\.md" data-turbo="false">/,
     );
     for (const path of ["binary.bin", "missing.txt"]) {
       assertEquals(

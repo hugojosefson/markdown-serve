@@ -2,6 +2,7 @@ import { assert, assertEquals, assertMatch } from "@std/assert";
 import { join } from "@std/path";
 import { serve } from "../src/server.ts";
 import { reloadClientScript } from "../src/server/reload-client.ts";
+import { clientLifecycle } from "../src/server/client-lifecycle.ts";
 import {
   createReloadWatcher,
   reloadEventRelevant,
@@ -192,6 +193,68 @@ Deno.test("reload client identifies its rendered file to SSE", () => {
   assertEquals(urls, [
     "/__markdown_serve__/events?path=guide.md&revision=1%2C2%2C3%2C4%2C5",
   ]);
+});
+
+Deno.test("reload client reconnects for the body installed by Turbo", () => {
+  type Listener = (event?: Record<string, unknown>) => void;
+  const documentListeners = new Map<string, Listener[]>();
+  const pageListeners = new Map<string, Listener[]>();
+  const sources: Array<{ url: string; closed: boolean }> = [];
+  class EventSource {
+    readonly state: { url: string; closed: boolean };
+    constructor(url: string) {
+      this.state = { url, closed: false };
+      sources.push(this.state);
+    }
+    addEventListener(): void {}
+    close(): void {
+      this.state.closed = true;
+    }
+  }
+  const reloadDataset: Record<string, string> = { reloadEnabled: "true" };
+  const document = {
+    body: { dataset: reloadDataset },
+    addEventListener: (name: string, listener: Listener) =>
+      documentListeners.set(name, [
+        ...(documentListeners.get(name) ?? []),
+        listener,
+      ]),
+  };
+  const globalThis = {
+    addEventListener: (name: string, listener: Listener) =>
+      pageListeners.set(name, [...(pageListeners.get(name) ?? []), listener]),
+  };
+  new Function(
+    "EventSource",
+    "location",
+    "document",
+    "globalThis",
+    "AbortController",
+    `${clientLifecycle}${reloadClientScript}`,
+  )(
+    EventSource,
+    { href: "http://x/", reload: () => {} },
+    document,
+    globalThis,
+    AbortController,
+  );
+
+  documentListeners.get("DOMContentLoaded")?.[0]();
+  assertEquals(sources.map(({ url }) => url), ["/__markdown_serve__/events"]);
+  documentListeners.get("turbo:before-cache")?.[0]();
+  assertEquals(sources[0].closed, true);
+  document.body = {
+    dataset: {
+      reloadEnabled: "true",
+      reloadPath: "guide.md",
+      reloadRevision: "1,2,3,4,5",
+    },
+  };
+  documentListeners.get("turbo:load")?.[0]();
+  assertEquals(
+    sources[1].url,
+    "/__markdown_serve__/events?path=guide.md&revision=1%2C2%2C3%2C4%2C5",
+  );
 });
 
 Deno.test("source paths do not race content reload notifications", () => {
@@ -392,14 +455,13 @@ Deno.test("reload client and SSE are limited to generated pages", async () => {
   try {
     const h = await handler(f.root, { reloadSource: source });
     for (const route of ["/guide", "/docs/", "/"]) {
-      assertMatch(
-        await (await h(new Request(`http://x${route}`))).text(),
-        /EventSource/,
-      );
+      const body = await (await h(new Request(`http://x${route}`))).text();
+      assertMatch(body, /assets\/client-[a-f0-9]{64}\.js/);
+      assertMatch(body, /<body data-reload-enabled="true"/);
     }
     const textResponse = await h(new Request("http://x/raw.txt"));
     assert(textResponse.headers.get("content-type")?.includes("html"));
-    assertMatch(await textResponse.text(), /EventSource/);
+    assertMatch(await textResponse.text(), /assets\/client-[a-f0-9]{64}\.js/);
     const response = await h(
       new Request("http://x/__markdown_serve__/events"),
     );

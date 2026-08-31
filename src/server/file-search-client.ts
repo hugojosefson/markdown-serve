@@ -1,10 +1,12 @@
 export const fileSearchClient = `
+const fileSearchListenerOptions = typeof pageSignal === 'undefined' ? {} : { signal: pageSignal };
 const goToFilePrefix = document.body?.dataset.goToFilePrefix;
 if (goToFilePrefix !== undefined) {
   let goToFile;
   const openGoToFile = () => {
     if (!goToFile) {
       const dialog = document.createElement('dialog'); dialog.className = 'go-to-file';
+      dialog.dataset.turboTemporary = '';
       dialog.innerHTML = '<form method="dialog"><label>Go to file<input type="search" autocomplete="off" placeholder="Find files and directories"></label><p class="go-to-file-status" aria-live="polite"></p><ul></ul></form>';
       document.body.append(dialog);
       const input = dialog.querySelector('input'); const list = dialog.querySelector('ul'); const status = dialog.querySelector('.go-to-file-status');
@@ -28,7 +30,7 @@ if (goToFilePrefix !== undefined) {
       input.addEventListener('input', () => { selected = 0; schedule(); });
       dialog.addEventListener('keydown', (event) => {
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); selected = (selected + (event.key === 'ArrowDown' ? 1 : -1) + files.length) % Math.max(1, files.length); render(); }
-        if (event.key === 'Enter' && files.length) { event.preventDefault(); location.assign(files[selected].href); }
+        if (event.key === 'Enter' && files.length) { event.preventDefault(); if (globalThis.Turbo?.visit) { globalThis.Turbo.visit(files[selected].href); } else { location.assign(files[selected].href); } }
       });
       installDialogDismissal(dialog, () => { clearTimeout(timer); controller?.abort(); });
       goToFile = { dialog, input, load };
@@ -39,5 +41,8 @@ if (goToFilePrefix !== undefined) {
     const target = event.target;
     if (event.key !== 'g' || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || target?.closest?.('a, input, textarea, select, button, [contenteditable]')) return;
     event.preventDefault(); openGoToFile();
-  });
+  }, fileSearchListenerOptions);
+  if (typeof pageSignal !== 'undefined') {
+    pageSignal.addEventListener('abort', () => { if (goToFile?.dialog.open) goToFile.dialog.close(); }, { once: true });
+  }
 }`;

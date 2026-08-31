@@ -83,7 +83,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     ));
     assertMatch(
       plainBody,
-      /<button class="code-copy"[^>]*>Copy<\/button><span class="code-toolbar-file-actions" data-file-actions="trailing"><a class="file-action raw-link" href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)" aria-label="View raw content \(text\/plain; charset=UTF-8\)">Raw<\/a>/,
+      /<button class="code-copy"[^>]*>Copy<\/button><span class="code-toolbar-file-actions" data-file-actions="trailing"><a class="file-action raw-link" href="\?raw" data-turbo="false" title="View raw content \(text\/plain; charset=UTF-8\)" aria-label="View raw content \(text\/plain; charset=UTF-8\)">Raw<\/a>/,
     );
     assertMatch(
       pageCss,
@@ -109,7 +109,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(pageClient, /matchMedia\?\.\('\(max-width: 560px\)'\)/);
     assertMatch(
       pageClient,
-      /addEventListener\?\.\('change', syncTreeDisclosure\)/,
+      /addEventListener\?\.\('change', syncTreeDisclosure, pageListenerOptions\)/,
     );
 
     const docsBody = await (await h(new Request("http://x/docs/"))).text();

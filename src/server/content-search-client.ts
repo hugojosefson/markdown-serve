@@ -4,6 +4,7 @@ export function installContentSearch(
   document: ClientDocument,
   location: ClientLocation,
   fetch: ClientFetch,
+  signal?: AbortSignal,
 ): void {
   const scope = document.body?.dataset.contentSearchScope;
   if (scope === undefined) return;
@@ -27,7 +28,11 @@ export function installContentSearch(
     ) return;
     event.preventDefault();
     open();
-  });
+  }, signal ? { signal } : undefined);
+  signal?.addEventListener("abort", () => {
+    if (search?.dialog.open) search.dialog.close();
+    search = undefined;
+  }, { once: true });
 }
 
 function createSearch(
@@ -38,6 +43,7 @@ function createSearch(
 ): { dialog: ClientElement; input: ClientElement } {
   const dialog = document.createElement("dialog");
   dialog.className = "content-search";
+  dialog.dataset.turboTemporary = "";
   const form = document.createElement("form");
   const input = document.createElement("input");
   input.type = "search";
@@ -212,7 +218,7 @@ function result(
 }
 
 export const contentSearchClient =
-  `${createSearch.toString()}${option.toString()}${textOption.toString()}${numberOption.toString()}${result.toString()}(${installContentSearch.toString()})(document, location, fetch);`;
+  `${createSearch.toString()}${option.toString()}${textOption.toString()}${numberOption.toString()}${result.toString()}(${installContentSearch.toString()})(document, location, fetch, typeof pageSignal === 'undefined' ? undefined : pageSignal);`;
 
 type ClientEvent = {
   key: string;
@@ -255,7 +261,11 @@ type ClientElement = {
 type ClientDocument = {
   body: ClientElement;
   createElement(name: string): ClientElement;
-  addEventListener(type: string, listener: (event: ClientEvent) => void): void;
+  addEventListener(
+    type: string,
+    listener: (event: ClientEvent) => void,
+    options?: { signal: AbortSignal },
+  ): void;
 };
 type ClientLocation = { href: string; assign(href: string): void };
 type ClientFetch = (

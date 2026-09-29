@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file. See
 [fork-version](https://github.com/eglavin/fork-version) for commit guidelines.
 
+## [0.1.7](https://github.com/hugojosefson/markdown-serve/compare/0.1.6...0.1.7) (2026-09-29)
+
+### Bug Fixes
+
+- add document print styles
+  ([33c9943](https://github.com/hugojosefson/markdown-serve/commit/33c994363c11f6007c607bc2506a5a3de633b8cf))
+
 ## [0.1.6](https://github.com/hugojosefson/markdown-serve/compare/0.1.5...0.1.6) (2026-08-27)
 
 ### Features

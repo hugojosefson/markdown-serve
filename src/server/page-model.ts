@@ -14,7 +14,15 @@ export type PageModel = {
   directoryView?: boolean;
   sourceName?: string;
   metadata?: FileMetadata;
-  sourceExpanded?: boolean;
+  markdownView?: "rendered" | "source" | "edit";
   gitStatus?: GitStatus;
   editPath?: string;
+  editText?: string;
+  editTag?: string;
+  editStatus?: string;
+  editView?: boolean;
+  editHighlight?: string;
+  editPreview?: string;
+  editCurrentText?: string;
+  reloadTarget?: { path: string; revision: string };
 };

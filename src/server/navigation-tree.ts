@@ -7,6 +7,7 @@ import type { IndexState } from "./file-catalog.ts";
 import type { DirectoryEntry } from "./fs.ts";
 import { canonicalPath } from "./paths.ts";
 import type { ServerConfig } from "./types.ts";
+import { gitStateAt, gitStateAtChild } from "./git/resolver.ts";
 import {
   gitDirtyCount,
   gitDisplay,
@@ -103,7 +104,15 @@ async function treeItem(
     : activeItem
     ? "active"
     : undefined;
-  const git = gitStatusAt(status, path.join("/"), entry.directory);
+  const parent = join(config.rootPath, ...path.slice(0, -1));
+  const state = entry.directory
+    ? await gitStateAtChild(config, parent, join(parent, entry.name))
+    : await gitStateAt(config, parent);
+  const entryStatus = await state?.status() ?? status;
+  const git = gitStatusAt(entryStatus, path.join("/"), entry.directory);
+  const accessDenied = entry.directory && config.access?.isDenied(
+    join(config.rootPath, ...path),
+  );
   const marker = git
     ? `<span class="git-marker" data-git-kind="${git.kind}" title="${
       escapeHtml(git.tooltip)
@@ -114,10 +123,16 @@ async function treeItem(
   const link = `<a${linkClass ? ` class="${linkClass}"` : ""} data-kind="${
     entryKind(entry)
   }"${
-    git?.kind === "ignored" ? ' data-git-ignored="true"' : ""
-  } href="${href}"${
+    entry.target === undefined ? "" : ` title="→ ${escapeHtml(entry.target)}"`
+  }${git?.kind === "ignored" ? ' data-git-ignored="true"' : ""} href="${href}"${
     entry.directory || isIndex ? ' data-query-remove="dir"' : ""
-  }>${escapeHtml(entry.name)}${entry.directory ? "/" : ""}</a>${marker}`;
+  }${
+    accessDenied
+      ? ` aria-label="${escapeHtml(entry.name)} directory, access denied"`
+      : ""
+  }>${escapeHtml(entry.name)}${entry.directory ? "/" : ""}${
+    accessDenied ? accessDeniedMarker() : ""
+  }</a>${marker}`;
   if (!entry.directory) {
     const files = isIndex
       ? filesLink(
@@ -125,9 +140,7 @@ async function treeItem(
         path.length === 1 ? config.rootLabel : path.at(-2)!,
       )
       : "";
-    return files
-      ? `<li class="tree-entry-row">${link}${files}</li>`
-      : `<li>${link}</li>`;
+    return `<li class="tree-entry-row">${link}${files}</li>`;
   }
   const descendants = activeDirectory
     ? await treeList(config, path, active, directoryView, sourceName, status)
@@ -156,6 +169,10 @@ function repoTitle(status: GitStatus): string {
 function filesLink(href: string, name: string): string {
   const label = escapeHtml(name);
   return `<a class="tree-files-link" href="${href}" data-query-scope="directory" title="Show files in ${label}" aria-label="Show files in ${label}">Files</a>`;
+}
+
+function accessDeniedMarker(): string {
+  return '<span class="tree-access-denied" title="Access denied" aria-hidden="true"> 🔒</span>';
 }
 
 function directoryFilesHref(href: string, indexState: IndexState): string {

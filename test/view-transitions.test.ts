@@ -50,7 +50,7 @@ Deno.test("source view uses standalone segmented controls and panel", () => {
   );
 });
 
-Deno.test("query navigation allows source- or metadata-only fold transitions", () => {
+Deno.test("query navigation allows view- or metadata-only fold transitions", () => {
   let pageswap: (event: {
     activation?: { from?: { url: string }; entry?: { url: string } };
     viewTransition?: { skipTransition: () => void };
@@ -71,6 +71,8 @@ Deno.test("query navigation allows source- or metadata-only fold transitions", (
     return count;
   };
   assertEquals(skips("http://x/readme/", "http://x/readme/?source"), 0);
+  assertEquals(skips("http://x/readme/?source", "http://x/readme/?edit"), 0);
+  assertEquals(skips("http://x/readme/", "http://x/readme/?edit"), 0);
   assertEquals(
     skips(
       "http://x/readme/?source&theme=dark&wide",

@@ -23,15 +23,27 @@ export function directoryIndex(
   path: string,
   status?: GitStatus,
   gitPrefix = "",
+  entryStatuses?: ReadonlyMap<string, GitStatus | undefined>,
 ): string {
   const order = directoryOrder(url.searchParams.get("order"));
-  const rows = entries.toSorted(compareEntries(order, status, gitPrefix)).map(
-    (entry) => row(entry, url, status, gitPrefix),
+  const hasGit = Boolean(status) ||
+    [...entryStatuses?.values() ?? []].some(Boolean);
+  const rows = entries.toSorted(
+    compareEntries(order, status, gitPrefix, entryStatuses),
+  ).map(
+    (entry) =>
+      row(
+        entry,
+        url,
+        statusFor(entry, status, entryStatuses),
+        gitPrefix,
+        hasGit,
+      ),
   ).join("");
   return `<div class="directory-scroll"><table class="directory-table"><caption class="sr-only">Files at ${
     escapeHtml(path)
   }</caption><thead><tr>${header(url, "Name", "name", order)}${
-    status ? header(url, "Git", "git", order) : ""
+    hasGit ? header(url, "Git", "git", order) : ""
   }${header(url, "Permissions", "permissions", order)}${
     header(url, "Size", "size", order)
   }${header(url, "User", "user", order)}${
@@ -58,6 +70,7 @@ function compareEntries(
   order: DirectoryOrder,
   status?: GitStatus,
   gitPrefix = "",
+  entryStatuses?: ReadonlyMap<string, GitStatus | undefined>,
 ) {
   const descending = order.endsWith("-desc");
   const field = order.replace("-desc", "") as DirectoryField;
@@ -66,8 +79,18 @@ function compareEntries(
     if (grouped) {
       return grouped;
     }
-    const leftValue = value(left, field, status, gitPrefix);
-    const rightValue = value(right, field, status, gitPrefix);
+    const leftValue = value(
+      left,
+      field,
+      statusFor(left, status, entryStatuses),
+      gitPrefix,
+    );
+    const rightValue = value(
+      right,
+      field,
+      statusFor(right, status, entryStatuses),
+      gitPrefix,
+    );
     if ((leftValue === undefined) !== (rightValue === undefined)) {
       return leftValue === undefined ? -1 : 1;
     }
@@ -79,11 +102,20 @@ function compareEntries(
       lexical(left.name, right.name);
   };
 }
+
+function statusFor(
+  entry: DirectoryEntry,
+  fallback: GitStatus | undefined,
+  statuses: ReadonlyMap<string, GitStatus | undefined> | undefined,
+): GitStatus | undefined {
+  return statuses?.has(entry.name) ? statuses.get(entry.name) : fallback;
+}
 function row(
   entry: DirectoryEntry,
   url: URL,
   status?: GitStatus,
   gitPrefix = "",
+  showGit = Boolean(status),
 ): string {
   const suffix = entry.directory ? "/" : "";
   const index = classifyEntry(entry).index;
@@ -103,11 +135,19 @@ function row(
   return `<tr><td class="directory-name"><a href="${
     escapeHtml(href)
   }" data-kind="${entryKind(entry)}"${
-    entry.directory ? ' data-query-scope="directory"' : ""
-  }${git?.kind === "ignored" ? ' data-git-ignored="true"' : ""}${
-    index ? ' data-query-remove="dir"' : ""
-  }>${escapeHtml(entry.name + suffix)}</a></td>${
-    status
+    entry.target === undefined ? "" : ` title="→ ${escapeHtml(entry.target)}"`
+  }${entry.directory ? ' data-query-scope="directory"' : ""}${
+    git?.kind === "ignored" ? ' data-git-ignored="true"' : ""
+  }${index ? ' data-query-remove="dir"' : ""}>${
+    escapeHtml(entry.name + suffix)
+  }</a>${
+    entry.target === undefined
+      ? ""
+      : `<span class="symlink-target"> → ${escapeHtml(entry.target)}${
+        entry.broken ? " (broken)" : ""
+      }</span>`
+  }</td>${
+    showGit
       ? `<td class="directory-git"><span data-git-kind="${
         git?.kind ?? ""
       }" title="${escapeHtml(git?.tooltip ?? "No Git status")}" aria-label="${

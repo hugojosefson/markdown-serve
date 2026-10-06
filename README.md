@@ -21,7 +21,17 @@ case "$(uname -s)" in
   MINGW* | MSYS* | CYGWIN*) browser_opener=cmd ;;
   *) browser_opener=xdg-open ;;
 esac
-deno install --global --force --minimum-dependency-age=0 --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED "--allow-run=${browser_opener},git,fd,fdfind,rg" jsr:@hugojosefson/markdown-serve
+run_commands=()
+for executable in "${browser_opener}" git fd fdfind rg; do
+  if command -v "${executable}" >/dev/null 2>&1; then
+    run_commands+=("${executable}")
+  fi
+done
+run_args=()
+if ((${#run_commands[@]})); then
+  run_args+=("--allow-run=$(IFS=,; printf '%s' "${run_commands[*]}")")
+fi
+deno install --global --force --minimum-dependency-age=0 --allow-read=. --allow-net --allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED "${run_args[@]}" jsr:@hugojosefson/markdown-serve
 ```
 
 ## Usage
@@ -66,12 +76,12 @@ occupied explicitly selected `--port` fails instead.
 The [suggested installation](#installation) uses narrowly scoped runtime
 permissions:
 
-| Permission                                                                                  | Purpose                                                                          |
-| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `--allow-read=.`                                                                            | Read the current directory tree without granting access to the whole filesystem. |
-| `--allow-net`                                                                               | Serve HTTP and listen for browser connections.                                   |
-| `--allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED`                             | Read terminal and CI settings and retain browser state across watched restarts.  |
-| `--allow-run=xdg-open,git,fd,fdfind,rg`, `open,git,fd,fdfind,rg`, or `cmd,git,fd,fdfind,rg` | Open the browser, read Git status, and use optional searches.                    |
+| Permission                                                      | Purpose                                                                          |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `--allow-read=.`                                                | Read the current directory tree without granting access to the whole filesystem. |
+| `--allow-net`                                                   | Serve HTTP and listen for browser connections.                                   |
+| `--allow-env=CI,FORCE_COLOR,TERM,MARKDOWN_SERVE_BROWSER_OPENED` | Read terminal and CI settings and retain browser state across watched restarts.  |
+| `--allow-run=<available commands>`                              | Open the browser, read Git status, and use optional searches.                    |
 
 Broader read grants can expose more files.
 
@@ -86,7 +96,19 @@ deno run --allow-read=. --allow-write=. --allow-net jsr:@hugojosefson/markdown-s
 
 The editor only changes existing regular UTF-8 text files below that root. It
 uses version checks and atomic replacement; it cannot create files or follow
-symlinks.
+symlinks. Dedicated edit pages and their Save forms work without JavaScript.
+When JavaScript and Git are available, the editor adds live highlighting and Git
+`HEAD` change markers. Reverting a marker only updates the draft; only Save
+writes to disk. Markdown editors default to a full-width editor and link to
+stacked, side-by-side, or preview-only layouts. Split layouts synchronize
+scrolling and mark the editor caret or selection in the rendered preview.
+Enhanced pages keep the draft, file version, selection, and scroll positions in
+the URL across layout changes, reloads, and browser history. Browser-session
+storage safeguards new input while URL compression is pending and holds drafts
+too large for a practical URL. Other source formats use their syntax
+highlighting. The browser warns before leaving a changed draft. Live-reload
+events automatically load and three-way merge external filesystem changes;
+overlapping edits remain marked for manual resolution.
 
 ## URLs and pages
 
@@ -124,11 +146,14 @@ table ordering applies within each group.
 
 ### Go to file
 
-Press `g` to open a scoped file picker. It searches only below the viewed
-directory (or a viewed file's directory), includes dotfiles, and uses canonical
-routes, including clean Markdown URLs. Type to filter; use up/down and Enter to
-open a match, or Escape to close. `fd` or `fdfind` is used when permitted and
-available; otherwise the server uses a bounded filesystem scan.
+Press `g` to search files and directories from the content root. The picker
+starts with the viewed directory in its input; replace that prefix to search
+elsewhere. Typed characters match in order against each full relative path.
+Results include dotfiles and use canonical routes, including clean Markdown
+URLs. Non-ignored paths rank before Git-ignored paths; within each group, paths
+without hidden components rank first. Use up/down and Enter to open a match.
+Escape or a backdrop click closes the picker. `fd` or `fdfind` is used when
+permitted and available; otherwise the server uses a bounded filesystem scan.
 
 ### Repository search
 

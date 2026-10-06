@@ -1,11 +1,12 @@
 export const pageClient = `
+const pageListenerOptions = typeof pageSignal === 'undefined' ? {} : { signal: pageSignal };
 const tree = document.querySelector('.tree');
 const treeDisclosure = tree?.querySelector?.('.tree-disclosure');
 const narrowTree = globalThis.matchMedia?.('(max-width: 560px)');
 const syncTreeDisclosure = (event) => { if (treeDisclosure) { treeDisclosure.open = !event.matches; } };
 if (narrowTree) {
   syncTreeDisclosure(narrowTree);
-  narrowTree.addEventListener?.('change', syncTreeDisclosure);
+  narrowTree.addEventListener?.('change', syncTreeDisclosure, pageListenerOptions);
 }
 const filesLink = (href, name) => {
   const filesLink = document.createElement('a');
@@ -23,7 +24,7 @@ const navigationLocationKey = (value) => {
 };
 document.querySelectorAll('.media-preview.image').forEach((image) => {
   const constrain = () => { if (image.naturalWidth) { image.style.setProperty('--image-max-width', (image.naturalWidth * 4) + 'px'); } };
-  if (image.complete) { constrain(); } else { image.addEventListener('load', constrain, { once: true }); }
+  if (image.complete) { constrain(); } else { image.addEventListener('load', constrain, { once: true, ...pageListenerOptions }); }
 });
 tree?.addEventListener('click', (event) => {
   if (event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) { return; }
@@ -32,21 +33,23 @@ tree?.addEventListener('click', (event) => {
   if (!details || navigationLocationKey(link.href) !== navigationLocationKey(location.href)) { return; }
   event.preventDefault();
   details.open = !details.open;
-});
+}, pageListenerOptions);
 const addEntries = (list, entries) => entries.forEach((entry) => {
   const item = document.createElement('li');
   const link = document.createElement('a');
+  if (!entry.directory) { item.className = 'tree-entry-row'; }
   if (entry.directory) { link.className = 'tree-folder-link'; }
-   link.href = entry.href;
-   link.dataset.kind = entry.kind;
+    link.href = entry.href;
+    link.dataset.kind = entry.kind;
+    if (entry.target !== undefined) { link.title = '→ ' + entry.target; }
    if (entry.git?.kind === 'ignored') { link.dataset.gitIgnored = 'true'; }
   if (entry.queryRemove) { link.dataset.queryRemove = entry.queryRemove.join(' '); }
    link.textContent = entry.name + (entry.directory ? '/' : '');
+   if (entry.accessDenied) { link.ariaLabel = entry.name + ' directory, access denied'; const lock = document.createElement('span'); lock.className = 'tree-access-denied'; lock.title = 'Access denied'; lock.ariaHidden = 'true'; lock.textContent = ' 🔒'; link.append(lock); }
    const marker = entry.git ? document.createElement('span') : null;
    if (marker) { marker.className = 'git-marker'; marker.dataset.gitKind = entry.git.kind; marker.title = marker.ariaLabel = entry.git.tooltip; marker.textContent = entry.git.display; }
   if (!entry.directory) {
     if (entry.filesHref) {
-      item.className = 'tree-entry-row';
       const files = filesLink(entry.filesHref, entry.filesLabel ?? entry.name);
       syncNavigationLinks([link, files]);
        item.append(link, ...(marker ? [marker] : []), files);
@@ -74,9 +77,10 @@ tree?.addEventListener('toggle', async (event) => {
   details.dataset.loading = 'true';
   try {
     const response = await fetch('/__markdown_serve__/tree?path=' +
-      encodeURIComponent(details.dataset.path));
+      encodeURIComponent(details.dataset.path), { ...pageListenerOptions });
     if (!response.ok || details.dataset.loaded === 'true') { return; }
     addEntries(details.querySelector('ul'), await response.json());
     details.dataset.loaded = 'true';
-  } finally { delete details.dataset.loading; }
-}, true);`;
+  } catch { /* The server-rendered tree remains usable. */ }
+  finally { delete details.dataset.loading; }
+}, { capture: true, ...pageListenerOptions });`;

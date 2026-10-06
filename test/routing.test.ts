@@ -102,7 +102,7 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
       const rows = body.match(/<tbody>([\s\S]*?)<\/tbody>/)?.[1] ?? "";
       return [
         ...rows.matchAll(
-          /<td class="directory-name"><a href="[^"]+"[^>]*>([^<]+)<\/a><\/td>/g,
+          /<td class="directory-name"><a href="[^"]+"[^>]*>([^<]+)<\/a>(?:<span[^>]*>[^<]*<\/span>)?<\/td>/g,
         ),
       ]
         .map((match) => match[1]);
@@ -192,7 +192,7 @@ Deno.test("directory tables expose metadata and support deterministic sorting", 
       ]);
       assertMatch(
         body,
-        /<td class="directory-name"><a href="y-broken"[^>]*>y-broken<\/a><\/td><td class="directory-permissions">\?{10}<\/td><td class="directory-size">—<\/td><td class="directory-user">—<\/td><td class="directory-modified">—<\/td>/,
+        /<td class="directory-name"><a href="y-broken" data-kind="broken-symlink" title="→ missing">y-broken<\/a><span class="symlink-target"> → missing \(broken\)<\/span><\/td><td class="directory-permissions">\?{10}<\/td><td class="directory-size">—<\/td><td class="directory-user">—<\/td><td class="directory-modified">—<\/td>/,
       );
     }
   } finally {
@@ -353,7 +353,7 @@ Deno.test("indexed directories can switch between their index and file listing",
     )).text();
     assertMatch(
       index,
-      /<a class="file-action raw-link" href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)" aria-label="View raw content \(text\/plain; charset=UTF-8\)">Raw<\/a><a class="file-action download-link" href="\?download" title="Download file \(text\/markdown; charset=UTF-8\)" aria-label="Download file \(text\/markdown; charset=UTF-8\)">Download<\/a>/,
+      /<a class="file-action raw-link" href="\?raw" data-turbo="false" title="View raw content \(text\/plain; charset=UTF-8\)" aria-label="View raw content \(text\/plain; charset=UTF-8\)">Raw<\/a><a class="file-action download-link" href="\?download" data-turbo="false" title="Download file \(text\/markdown; charset=UTF-8\)" aria-label="Download file \(text\/markdown; charset=UTF-8\)">Download<\/a>/,
     );
     assertMatch(
       index,
@@ -493,7 +493,7 @@ Deno.test("exact text paths render code and raw source accepts queries", async (
     assertMatch(guide, /token keyword">const/);
     assertMatch(
       guide,
-      /href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)"[^>]*>Raw/,
+      /href="\?raw" data-turbo="false" title="View raw content \(text\/plain; charset=UTF-8\)"[^>]*>Raw/,
     );
     assertEquals((await h(new Request("http://x/guide"))).status, 404);
     const hook = await (await h(
@@ -551,7 +551,7 @@ Deno.test("directory Markdown indexes expose raw source", async () => {
     const rendered = await (await h(new Request("http://x/docs/"))).text();
     assertMatch(
       rendered,
-      /href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)"[^>]*>Raw/,
+      /href="\?raw" data-turbo="false" title="View raw content \(text\/plain; charset=UTF-8\)"[^>]*>Raw/,
     );
     const raw = await h(new Request("http://x/docs/?raw"));
     assertEquals(raw.headers.get("content-type"), "text/plain; charset=UTF-8");

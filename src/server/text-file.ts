@@ -1,5 +1,6 @@
 import { contentType } from "@std/media-types";
 import { basename } from "@std/path";
+import type { FileAccess } from "./file-access.ts";
 
 const SAMPLE_SIZE = 8192;
 const sourceExtensions = new Set([
@@ -37,11 +38,15 @@ const sourceExtensions = new Set([
   ".zsh",
 ]);
 
-export async function isTextFile(path: string): Promise<boolean> {
+export async function isTextFile(
+  path: string,
+  access?: FileAccess,
+): Promise<boolean> {
   if (!isLikelyTextFile(path)) {
     return false;
   }
-  const file = await Deno.open(path);
+  const file = access ? await access.open(path) : await Deno.open(path);
+  if (!file) return false;
   try {
     const sample = new Uint8Array(SAMPLE_SIZE);
     const bytesRead = await file.read(sample) ?? 0;

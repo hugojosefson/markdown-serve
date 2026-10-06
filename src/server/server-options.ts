@@ -9,6 +9,7 @@ export type HandlerOptions = {
   root: string;
   redirectStatus?: 301 | 302;
   onError?: ErrorHandler;
+  warn?: (message: string) => void;
   reloadSource?: ReloadSource;
   git?: boolean;
   finders?: ("fd" | "fdfind")[];

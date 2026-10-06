@@ -4,6 +4,8 @@ import { htmlResponse } from "./html-response.ts";
 import { page } from "./page.ts";
 import { filePageActions } from "./page-action.ts";
 import type { ServerConfig } from "./types.ts";
+import { viewedFileTarget } from "./active-file-poller.ts";
+import { renderEmptyFile } from "./render-empty-file.ts";
 
 const sampleLength = 256;
 
@@ -33,6 +35,7 @@ export async function renderFile(
         metadata.mime,
         info.size,
       ),
+      reloadTarget: viewedFileTarget(config.rootPath, file, info),
     }),
   );
 }
@@ -43,6 +46,9 @@ async function fileContent(
   mime: string,
   size: number,
 ): Promise<string> {
+  if (size === 0) {
+    return renderEmptyFile();
+  }
   const raw = "?raw";
   const label = escapeHtml(name);
   if (mime.startsWith("image/")) {

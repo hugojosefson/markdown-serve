@@ -40,6 +40,7 @@ export async function serve(options: ServerOptions): Promise<Deno.HttpServer> {
         root: options.root,
         redirectStatus: options.redirectStatus,
         onError: options.onError,
+        warn: options.warn,
         reloadSource: options.reloadSource ?? watched,
         git: options.git,
         finders: options.finders,

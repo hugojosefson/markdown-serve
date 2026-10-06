@@ -16,6 +16,10 @@ const entry = (
 
 Deno.test("entry kinds prefer symlinks and classify common groups", () => {
   assertEquals(entryKind(entry("folder", true, true)), "symlink");
+  assertEquals(
+    entryKind({ ...entry("broken", false, true), broken: true }),
+    "broken-symlink",
+  );
   assertEquals(entryKind(entry("folder", true)), "directory");
   assertEquals(entryKind(entry("run", false, false, 0o755)), "executable");
   assertEquals(entryKind(entry("release.tar")), "archive");

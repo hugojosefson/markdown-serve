@@ -1,4 +1,5 @@
 export const directoryTableClient = `
+const directoryListenerOptions = typeof pageSignal === 'undefined' ? {} : { signal: pageSignal };
 const directoryColumnCandidates = [
   '',
   'git',
@@ -25,10 +26,11 @@ const fitDirectoryColumns = (container) => {
 };
 const directoryTableContainers = document.querySelectorAll('.directory-scroll');
 directoryTableContainers.forEach(fitDirectoryColumns);
+let directoryTableObserver;
 if (typeof ResizeObserver === 'function') {
-  const directoryTableObserver = new ResizeObserver((entries) =>
+  directoryTableObserver = new ResizeObserver((entries) =>
     entries.forEach((entry) => fitDirectoryColumns(entry.target)));
   directoryTableContainers.forEach((container) => directoryTableObserver.observe(container));
 } else {
-  addEventListener('resize', () => directoryTableContainers.forEach(fitDirectoryColumns));
+  addEventListener('resize', () => directoryTableContainers.forEach(fitDirectoryColumns), directoryListenerOptions);
 }`;

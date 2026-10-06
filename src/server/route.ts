@@ -4,6 +4,7 @@ import { renderDirectory } from "./render-directory.ts";
 import { renderMarkdown } from "./render-markdown.ts";
 import { renderText } from "./render-text.ts";
 import { renderFile } from "./render-file.ts";
+import { renderBrokenSymlink } from "./render-broken-symlink.ts";
 import { downloadFile, plain, rawFile, redirect } from "./responses.ts";
 import { previewableFile } from "./file-metadata.ts";
 import { isTextFile } from "./text-file.ts";
@@ -13,7 +14,10 @@ export async function route(
   config: ServerConfig,
   request: Request,
 ): Promise<Response> {
-  if (request.method !== "GET" && request.method !== "HEAD") {
+  if (
+    request.method !== "GET" && request.method !== "HEAD" &&
+    request.method !== "POST"
+  ) {
     return new Response("Method Not Allowed", {
       status: 405,
       headers: { Allow: "GET, HEAD" },
@@ -27,8 +31,14 @@ export async function route(
   if (resolved.kind === "bad-request") {
     return plain("Bad Request", 400, request.method);
   }
+  if (resolved.kind === "forbidden") {
+    return plain("Forbidden", 403, request.method);
+  }
   if (resolved.kind === "not-found") {
     return plain("Not Found", 404, request.method);
+  }
+  if ("path" in resolved && config.access?.isDenied(resolved.path)) {
+    return plain("Forbidden", 403, request.method);
   }
   if (resolved.kind === "redirect") {
     return redirect(
@@ -38,54 +48,109 @@ export async function route(
       request.method,
     );
   }
-  if (resolved.kind === "directory") {
-    return await renderDirectory(
-      config,
-      request,
-      resolved.url,
-      resolved.path,
-      resolved.parts,
-    );
+  try {
+    if (resolved.kind === "directory") {
+      if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
+        return methodNotAllowed();
+      }
+      const response = await renderDirectory(
+        config,
+        request,
+        resolved.url,
+        resolved.path,
+        resolved.parts,
+      );
+      return config.access?.isDenied(resolved.path)
+        ? plain("Forbidden", 403, request.method)
+        : response;
+    }
+    if (resolved.kind === "broken-symlink") {
+      if (request.method === "POST") return methodNotAllowed();
+      return await renderBrokenSymlink(
+        config,
+        request,
+        resolved.url,
+        resolved.path,
+        resolved.parts,
+        resolved.target,
+        resolved.info,
+      );
+    }
+    if (resolved.kind === "markdown") {
+      if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
+        return methodNotAllowed();
+      }
+      return await renderMarkdown(
+        config,
+        request,
+        resolved.url.pathname,
+        resolved.path,
+        resolved.parts,
+        { sourceName: resolved.sourceName },
+      );
+    }
+    if (resolved.kind === "raw" || resolved.kind === "download") {
+      if (request.method === "POST") {
+        return methodNotAllowed();
+      }
+      return resolved.kind === "raw"
+        ? await rawFile(request, resolved.path, resolved.text)
+        : await downloadFile(request, resolved.path);
+    }
+    if (resolved.kind === "text") {
+      if (request.method === "POST" && !resolved.url.searchParams.has("edit")) {
+        return methodNotAllowed();
+      }
+      return await renderText(
+        config,
+        request,
+        resolved.url,
+        resolved.path,
+        resolved.parts,
+      );
+    }
+    if (resolved.kind === "static") {
+      if (request.method === "POST") {
+        return methodNotAllowed();
+      }
+      return await renderFile(
+        config,
+        request,
+        resolved.url,
+        resolved.path,
+        resolved.parts,
+      );
+    }
+    throw new Error("unreachable route");
+  } catch (error) {
+    if (
+      "path" in resolved &&
+      config.access?.handlePermissionDenied(resolved.path, error)
+    ) {
+      return plain("Forbidden", 403, request.method);
+    }
+    throw error;
   }
-  if (resolved.kind === "markdown") {
-    return await renderMarkdown(
-      config,
-      request,
-      resolved.url.pathname,
-      resolved.path,
-      resolved.parts,
-      { sourceName: resolved.sourceName },
-    );
-  }
-  if (resolved.kind === "raw" || resolved.kind === "download") {
-    return resolved.kind === "raw"
-      ? await rawFile(request, resolved.path, resolved.text)
-      : await downloadFile(request, resolved.path);
-  }
-  if (resolved.kind === "text") {
-    return await renderText(
-      config,
-      request,
-      resolved.url,
-      resolved.path,
-      resolved.parts,
-    );
-  }
-  if (resolved.kind === "static") {
-    return await renderFile(
-      config,
-      request,
-      resolved.url,
-      resolved.path,
-      resolved.parts,
-    );
-  }
-  throw new Error("unreachable route");
+}
+
+function methodNotAllowed(): Response {
+  return new Response("Method Not Allowed", {
+    status: 405,
+    headers: { Allow: "GET, HEAD" },
+  });
 }
 
 export type ResolvedRoute =
-  | { kind: "bad-request" | "not-found" }
+  | { kind: "bad-request" | "not-found" | "forbidden" }
   | { kind: "redirect"; url: URL; pathname: string }
+  | {
+    kind: "broken-symlink";
+    url: URL;
+    path: string;
+    parts: string[];
+    target: string;
+    info: Deno.FileInfo;
+  }
   | {
     kind: "directory";
     url: URL;
@@ -119,16 +184,36 @@ export async function resolveRoute(
   const parts = decodedParts;
   const target = filePath(config.rootPath, parts);
   const stat = await catalog.stat(target);
+  if (config.access?.isDenied(target)) return { kind: "forbidden" };
   if (url.pathname.endsWith("/")) {
     return stat?.isDirectory
       ? { kind: "directory", url, path: target, parts }
       : { kind: "not-found" };
+  }
+  if (!stat) {
+    const link = await catalog.symlink(target);
+    if (link) {
+      return {
+        kind: "broken-symlink",
+        url,
+        path: target,
+        parts,
+        target: link.target,
+        info: link.info,
+      };
+    }
   }
   const routeLeaf = parts.at(-1)!;
   const parent = filePath(config.rootPath, parts.slice(0, -1));
   const sourceName = (!stat || stat.isDirectory)
     ? await catalog.markdown(parent, routeLeaf)
     : undefined;
+  if (
+    config.access?.isDenied(filePath(parent, [`${routeLeaf}.md`])) ||
+    (!sourceName && await catalog.markdownDenied(parent, routeLeaf))
+  ) {
+    return { kind: "forbidden" };
+  }
   if (sourceName) {
     return {
       kind: "markdown",
@@ -154,7 +239,8 @@ export async function resolveRoute(
     };
   }
   if (url.searchParams.has("raw")) {
-    const text = !previewableFile(target) && await isTextFile(target);
+    const text = !previewableFile(target) &&
+      await isTextFile(target, config.access);
     return { kind: "raw", url, path: target, parts, text };
   }
   if (url.searchParams.has("download")) {
@@ -164,7 +250,7 @@ export async function resolveRoute(
     return { kind: "static", url, path: target, parts };
   }
   // Sampling stays method-independent so GET and HEAD have matching types.
-  const text = await isTextFile(target);
+  const text = await isTextFile(target, config.access);
   if (text) {
     return { kind: "text", url, path: target, parts };
   }

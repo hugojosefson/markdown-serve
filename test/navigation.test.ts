@@ -83,7 +83,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     ));
     assertMatch(
       plainBody,
-      /<button class="code-copy"[^>]*>Copy<\/button><span class="code-toolbar-file-actions" data-file-actions="trailing"><a class="file-action raw-link" href="\?raw" title="View raw content \(text\/plain; charset=UTF-8\)" aria-label="View raw content \(text\/plain; charset=UTF-8\)">Raw<\/a>/,
+      /<button class="code-copy"[^>]*>Copy<\/button><span class="code-toolbar-file-actions" data-file-actions="trailing"><a class="file-action raw-link" href="\?raw" data-turbo="false" title="View raw content \(text\/plain; charset=UTF-8\)" aria-label="View raw content \(text\/plain; charset=UTF-8\)">Raw<\/a>/,
     );
     assertMatch(
       pageCss,
@@ -109,7 +109,7 @@ Deno.test("generated pages include responsive navigation and active branches", a
     assertMatch(pageClient, /matchMedia\?\.\('\(max-width: 560px\)'\)/);
     assertMatch(
       pageClient,
-      /addEventListener\?\.\('change', syncTreeDisclosure\)/,
+      /addEventListener\?\.\('change', syncTreeDisclosure, pageListenerOptions\)/,
     );
 
     const docsBody = await (await h(new Request("http://x/docs/"))).text();
@@ -432,6 +432,66 @@ Deno.test("reserved tree endpoint is lazy, safe, and wins namespace collisions",
         child: { name: string; href: string },
       ) => child.name === "README.md")?.href,
       "/",
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("navigation preserves symlink targets and broken status", async () => {
+  if (Deno.build.os === "windows") return;
+  const f = await fixture({ "target/file.md": "target" });
+  try {
+    await Deno.symlink("target/file.md", `${f.root}/linked.md`);
+    await Deno.symlink("target", `${f.root}/linked-dir`);
+    await Deno.symlink("missing", `${f.root}/broken`);
+    const h = await handler(f.root);
+    const body = await (await h(new Request("http://x/"))).text();
+    assertMatch(body, /data-kind="symlink" title="→ target\/file\.md"/);
+    assertMatch(
+      body,
+      /class="tree-folder-link" data-kind="symlink" title="→ target" href="\/linked-dir\/"/,
+    );
+    assertMatch(
+      body,
+      /data-kind="broken-symlink" title="→ missing" href="\/broken"/,
+    );
+    const entries = await (
+      await h(new Request("http://x/__markdown_serve__/tree"))
+    ).json() as Array<{
+      name: string;
+      path: string;
+      directory: boolean;
+      href: string;
+      kind: string;
+      target?: string;
+      broken?: boolean;
+    }>;
+    assertEquals(entries.find((entry) => entry.name === "linked.md"), {
+      name: "linked.md",
+      path: "linked.md",
+      directory: false,
+      href: "/linked",
+      kind: "symlink",
+      target: "target/file.md",
+    });
+    assertEquals(
+      entries.find((entry) => entry.name === "linked-dir")?.directory,
+      true,
+    );
+    assertEquals(
+      entries.find((entry) => entry.name === "linked-dir")?.target,
+      "target",
+    );
+    assertEquals(
+      entries.find((entry) => entry.name === "broken")?.broken,
+      true,
+    );
+    assertMatch(pageClient, /entry\.target !== undefined/);
+    assertMatch(pageCss, /data-kind="symlink"\]::before \{ content: "↗ "/);
+    assertMatch(
+      pageCss,
+      /data-kind="broken-symlink"\]::before \{ content: "⚠ "/,
     );
   } finally {
     await f.cleanup();

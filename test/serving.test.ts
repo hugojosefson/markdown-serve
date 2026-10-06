@@ -8,6 +8,7 @@ import {
 import { pageScript, pageStylesheet } from "../src/server/page-assets.ts";
 import { navigationSpeculation } from "../src/server/navigation-speculation.ts";
 import { fixture, handler } from "./fixture.ts";
+import { join } from "@std/path";
 
 Deno.test("handlers reject missing and non-directory roots", async () => {
   const f = await fixture({ "file.txt": "content" });
@@ -22,6 +23,164 @@ Deno.test("handlers reject missing and non-directory roots", async () => {
   } finally {
     await f.cleanup();
   }
+});
+
+Deno.test({
+  name: "permission-denied paths are skipped without repeated warnings",
+  ignore: Deno.build.os === "windows",
+  fn: async () => {
+    const f = await fixture({
+      "blocked/hidden.ts": "export function hidden() {}",
+      "visible.ts": "export function visible() {}",
+    });
+    const blocked = join(f.root, "blocked");
+    const warnings: string[] = [];
+    let notify: () => void | Promise<void> = () => {};
+    try {
+      await Deno.chmod(blocked, 0o000);
+      try {
+        await Array.fromAsync(Deno.readDir(blocked));
+        return;
+      } catch (error) {
+        if (!(error instanceof Deno.errors.PermissionDenied)) throw error;
+      }
+      const h = await handler(f.root, {
+        reloadSource: {
+          subscribe: (listener: () => void | Promise<void>) => (
+            notify = listener, () => {}
+          ),
+        },
+        warn: (warning) => warnings.push(warning),
+      });
+      const root = await h(new Request("http://x/"));
+      assertEquals(root.status, 200);
+      const rootBody = await root.text();
+      assertMatch(
+        rootBody,
+        /blocked\/<span class="tree-access-denied"[^>]*> 🔒<\/span>/,
+      );
+      assertMatch(rootBody, /aria-label="blocked directory, access denied"/);
+      const rootTree = await h(
+        new Request("http://x/__markdown_serve__/tree?path="),
+      );
+      assertEquals(rootTree.status, 200);
+      assertEquals(
+        (await rootTree.json()).find((entry: { name: string }) =>
+          entry.name === "blocked"
+        )?.accessDenied,
+        true,
+      );
+      assertEquals(
+        (await h(
+          new Request("http://x/__markdown_serve__/files?search=hidden"),
+        ))
+          .status,
+        200,
+      );
+      assertEquals(
+        (await h(new Request("http://x/blocked/hidden.ts"))).status,
+        403,
+      );
+      assertEquals((await h(new Request("http://x/blocked/"))).status, 403);
+      assertEquals(
+        (await h(new Request("http://x/__markdown_serve__/tree?path=blocked")))
+          .status,
+        403,
+      );
+      assertEquals(
+        (await h(new Request("http://x/__markdown_serve__/site/blocked/")))
+          .status,
+        403,
+      );
+      assertEquals(
+        (await h(new Request("http://x/blocked/hidden.ts"))).status,
+        403,
+      );
+      assertEquals((await h(new Request("http://x/visible.ts"))).status, 200);
+      await Deno.chmod(blocked, 0o755);
+      await notify();
+      assertEquals(
+        (await h(new Request("http://x/blocked/hidden.ts"))).status,
+        200,
+      );
+      assertEquals(warnings, ["Cannot access blocked: permission denied"]);
+    } finally {
+      await Deno.chmod(blocked, 0o755);
+      await f.cleanup();
+    }
+  },
+});
+
+Deno.test({
+  name: "unreadable roots reject handler creation",
+  ignore: Deno.build.os === "windows",
+  fn: async () => {
+    const f = await fixture({ "visible.ts": "export const visible = true" });
+    try {
+      await Deno.chmod(f.root, 0o000);
+      try {
+        await Array.fromAsync(Deno.readDir(f.root));
+        return;
+      } catch (error) {
+        if (!(error instanceof Deno.errors.PermissionDenied)) throw error;
+      }
+      await assertRejects(() => handler(f.root), Error, "cannot access root");
+    } finally {
+      await Deno.chmod(f.root, 0o755);
+      await f.cleanup();
+    }
+  },
+});
+
+Deno.test({
+  name:
+    "unreadable files return 403 once while sibling symbols remain available",
+  ignore: Deno.build.os === "windows",
+  fn: async () => {
+    const f = await fixture({
+      "hidden.ts": "export function hidden() {}",
+      "guide.md": "# hidden guide",
+      "manual.MD": "# hidden manual",
+      "visible.ts": "export function visible() {}",
+      "consumer.ts": "visible();",
+    });
+    const hidden = join(f.root, "hidden.ts");
+    const guide = join(f.root, "guide.md");
+    const manual = join(f.root, "manual.MD");
+    const warnings: string[] = [];
+    try {
+      await Deno.chmod(hidden, 0o000);
+      await Deno.chmod(guide, 0o000);
+      await Deno.chmod(manual, 0o000);
+      try {
+        await Deno.readFile(hidden);
+        return;
+      } catch (error) {
+        if (!(error instanceof Deno.errors.PermissionDenied)) throw error;
+      }
+      const h = await handler(f.root, {
+        warn: (warning) => warnings.push(warning),
+      });
+      assertEquals((await h(new Request("http://x/hidden.ts"))).status, 403);
+      assertEquals((await h(new Request("http://x/hidden.ts"))).status, 403);
+      assertEquals((await h(new Request("http://x/guide"))).status, 403);
+      assertEquals((await h(new Request("http://x/manual"))).status, 403);
+      assertMatch(
+        await (await h(new Request("http://x/consumer.ts"))).text(),
+        /href="\/visible\.ts#symbol-visible">visible<\/a>/,
+      );
+      assertEquals(warnings, [
+        "Cannot access hidden.ts: permission denied",
+        "Cannot access guide.md: permission denied",
+        "Cannot access manual.MD: permission denied",
+      ]);
+    } finally {
+      await Deno.chmod(hidden, 0o644);
+      await Deno.chmod(guide, 0o644);
+      await Deno.chmod(manual, 0o644);
+      await f.cleanup();
+    }
+  },
 });
 
 Deno.test("source references use unique declarations from the served tree", async () => {
@@ -239,6 +398,49 @@ Deno.test("file actions have stable placements and preserve raw/download priorit
   }
 });
 
+Deno.test("Markdown edit view owns the content area and shares source styling", async () => {
+  const f = await fixture({
+    "guide.md": "# Guide\n\nRendered paragraph.\n",
+  });
+  try {
+    const h = await handler(f.root, { edit: true });
+    const edit = await (await h(
+      new Request("http://x/guide?edit&metadata&theme=dark&wide"),
+    )).text();
+    assertMatch(
+      edit,
+      /aria-label="Markdown view"><a[^>]*>Rendered<\/a><a[^>]*>Source<\/a><a class="is-selected"[^>]*>Edit<\/a>/,
+    );
+    assertMatch(
+      edit,
+      /<section class="markdown-source-panel markdown-edit-panel"[\s\S]*<textarea class="edit-text"[^>]*># Guide\n\nRendered paragraph\.\n<\/textarea>/,
+    );
+    assertEquals(edit.includes("markdown-toc"), false);
+    assertEquals(
+      edit.includes('<section class="file-metadata-details"'),
+      false,
+    );
+    assertMatch(
+      edit,
+      /class="edit-markdown-preview"[\s\S]*<h1 id="guide"/,
+    );
+    assertMatch(
+      edit,
+      /class="edit-highlight code-block gfm-highlight"[\s\S]*class="token/,
+    );
+
+    const source = await (await h(new Request("http://x/guide?source"))).text();
+    assertMatch(source, /class="markdown-source-panel"/);
+    assertMatch(source, /id="L1"/);
+    assertMatch(
+      source,
+      />Rendered<\/a><a class="is-selected"[^>]*>Source<\/a><a[^>]*>Edit<\/a>/,
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
 Deno.test("site previews serve scoped assets and safely resolve directories", async () => {
   const f = await fixture({
     "site/index.html":
@@ -352,6 +554,9 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     "vector.svg": '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
     "script.ts": "const value = 1;",
     "empty.bin": "",
+    "empty.txt": "",
+    "empty.md": "",
+    "empty.png": "",
     "café.bin": "x",
   });
   try {
@@ -395,7 +600,7 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     );
     assertMatch(
       image,
-      /<a class="file-action raw-link" href="\?raw" title="View raw content \(image\/png\)" aria-label="View raw content \(image\/png\)">Raw<\/a><a class="file-action download-link" href="\?download" title="Download file \(image\/png\)" aria-label="Download file \(image\/png\)">Download<\/a>/,
+      /<a class="file-action raw-link" href="\?raw" data-turbo="false" title="View raw content \(image\/png\)" aria-label="View raw content \(image\/png\)">Raw<\/a><a class="file-action download-link" href="\?download" data-turbo="false" title="Download file \(image\/png\)" aria-label="Download file \(image\/png\)">Download<\/a>/,
     );
     assertMatch(
       image,
@@ -403,6 +608,11 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
     );
     assert(!image.includes("onload="));
     assertMatch(pageScript.body, /naturalWidth \* 4/);
+    assertMatch(
+      pageStylesheet.body,
+      /\.media-preview\.pdf \{[^}]*height: calc\(100dvh - 8rem\);[^}]*min-height: 20rem;/,
+    );
+    assertNotMatch(pageStylesheet.body, /\.media-preview\.pdf[^}]*900px/);
     assertMatch(
       await (await h(new Request("http://x/vector.svg"))).text(),
       /<img class="media-preview image"/,
@@ -479,6 +689,12 @@ Deno.test("file pages expose metadata, previews, raw downloads, and ranges", asy
       "0",
     ]);
     assertEquals((await empty.arrayBuffer()).byteLength, 0);
+    for (const path of ["/empty.bin", "/empty.txt", "/empty", "/empty.png"]) {
+      assertMatch(
+        await (await h(new Request(`http://x${path}`))).text(),
+        /<p class="empty-file">Empty file<\/p>/,
+      );
+    }
     const download = await h(new Request("http://x/photo.png?download"));
     assertMatch(
       download.headers.get("content-disposition")!,
@@ -555,7 +771,47 @@ Deno.test("symlink targets are followed for files, directories, indexes, and lis
     const linkedIndex = await h(new Request("http://x/index-links/"));
     assertMatch(await linkedIndex.text(), /linked index/);
     const root = await h(new Request("http://x/"));
-    assertMatch(await root.text(), /index-dir\//);
+    const rootBody = await root.text();
+    assertMatch(rootBody, /index-dir\//);
+    assertMatch(
+      rootBody,
+      new RegExp(`title="→ ${f.root}/target/file\\.txt"`),
+    );
+    assertMatch(rootBody, new RegExp(`title="→ ${f.root}/target"`));
+    assertMatch(
+      rootBody,
+      new RegExp(
+        `<a href="linked\\.txt" data-kind="symlink" title="→ ${f.root}/target/file\\.txt">linked\\.txt</a><span class="symlink-target"> → ${f.root}/target/file\\.txt</span>`,
+      ),
+    );
+  } finally {
+    await f.cleanup();
+  }
+});
+
+Deno.test("broken symlinks render escaped target pages and reject POST", async () => {
+  if (Deno.build.os === "windows") return;
+  const f = await fixture({});
+  try {
+    await Deno.symlink("missing<&", `${f.root}/broken`);
+    await Deno.symlink("missing-markdown", `${f.root}/broken.md`);
+    await Deno.symlink("init", `${f.root}/init`);
+    const h = await handler(f.root);
+    const listing = await (await h(new Request("http://x/"))).text();
+    assertMatch(listing, /title="→ missing&lt;&amp;"/);
+    assertMatch(listing, /→ missing&lt;&amp; \(broken\)/);
+    assertMatch(listing, /href="broken\.md" data-kind="broken-symlink"/);
+    for (const path of ["/broken", "/broken.md", "/init"]) {
+      const response = await h(new Request(`http://x${path}`));
+      assertEquals(response.status, 200);
+      assertMatch(await response.text(), /Broken symlink:/);
+    }
+    const broken = await (await h(new Request("http://x/broken"))).text();
+    assertMatch(broken, /<code>missing&lt;&amp;<\/code>/);
+    const head = await h(new Request("http://x/broken", { method: "HEAD" }));
+    assertEquals([head.status, await head.text()], [200, ""]);
+    const post = await h(new Request("http://x/broken", { method: "POST" }));
+    assertEquals([post.status, post.headers.get("allow")], [405, "GET, HEAD"]);
   } finally {
     await f.cleanup();
   }

@@ -3,6 +3,7 @@ import type { DirectoryEntry } from "./fs.ts";
 export type EntryKind =
   | "directory"
   | "symlink"
+  | "broken-symlink"
   | "executable"
   | "archive"
   | "image"
@@ -10,6 +11,7 @@ export type EntryKind =
   | "file";
 
 export function entryKind(entry: DirectoryEntry): EntryKind {
+  if (entry.broken) return "broken-symlink";
   if (entry.symlink) return "symlink";
   if (entry.directory) return "directory";
   if (entry.info && (entry.info.mode ?? 0) & 0o111) return "executable";

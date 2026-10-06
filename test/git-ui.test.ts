@@ -2,6 +2,7 @@ import { assertEquals, assertMatch } from "@std/assert";
 import { FileCatalog } from "../src/server/file-catalog.ts";
 import { parseGitStatus } from "../src/server/git/status.ts";
 import { page } from "../src/server/page.ts";
+import { pageCss } from "../src/server/page-css.ts";
 import { treeResponse } from "../src/server/tree-response.ts";
 import type { ServerConfig } from "../src/server/types.ts";
 import { fixture } from "./fixture.ts";
@@ -31,6 +32,7 @@ Deno.test("Git context and statuses match SSR and lazy navigation", async () => 
         worktree: true,
         status: () => Promise.resolve(status),
         diff: () => Promise.resolve(undefined),
+        head: () => Promise.resolve(undefined),
         refresh: () => Promise.resolve(),
       },
     };
@@ -52,6 +54,23 @@ Deno.test("Git context and statuses match SSR and lazy navigation", async () => 
       /data-kind="directory" data-git-ignored="true" href="\/ignored\/"/,
     );
     assertMatch(html, /data-git-kind="ignored"[^>]*>!!<\/span>/);
+    const docsHtml = await page(config, {
+      title: "docs",
+      parts: ["docs"],
+      directory: true,
+      directoryView: true,
+      content: "<p>docs</p>",
+      url: new URL("http://x/docs/"),
+      gitStatus: status,
+    });
+    assertMatch(
+      docsHtml,
+      /<li class="tree-entry-row"><a data-kind="file" href="\/docs\/changed">changed\.md<\/a><span class="git-marker"[^>]*>M<\/span><\/li>/,
+    );
+    assertMatch(
+      pageCss,
+      /\.tree \.git-marker \{ flex: 0 0 auto; margin-right: 6px; white-space: nowrap; \}/,
+    );
 
     const response = await treeResponse(
       config,

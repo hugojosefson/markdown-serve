@@ -49,7 +49,16 @@ globalThis.navigation?.addEventListener('navigate', (event) => {
 });
 globalThis.addEventListener('pagehide', disconnectReload);
 globalThis.addEventListener('pageshow', (event) => {
-  if (event.persisted) { connectReload(); }
+  if (event.persisted) { connectReload(); return; }
+  if (globalThis.performance?.getEntriesByType('navigation')[0]?.type !== 'reload' || document.querySelector?.('.edit-page')) { return; }
+  const url = new URL(location.href);
+  if (!url.hash) { return; }
+  let id = url.hash.slice(1);
+  try { id = decodeURIComponent(id); } catch {}
+  globalThis.requestAnimationFrame(() => {
+    if (location.href !== url.href) { return; }
+    document.getElementById(id)?.scrollIntoView({ behavior: 'instant', block: 'start' });
+  });
 });
 const registerReloadPageInitializer = globalThis.markdownServeRegisterPageInitializer ?? ((initializer) => initializer());
 registerReloadPageInitializer(() => { connectReload(); return disconnectReload; });`;

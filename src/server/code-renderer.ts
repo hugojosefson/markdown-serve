@@ -1,8 +1,9 @@
-import { type Marked, Renderer } from "@deno/gfm";
+import type { Marked } from "@deno/gfm";
+import { MarkdownHeadingRenderer } from "./markdown-heading-renderer.ts";
 import { codeLanguage } from "./code-language.ts";
 import { escapeHtml } from "./html.ts";
 
-export class CodeRenderer extends Renderer {
+export class CodeRenderer extends MarkdownHeadingRenderer {
   override code(token: Marked.Tokens.Code): string {
     const renderedToken = { ...token, lang: codeLanguage(token.lang) };
     const language = escapeHtml(renderedToken.lang);

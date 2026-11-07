@@ -100,6 +100,7 @@ Deno.test("Markdown source headings use the rendered GFM fragments", async () =>
     "> - ### [linked](path) `code`",
     "# Hello, *world*!",
     "# Ship :rocket:",
+    "# Å ä ö",
     "```md",
     "# not a heading",
     "```",
@@ -111,10 +112,11 @@ Deno.test("Markdown source headings use the rendered GFM fragments", async () =>
   );
   assertEquals(ids, [
     "hello-world",
-    "café-中文-",
+    "cafe-u4e2du6587-",
     "linkedpath-code",
     "hello-world-1",
     "ship-",
+    "a-a-o",
   ]);
   for (const id of ids) {
     assertMatch(source, new RegExp(`href="#${id}"`));

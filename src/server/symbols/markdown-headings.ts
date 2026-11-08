@@ -1,4 +1,5 @@
-import { Marked, render, Renderer } from "@deno/gfm";
+import { Marked, render } from "@deno/gfm";
+import { MarkdownHeadingRenderer } from "../markdown-heading-renderer.ts";
 import type { SymbolAnalysis, SymbolDeclarationLink } from "./types.ts";
 
 type HeadingToken = Marked.Tokens.Heading;
@@ -59,7 +60,7 @@ export function markdownHeadings(text: string): SymbolAnalysis {
   };
 }
 
-class HeadingRenderer extends Renderer {
+class HeadingRenderer extends MarkdownHeadingRenderer {
   readonly ids: string[] = [];
 
   override heading(token: HeadingToken): string {

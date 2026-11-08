@@ -8,9 +8,10 @@ import { injectSymbols } from "./symbols/inject.ts";
 import type { SymbolTargets } from "./symbols/types.ts";
 
 export function renderCodeMarkdown(markdown: string, baseUrl: string): string {
-  return render(markdown, {
+  const renderer = new CodeRenderer({ baseUrl });
+  const html = render(markdown, {
     baseUrl,
-    renderer: new CodeRenderer({ baseUrl }),
+    renderer,
     allowedTags: ["button"],
     allowedClasses: {
       div: [
@@ -72,6 +73,7 @@ export function renderCodeMarkdown(markdown: string, baseUrl: string): string {
       span: ["aria-live", "data-file-actions"],
     },
   });
+  return renderer.rewriteInternalLinks(html);
 }
 
 export function renderCodeBlock(text: string, language: string): string {
